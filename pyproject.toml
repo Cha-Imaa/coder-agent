@@ -1,0 +1,40 @@
+[project]
+name = "coder-agent"
+version = "0.1.0"
+description = "A terminal coding agent: plans a change, edits files, runs tests, and iterates. Built with LangGraph, MCP, and local RAG."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "langchain>=0.3",
+    "langchain-core>=0.3",
+    "langgraph>=0.4",
+    "langchain-groq>=0.3",
+    "langchain-google-genai>=2.1",
+    "langsmith>=0.3",
+    "pydantic>=2",
+    "pydantic-settings>=2",
+    "python-dotenv>=1",
+    "typer>=0.15",
+    "rich>=13",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.24", "ruff>=0.6"]
+
+[project.scripts]
+coder = "coder_agent.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/coder_agent"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
