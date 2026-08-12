@@ -16,6 +16,8 @@ dependencies = [
     "python-dotenv>=1",
     "typer>=0.15",
     "rich>=13",
+    "mcp>=1.10",
+    "langchain-mcp-adapters>=0.1",
 ]
 
 [project.optional-dependencies]
