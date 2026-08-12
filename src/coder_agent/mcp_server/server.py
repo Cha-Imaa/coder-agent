@@ -16,6 +16,7 @@ Run standalone:  python -m coder_agent.mcp_server.server <repo_path>
 
 from __future__ import annotations
 
+import difflib
 import fnmatch
 import os
 import re
@@ -121,8 +122,14 @@ def edit_file(path: str, old_string: str, new_string: str) -> str:
             f"ERROR: old_string occurs {count} times; include more surrounding context "
             "so it matches exactly once."
         )
-    target.write_text(content.replace(old_string, new_string, 1), encoding="utf-8")
-    return f"OK: edited {path}."
+    updated = content.replace(old_string, new_string, 1)
+    target.write_text(updated, encoding="utf-8")
+    # A unified diff lets the model verify the edit landed where intended, and lets the UI show
+    # the change without re-reading the file.
+    diff = difflib.unified_diff(
+        content.splitlines(), updated.splitlines(), fromfile=path, tofile=path, lineterm="", n=2
+    )
+    return f"OK: edited {path}.\n" + "\n".join(diff)
 
 
 @mcp.tool()
