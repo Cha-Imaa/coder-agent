@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     )
 
     # "provider:model" string understood by langchain's init_chat_model.
-    model: str = "groq:llama-3.3-70b-versatile"
+    model: str = "groq:openai/gpt-oss-120b"
     fallback_model: str | None = "google_genai:gemini-2.5-flash"
 
     # Agent loop
