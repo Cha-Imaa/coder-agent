@@ -12,11 +12,13 @@ from pathlib import Path
 from typing import Any
 
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, RemoveMessage, SystemMessage
 from langchain_core.tools import BaseTool
+from langgraph.graph.message import REMOVE_ALL_MESSAGES
 
 from coder_agent.config import settings
 from coder_agent.graph import testing
+from coder_agent.graph.context import manage_context
 from coder_agent.graph.prompts import ACT_SYSTEM, PLAN_SYSTEM, REFLECT_SYSTEM
 from coder_agent.graph.state import AgentState
 
@@ -62,9 +64,13 @@ def make_act_node(llm: BaseChatModel, tools: list[BaseTool]) -> Node:
     model = llm.bind_tools(tools)
 
     def act(state: AgentState) -> dict[str, Any]:
+        history, rewritten = manage_context(llm, state["messages"])
         system = SystemMessage(ACT_SYSTEM.format(task=state["task"], plan=state.get("plan", "")))
-        response = model.invoke([system, *state["messages"]])
-        return {"messages": [response], "steps": state.get("steps", 0) + 1}
+        response = model.invoke([system, *history])
+        # If context management changed the history, replace the stored conversation with the
+        # compacted one: `add_messages` cannot edit in place, so remove all and re-add in order.
+        patch = [RemoveMessage(id=REMOVE_ALL_MESSAGES), *history] if rewritten else []
+        return {"messages": [*patch, response], "steps": state.get("steps", 0) + 1}
 
     return act
 

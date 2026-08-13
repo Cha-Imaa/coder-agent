@@ -29,6 +29,12 @@ class Settings(BaseSettings):
     max_steps: int = 40  # model calls inside `act` per run; guards against tool-call loops
     command_timeout: int = 120  # seconds, for any shell command the agent runs
 
+    # Context management (see graph/context.py). Budget is well under gpt-oss-120b's 131k so
+    # the fallback model and the tool schemas always fit too.
+    context_budget_tokens: int = 60_000
+    keep_recent_tool_outputs: int = 6
+    tool_output_stub_chars: int = 400
+
     # Where local state (vector index, checkpoints) is stored, relative to the target repo.
     state_dir_name: str = ".coder-agent"
 
