@@ -1,0 +1,9 @@
+id = "humaneval-024-largest-divisor"
+category = "humaneval"
+source = "HumanEval/24"
+prompt = """
+Implement the function `largest_divisor` in `largest_divisor.py`. Its docstring describes the behaviour and gives examples; the examples are run as doctests by tests/test_largest_divisor.py, which currently fails. Do not change the tests.
+"""
+notes = """
+HumanEval/24 packaged as a repository task. Visible test is the docstring examples via doctest; hidden test is the original check(candidate).
+"""

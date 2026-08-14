@@ -1,0 +1,9 @@
+id = "humaneval-012-longest"
+category = "humaneval"
+source = "HumanEval/12"
+prompt = """
+Implement the function `longest` in `longest.py`. Its docstring describes the behaviour and gives examples; the examples are run as doctests by tests/test_longest.py, which currently fails. Do not change the tests.
+"""
+notes = """
+HumanEval/12 packaged as a repository task. Visible test is the docstring examples via doctest; hidden test is the original check(candidate).
+"""

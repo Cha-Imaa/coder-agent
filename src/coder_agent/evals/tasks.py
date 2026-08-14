@@ -17,15 +17,22 @@ from __future__ import annotations
 
 import shutil
 import tomllib
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
 from coder_agent.sandbox.local import CommandResult, run_command
 
-CATEGORIES: tuple[str, ...] = ("fix-bug", "add-feature", "refactor", "add-test", "multi-file")
+# The in-house categories, plus the public HumanEval slice which is its own category so the
+# pass-rate table keeps the two kinds of number apart.
+CATEGORIES: tuple[str, ...] = (
+    "fix-bug", "add-feature", "refactor", "add-test", "multi-file", "humaneval",
+)
 
 # src/coder_agent/evals/tasks.py -> repo root is three parents up from the package directory.
-SUITE_DIR = Path(__file__).resolve().parents[3] / "evals" / "suite"
+_EVALS_DIR = Path(__file__).resolve().parents[3] / "evals"
+SUITE_DIR = _EVALS_DIR / "suite"
+SUITES: dict[str, Path] = {"inhouse": SUITE_DIR, "humaneval": _EVALS_DIR / "humaneval"}
 
 # Same flags the agent's own `run_tests` node uses, so grading and self-verification agree.
 GRADE_COMMAND = "python -m pytest -q --no-header -p no:cacheprovider tests"
@@ -108,6 +115,8 @@ def load_task(path: Path) -> EvalTask:
 
 def load_suite(root: Path = SUITE_DIR, category: str | None = None) -> list[EvalTask]:
     """All tasks under `root`, sorted by id, optionally restricted to one category."""
+    if not root.is_dir():
+        return []
     tasks = [load_task(p) for p in sorted(root.iterdir()) if (p / "task.toml").is_file()]
     if category is not None:
         tasks = [t for t in tasks if t.category == category]
@@ -121,3 +130,15 @@ def grade(repo: Path, timeout: int = 300) -> CommandResult:
     timeout and output cap apply to grading as to the agent's own test runs.
     """
     return run_command(repo, GRADE_COMMAND, timeout=timeout)
+
+
+def load_suites(names: Iterable[str], category: str | None = None) -> list[EvalTask]:
+    """Concatenate the named suites (`SUITES` keys, or "all") in the order given."""
+    chosen = list(SUITES) if "all" in names else list(names)
+    unknown = [n for n in chosen if n not in SUITES]
+    if unknown:
+        raise ValueError(f"unknown suite(s) {unknown}; choose from {sorted(SUITES)} or 'all'")
+    tasks: list[EvalTask] = []
+    for name in chosen:
+        tasks.extend(load_suite(SUITES[name], category=category))
+    return tasks

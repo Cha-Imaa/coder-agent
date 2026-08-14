@@ -1,6 +1,8 @@
 """Run the in-house eval suite and print the pass-rate table.
 
-    uv run python evals/run_evals.py                      # all 12 tasks with the real agent
+    uv run python evals/run_evals.py                      # all 12 in-house tasks with the real agent
+    uv run python evals/run_evals.py --suite humaneval    # the 30-problem HumanEval slice
+    uv run python evals/run_evals.py --suite all
     uv run python evals/run_evals.py --category fix-bug   # one category
     uv run python evals/run_evals.py --task add-feature-slugify --task fix-bug-duration-units
     uv run python evals/run_evals.py --agent solution     # harness self-check, must be 100%
@@ -22,7 +24,7 @@ from rich.console import Console
 from rich.table import Table
 
 from coder_agent.config import settings
-from coder_agent.evals import load_suite
+from coder_agent.evals import load_suites
 from coder_agent.evals.runner import (
     RESULTS_DIR,
     SuiteResult,
@@ -43,6 +45,7 @@ app = typer.Typer(add_completion=False)
 
 @app.command()
 def main(
+    suite: Annotated[str, typer.Option(help="inhouse | humaneval | all")] = "inhouse",
     category: Annotated[str | None, typer.Option(help="Only tasks in this category.")] = None,
     task: Annotated[list[str] | None, typer.Option(help="Only these task ids (repeatable).")] = None,
     agent: Annotated[str, typer.Option(help="graph | solution | noop")] = "graph",
@@ -62,7 +65,11 @@ def main(
     if max_iterations is not None:
         settings.max_iterations = max_iterations
 
-    tasks = load_suite(category=category)
+    try:
+        tasks = load_suites([suite], category=category)
+    except ValueError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=2) from None
     previous = load_result(rerun_errors) if rerun_errors else None
     if previous is not None:
         errored = {r.task_id for r in previous.results if r.error}
@@ -94,6 +101,8 @@ def main(
         raise typer.Exit(code=2)
 
     label = label or (agent if agent != "graph" else settings.model.split(":")[-1].replace("/", "-"))
+    if suite != "inhouse":
+        label = f"{suite}-{label}"
     console.print(
         f"[bold]{len(tasks)} task(s)[/bold] · agent={agent} · model={model_name} · "
         f"max_iterations={settings.max_iterations}"

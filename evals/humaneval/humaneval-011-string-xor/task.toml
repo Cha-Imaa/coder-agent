@@ -1,0 +1,9 @@
+id = "humaneval-011-string-xor"
+category = "humaneval"
+source = "HumanEval/11"
+prompt = """
+Implement the function `string_xor` in `string_xor.py`. Its docstring describes the behaviour and gives examples; the examples are run as doctests by tests/test_string_xor.py, which currently fails. Do not change the tests.
+"""
+notes = """
+HumanEval/11 packaged as a repository task. Visible test is the docstring examples via doctest; hidden test is the original check(candidate).
+"""

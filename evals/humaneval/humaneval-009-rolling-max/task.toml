@@ -1,0 +1,9 @@
+id = "humaneval-009-rolling-max"
+category = "humaneval"
+source = "HumanEval/9"
+prompt = """
+Implement the function `rolling_max` in `rolling_max.py`. Its docstring describes the behaviour and gives examples; the examples are run as doctests by tests/test_rolling_max.py, which currently fails. Do not change the tests.
+"""
+notes = """
+HumanEval/9 packaged as a repository task. Visible test is the docstring examples via doctest; hidden test is the original check(candidate).
+"""

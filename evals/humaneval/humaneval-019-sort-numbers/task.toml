@@ -1,0 +1,9 @@
+id = "humaneval-019-sort-numbers"
+category = "humaneval"
+source = "HumanEval/19"
+prompt = """
+Implement the function `sort_numbers` in `sort_numbers.py`. Its docstring describes the behaviour and gives examples; the examples are run as doctests by tests/test_sort_numbers.py, which currently fails. Do not change the tests.
+"""
+notes = """
+HumanEval/19 packaged as a repository task. Visible test is the docstring examples via doctest; hidden test is the original check(candidate).
+"""

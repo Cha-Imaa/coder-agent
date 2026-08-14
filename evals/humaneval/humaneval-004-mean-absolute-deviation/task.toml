@@ -1,0 +1,9 @@
+id = "humaneval-004-mean-absolute-deviation"
+category = "humaneval"
+source = "HumanEval/4"
+prompt = """
+Implement the function `mean_absolute_deviation` in `mean_absolute_deviation.py`. Its docstring describes the behaviour and gives examples; the examples are run as doctests by tests/test_mean_absolute_deviation.py, which currently fails. Do not change the tests.
+"""
+notes = """
+HumanEval/4 packaged as a repository task. Visible test is the docstring examples via doctest; hidden test is the original check(candidate).
+"""

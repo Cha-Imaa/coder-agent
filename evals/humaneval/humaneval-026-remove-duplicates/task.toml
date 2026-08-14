@@ -1,0 +1,9 @@
+id = "humaneval-026-remove-duplicates"
+category = "humaneval"
+source = "HumanEval/26"
+prompt = """
+Implement the function `remove_duplicates` in `remove_duplicates.py`. Its docstring describes the behaviour and gives examples; the examples are run as doctests by tests/test_remove_duplicates.py, which currently fails. Do not change the tests.
+"""
+notes = """
+HumanEval/26 packaged as a repository task. Visible test is the docstring examples via doctest; hidden test is the original check(candidate).
+"""

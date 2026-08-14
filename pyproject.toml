@@ -37,7 +37,7 @@ packages = ["src/coder_agent"]
 line-length = 100
 target-version = "py311"
 # Benchmark fixtures are the agent's target repos; one contains a planted bug on purpose.
-extend-exclude = ["evals/suite"]
+extend-exclude = ["evals/suite", "evals/humaneval"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

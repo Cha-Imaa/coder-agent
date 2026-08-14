@@ -1,0 +1,9 @@
+id = "humaneval-007-filter-by-substring"
+category = "humaneval"
+source = "HumanEval/7"
+prompt = """
+Implement the function `filter_by_substring` in `filter_by_substring.py`. Its docstring describes the behaviour and gives examples; the examples are run as doctests by tests/test_filter_by_substring.py, which currently fails. Do not change the tests.
+"""
+notes = """
+HumanEval/7 packaged as a repository task. Visible test is the docstring examples via doctest; hidden test is the original check(candidate).
+"""

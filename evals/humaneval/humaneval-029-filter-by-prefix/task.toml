@@ -1,0 +1,9 @@
+id = "humaneval-029-filter-by-prefix"
+category = "humaneval"
+source = "HumanEval/29"
+prompt = """
+Implement the function `filter_by_prefix` in `filter_by_prefix.py`. Its docstring describes the behaviour and gives examples; the examples are run as doctests by tests/test_filter_by_prefix.py, which currently fails. Do not change the tests.
+"""
+notes = """
+HumanEval/29 packaged as a repository task. Visible test is the docstring examples via doctest; hidden test is the original check(candidate).
+"""

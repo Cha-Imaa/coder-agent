@@ -1,0 +1,9 @@
+id = "humaneval-020-find-closest-elements"
+category = "humaneval"
+source = "HumanEval/20"
+prompt = """
+Implement the function `find_closest_elements` in `find_closest_elements.py`. Its docstring describes the behaviour and gives examples; the examples are run as doctests by tests/test_find_closest_elements.py, which currently fails. Do not change the tests.
+"""
+notes = """
+HumanEval/20 packaged as a repository task. Visible test is the docstring examples via doctest; hidden test is the original check(candidate).
+"""
