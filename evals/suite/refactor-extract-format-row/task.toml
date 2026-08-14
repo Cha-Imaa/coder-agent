@@ -1,0 +1,8 @@
+id = "refactor-extract-format-row"
+category = "refactor"
+prompt = """
+report.py formats table rows the same way in render_report and render_summary. Extract that formatting into a module-level function format_row(name, qty, price) -> str and call it from both. The rendered output must not change; the existing tests must keep passing.
+"""
+notes = """
+Behaviour-preserving refactor with a golden-output test. Hidden tests import the new function and re-check the golden strings, so both 'did you extract it' and 'did you break it' are graded.
+"""

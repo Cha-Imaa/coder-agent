@@ -1,0 +1,8 @@
+id = "multi-file-cart-discount"
+category = "multi-file"
+prompt = """
+Add discount codes to the shop package. Create shop/discounts.py with a DISCOUNTS table mapping code to fraction ({"SAVE10": 0.10, "HALF": 0.50}) and discount_for(code) -> float that is case-insensitive and raises ValueError for an unknown code. Add apply_discount(amount, fraction) to shop/pricing.py. Give Cart.total in shop/cart.py an optional code=None keyword: the discount is applied to the subtotal before tax. Results are rounded to 2 decimals as today. Add tests.
+"""
+notes = """
+Three files across a package, one new. Hidden tests import each piece separately, so wiring everything into cart.py alone does not pass.
+"""

@@ -1,0 +1,8 @@
+id = "multi-file-notes-delete"
+category = "multi-file"
+prompt = """
+The notes package has add, show and list but no delete. Add it through all three layers: Storage.delete(note_id) in notes/storage.py raises KeyError when the id is unknown; NoteService.delete(note_id) in notes/service.py returns True if a note was removed and False otherwise; the CLI in notes/cli.py accepts `delete <id>` and returns 'deleted <id>' or 'no such note <id>'. Add tests for each layer.
+"""
+notes = """
+Layered change where each layer has a different error contract (exception, bool, message). Hidden tests exercise every layer, including that the service swallows the storage KeyError.
+"""

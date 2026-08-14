@@ -1,0 +1,8 @@
+id = "refactor-config-dataclass"
+category = "refactor"
+prompt = """
+appconfig.py returns settings as a plain dict. Replace it with a dataclass named Config with fields host (str), port (int) and debug (bool), keeping the same defaults and the same parsing rules. Add a classmethod Config.from_dict(data) that applies the defaults and coercion, and make load_config return a Config. Update tests/test_appconfig.py to use attribute access.
+"""
+notes = """
+Interface-changing refactor across code and tests. The hidden tests replace the visible test file, so the agent's own rewrite of the tests is not what is graded.
+"""

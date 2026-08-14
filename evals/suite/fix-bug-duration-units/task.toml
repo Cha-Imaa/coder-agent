@@ -1,0 +1,8 @@
+id = "fix-bug-duration-units"
+category = "fix-bug"
+prompt = """
+parse_duration in durations.py returns wrong values for some inputs and tests/test_durations.py fails. Fix the implementation; leave the tests as they are.
+"""
+notes = """
+Two table entries are swapped. Hidden tests cover combinations so a fix that special-cases the visible input does not pass.
+"""

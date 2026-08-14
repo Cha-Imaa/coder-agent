@@ -1,0 +1,8 @@
+id = "fix-bug-chunk-drops-tail"
+category = "fix-bug"
+prompt = """
+The test suite has a failing test in tests/test_slicer.py. Fix the bug in slicer.py without changing the tests.
+"""
+notes = """
+Classic off-by-one in a range() bound. One-line fix; checks the agent reads the failing assertion rather than rewriting the function.
+"""
