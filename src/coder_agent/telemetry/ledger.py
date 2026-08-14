@@ -163,6 +163,22 @@ class Ledger:
             ).fetchall()
         return [dict(r) for r in rows]
 
+    def usage_for(self, **tags: Any) -> Usage | None:
+        """Per-node usage of the most recent run whose tags contain all of `tags`.
+
+        The figure script uses it to recover node-level tokens for results files written before
+        they stored `usage` themselves; new files carry it and never need the ledger.
+        """
+        with self._conn() as c:
+            rows = c.execute(
+                "SELECT usage_json, tags_json FROM runs ORDER BY started_at DESC"
+            ).fetchall()
+        for row in rows:
+            stored = json.loads(row["tags_json"] or "{}")
+            if all(stored.get(k) == v for k, v in tags.items()):
+                return json.loads(row["usage_json"] or "{}")
+        return None
+
     def summary(self) -> dict[str, Any]:
         """Aggregates for `coder stats`: counts by status, mean tokens and time, per-node tokens."""
         with self._conn() as c:
