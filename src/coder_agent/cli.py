@@ -23,6 +23,7 @@ from coder_agent.config import settings
 # langchain-google-genai warns once per message when it drops another provider's reasoning
 # blocks during a fallback; correct behaviour, but noise in a terminal UI.
 logging.getLogger("langchain_google_genai").setLevel(logging.ERROR)
+logging.getLogger("google_genai").setLevel(logging.ERROR)
 
 app = typer.Typer(no_args_is_help=True, add_completion=False, rich_markup_mode="rich")
 console = Console()
@@ -70,41 +71,15 @@ def run(
 
 async def _run(repo: Path, task: str, verbose: bool, test_cmd: str | None) -> str:
     # Imports here so `coder --version` stays fast and does not need provider packages.
-    from coder_agent.graph import build_graph
-    from coder_agent.llm import get_llm
-    from coder_agent.telemetry import Ledger, RunRecord, merge_usage
-    from coder_agent.tools.client import load_tools
+    from coder_agent.agent import run_agent
     from coder_agent.ui.render import Renderer
 
     renderer = Renderer(console, verbose=verbose)
     renderer.header(str(repo), task, settings.model)
 
-    tools = await load_tools(repo)
-    graph = build_graph(get_llm(), tools)
-
-    state: dict = {"task": task, "repo": str(repo)}
-    if test_cmd:
-        state["test_command"] = test_cmd
-
-    started = time.time()
-    final: dict = {}
-    # `updates` streams one patch per node for the UI. The ledger needs the final values of a few
-    # keys, so fold them as they arrive instead of paying for a second pass over the state.
-    async for update in graph.astream(state, stream_mode="updates"):
-        for node, patch in update.items():
-            renderer.update(node, patch)
-            for key in ("status", "iteration", "steps", "tests_passed", "test_command"):
-                if key in patch:
-                    final[key] = patch[key]
-            if "usage" in patch:
-                final["usage"] = merge_usage(final.get("usage"), patch["usage"])
-
-    record = RunRecord.from_state(
-        {**state, **final}, model=settings.model, wall_seconds=time.time() - started
-    )
-    Ledger(settings.ledger_path).record(record)
-    console.print(f"[dim]{record.footer()}[/dim]")
-    return final.get("status", "failed")
+    outcome = await run_agent(repo, task, test_cmd=test_cmd, on_update=renderer.update)
+    console.print(f"[dim]{outcome.record.footer()}[/dim]")
+    return outcome.status
 
 
 @app.command()
