@@ -9,7 +9,7 @@ Built to learn the agentic-AI stack end to end, on a zero-cost setup:
 |---|---|
 | Agent orchestration | LangGraph state graph (plan → act → test → reflect) |
 | Tools | Model Context Protocol (MCP) server exposing file and shell tools |
-| Codebase retrieval | Local embeddings (bge-small) + Chroma vector store |
+| Codebase retrieval | tree-sitter chunking, local embeddings (bge-small) + Chroma vector store |
 | LLM | Groq free tier, Gemini free tier as fallback, swappable via one env var |
 | Observability | LangSmith tracing |
 | Interface | Typer + Rich CLI |
