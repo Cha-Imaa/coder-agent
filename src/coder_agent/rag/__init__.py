@@ -10,14 +10,26 @@ from coder_agent.rag.loader import (
     load_file,
     load_repo,
 )
+from coder_agent.rag.retriever import (
+    BM25,
+    MODES,
+    HybridRetriever,
+    Mode,
+    reciprocal_rank_fusion,
+    tokenize,
+)
 
 __all__ = [
+    "BM25",
+    "MODES",
     "Chunk",
     "Embedder",
     "FastEmbedder",
     "HashEmbedder",
     "Hit",
+    "HybridRetriever",
     "IndexStats",
+    "Mode",
     "RepoFile",
     "RepoIndex",
     "chunk_file",
@@ -28,5 +40,7 @@ __all__ = [
     "iter_repo_paths",
     "load_file",
     "load_repo",
+    "reciprocal_rank_fusion",
     "supports_syntax_chunking",
+    "tokenize",
 ]
