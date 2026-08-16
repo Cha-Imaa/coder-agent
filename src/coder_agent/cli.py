@@ -1,4 +1,4 @@
-"""Command-line entry point: `coder run <repo> "<task>"` and `coder stats`.
+"""Command-line entry point: `coder run <repo> "<task>"`, `coder index <repo>`, `coder stats`.
 
 The CLI is deliberately thin. It resolves the repo, loads the MCP tools, builds the graph, and
 streams node updates to the renderer. All behaviour lives in the graph so the same code path is
@@ -80,6 +80,67 @@ async def _run(repo: Path, task: str, verbose: bool, test_cmd: str | None) -> st
     outcome = await run_agent(repo, task, test_cmd=test_cmd, on_update=renderer.update)
     console.print(f"[dim]{outcome.record.footer()}[/dim]")
     return outcome.status
+
+
+@app.command()
+def index(
+    repo: Annotated[Path, typer.Argument(help="Repository to index.")] = Path("."),
+    rebuild: Annotated[
+        bool, typer.Option("--rebuild", help="Drop the existing index and embed everything.")
+    ] = False,
+    query: Annotated[
+        str | None,
+        typer.Option("--query", "-q", help="After indexing, show the top hits for this."),
+    ] = None,
+    k: Annotated[int, typer.Option(help="How many hits to show with --query.")] = 5,
+) -> None:
+    """Build or refresh the local vector index of a repository (incremental by file hash)."""
+    from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn, TimeElapsedColumn
+
+    from coder_agent.rag import RepoIndex
+
+    repo = repo.resolve()
+    if not repo.is_dir():
+        console.print(f"[red]Not a directory:[/red] {repo}")
+        raise typer.Exit(code=2)
+
+    store = RepoIndex(repo)
+    if rebuild:
+        store.clear()
+    console.print(
+        f"[bold]Indexing[/bold] {repo}  [dim]model={settings.embedding_model} "
+        f"store={store.index_dir.relative_to(repo)}[/dim]"
+    )
+
+    progress = Progress(
+        TextColumn("{task.description}"),
+        BarColumn(),
+        MofNCompleteColumn(),
+        TimeElapsedColumn(),
+        console=console,
+        transient=True,
+    )
+    tasks: dict[str, int] = {}
+    labels = {"chunk": "chunking files", "embed": "embedding chunks", "write": "writing vectors"}
+
+    def report(phase: str, done: int, total: int) -> None:
+        if phase not in tasks:
+            tasks[phase] = progress.add_task(labels[phase], total=total)
+        progress.update(tasks[phase], completed=done, total=total)
+
+    with progress:
+        stats = store.update(progress=report)
+    console.print(f"[green]Done.[/green] {stats.summary()}")
+
+    if query:
+        hits = store.search(query, k=k)
+        table = Table(title=f"Top {len(hits)} for: {query}", show_edge=False)
+        table.add_column("score", justify="right")
+        table.add_column("kind")
+        table.add_column("location")
+        for hit in hits:
+            table.add_row(f"{hit.score:.3f}", hit.chunk.kind, hit.location)
+        console.print(table)
 
 
 @app.command()

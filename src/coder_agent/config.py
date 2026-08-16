@@ -43,15 +43,25 @@ class Settings(BaseSettings):
     chunk_window_lines: int = 60
     chunk_overlap_lines: int = 10
 
+    # Embeddings run on the CPU through fastembed (ONNX). bge-small is 67 MB, 384 dimensions and
+    # good at code for its size; the model is downloaded once into `models_dir`.
+    embedding_model: str = "BAAI/bge-small-en-v1.5"
+    embed_batch_size: int = 64
+    index_collection: str = "chunks"
+
     # Where local state (vector index, checkpoints) is stored, relative to the target repo.
     state_dir_name: str = ".coder-agent"
 
     # Run ledger (tokens, time, outcome per run). Lives in the user's home, not in the target repo,
     # because evals run across many repos and the numbers belong together.
     ledger_path: Path = Path.home() / ".coder-agent" / "ledger.sqlite"
+    models_dir: Path = Path.home() / ".coder-agent" / "models"
 
     def state_dir(self, repo: Path) -> Path:
         return repo / self.state_dir_name
+
+    def index_dir(self, repo: Path) -> Path:
+        return self.state_dir(repo) / "chroma"
 
 
 settings = Settings()
