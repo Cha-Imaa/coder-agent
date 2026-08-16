@@ -1,0 +1,1626 @@
+{
+  "meta": {
+    "suite": "all",
+    "embedding_model": "snowflake/snowflake-arctic-embed-xs"
+  },
+  "ks": [
+    1,
+    3,
+    5
+  ],
+  "summary": [
+    {
+      "mode": "hybrid",
+      "tasks": 40,
+      "recall@1": 0.08333333333333333,
+      "recall@3": 0.9916666666666668,
+      "recall@5": 1.0,
+      "mrr": 0.5625
+    },
+    {
+      "mode": "dense",
+      "tasks": 40,
+      "recall@1": 0.08333333333333334,
+      "recall@3": 0.9916666666666668,
+      "recall@5": 1.0,
+      "mrr": 0.5625
+    },
+    {
+      "mode": "bm25",
+      "tasks": 40,
+      "recall@1": 0.08333333333333333,
+      "recall@3": 0.9916666666666668,
+      "recall@5": 1.0,
+      "mrr": 0.5541666666666667
+    }
+  ],
+  "results": [
+    {
+      "task_id": "add-feature-inventory-remove",
+      "category": "add-feature",
+      "mode": "hybrid",
+      "gold": [
+        "inventory.py"
+      ],
+      "ranked": [
+        "inventory.py",
+        "tests/test_inventory.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "add-feature-inventory-remove",
+      "category": "add-feature",
+      "mode": "dense",
+      "gold": [
+        "inventory.py"
+      ],
+      "ranked": [
+        "inventory.py",
+        "tests/test_inventory.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "add-feature-inventory-remove",
+      "category": "add-feature",
+      "mode": "bm25",
+      "gold": [
+        "inventory.py"
+      ],
+      "ranked": [
+        "inventory.py",
+        "tests/test_inventory.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "add-feature-slugify",
+      "category": "add-feature",
+      "mode": "hybrid",
+      "gold": [
+        "textutils.py"
+      ],
+      "ranked": [
+        "tests/test_textutils.py",
+        "textutils.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "add-feature-slugify",
+      "category": "add-feature",
+      "mode": "dense",
+      "gold": [
+        "textutils.py"
+      ],
+      "ranked": [
+        "textutils.py",
+        "tests/test_textutils.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "add-feature-slugify",
+      "category": "add-feature",
+      "mode": "bm25",
+      "gold": [
+        "textutils.py"
+      ],
+      "ranked": [
+        "tests/test_textutils.py",
+        "textutils.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "add-feature-stack-peek",
+      "category": "add-feature",
+      "mode": "hybrid",
+      "gold": [
+        "stack.py"
+      ],
+      "ranked": [
+        "tests/test_stack.py",
+        "stack.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "add-feature-stack-peek",
+      "category": "add-feature",
+      "mode": "dense",
+      "gold": [
+        "stack.py"
+      ],
+      "ranked": [
+        "tests/test_stack.py",
+        "stack.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "add-feature-stack-peek",
+      "category": "add-feature",
+      "mode": "bm25",
+      "gold": [
+        "stack.py"
+      ],
+      "ranked": [
+        "tests/test_stack.py",
+        "stack.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "fix-bug-chunk-drops-tail",
+      "category": "fix-bug",
+      "mode": "hybrid",
+      "gold": [
+        "slicer.py"
+      ],
+      "ranked": [
+        "tests/test_slicer.py",
+        "slicer.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "fix-bug-chunk-drops-tail",
+      "category": "fix-bug",
+      "mode": "dense",
+      "gold": [
+        "slicer.py"
+      ],
+      "ranked": [
+        "tests/test_slicer.py",
+        "slicer.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "fix-bug-chunk-drops-tail",
+      "category": "fix-bug",
+      "mode": "bm25",
+      "gold": [
+        "slicer.py"
+      ],
+      "ranked": [
+        "tests/test_slicer.py",
+        "conftest.py",
+        "slicer.py"
+      ]
+    },
+    {
+      "task_id": "fix-bug-duration-units",
+      "category": "fix-bug",
+      "mode": "hybrid",
+      "gold": [
+        "durations.py"
+      ],
+      "ranked": [
+        "tests/test_durations.py",
+        "durations.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "fix-bug-duration-units",
+      "category": "fix-bug",
+      "mode": "dense",
+      "gold": [
+        "durations.py"
+      ],
+      "ranked": [
+        "tests/test_durations.py",
+        "durations.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "fix-bug-duration-units",
+      "category": "fix-bug",
+      "mode": "bm25",
+      "gold": [
+        "durations.py"
+      ],
+      "ranked": [
+        "tests/test_durations.py",
+        "durations.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "fix-bug-shared-default-list",
+      "category": "fix-bug",
+      "mode": "hybrid",
+      "gold": [
+        "registry.py"
+      ],
+      "ranked": [
+        "tests/test_registry.py",
+        "registry.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "fix-bug-shared-default-list",
+      "category": "fix-bug",
+      "mode": "dense",
+      "gold": [
+        "registry.py"
+      ],
+      "ranked": [
+        "tests/test_registry.py",
+        "registry.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "fix-bug-shared-default-list",
+      "category": "fix-bug",
+      "mode": "bm25",
+      "gold": [
+        "registry.py"
+      ],
+      "ranked": [
+        "tests/test_registry.py",
+        "registry.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "multi-file-cart-discount",
+      "category": "multi-file",
+      "mode": "hybrid",
+      "gold": [
+        "shop/cart.py",
+        "shop/pricing.py"
+      ],
+      "ranked": [
+        "shop/pricing.py",
+        "shop/cart.py",
+        "tests/test_cart.py",
+        "shop/__init__.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "multi-file-cart-discount",
+      "category": "multi-file",
+      "mode": "dense",
+      "gold": [
+        "shop/cart.py",
+        "shop/pricing.py"
+      ],
+      "ranked": [
+        "shop/pricing.py",
+        "tests/test_cart.py",
+        "shop/cart.py",
+        "shop/__init__.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "multi-file-cart-discount",
+      "category": "multi-file",
+      "mode": "bm25",
+      "gold": [
+        "shop/cart.py",
+        "shop/pricing.py"
+      ],
+      "ranked": [
+        "shop/pricing.py",
+        "shop/cart.py",
+        "tests/test_cart.py",
+        "shop/__init__.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "multi-file-notes-delete",
+      "category": "multi-file",
+      "mode": "hybrid",
+      "gold": [
+        "notes/cli.py",
+        "notes/service.py",
+        "notes/storage.py"
+      ],
+      "ranked": [
+        "notes/service.py",
+        "notes/cli.py",
+        "tests/test_notes.py",
+        "notes/storage.py",
+        "notes/__init__.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "multi-file-notes-delete",
+      "category": "multi-file",
+      "mode": "dense",
+      "gold": [
+        "notes/cli.py",
+        "notes/service.py",
+        "notes/storage.py"
+      ],
+      "ranked": [
+        "notes/service.py",
+        "notes/storage.py",
+        "notes/__init__.py",
+        "notes/cli.py",
+        "tests/test_notes.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "multi-file-notes-delete",
+      "category": "multi-file",
+      "mode": "bm25",
+      "gold": [
+        "notes/cli.py",
+        "notes/service.py",
+        "notes/storage.py"
+      ],
+      "ranked": [
+        "notes/service.py",
+        "notes/cli.py",
+        "tests/test_notes.py",
+        "notes/storage.py",
+        "notes/__init__.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "refactor-config-dataclass",
+      "category": "refactor",
+      "mode": "hybrid",
+      "gold": [
+        "appconfig.py",
+        "tests/test_appconfig.py"
+      ],
+      "ranked": [
+        "appconfig.py",
+        "tests/test_appconfig.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "refactor-config-dataclass",
+      "category": "refactor",
+      "mode": "dense",
+      "gold": [
+        "appconfig.py",
+        "tests/test_appconfig.py"
+      ],
+      "ranked": [
+        "appconfig.py",
+        "tests/test_appconfig.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "refactor-config-dataclass",
+      "category": "refactor",
+      "mode": "bm25",
+      "gold": [
+        "appconfig.py",
+        "tests/test_appconfig.py"
+      ],
+      "ranked": [
+        "tests/test_appconfig.py",
+        "appconfig.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "refactor-extract-format-row",
+      "category": "refactor",
+      "mode": "hybrid",
+      "gold": [
+        "report.py"
+      ],
+      "ranked": [
+        "report.py",
+        "tests/test_report.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "refactor-extract-format-row",
+      "category": "refactor",
+      "mode": "dense",
+      "gold": [
+        "report.py"
+      ],
+      "ranked": [
+        "tests/test_report.py",
+        "report.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "refactor-extract-format-row",
+      "category": "refactor",
+      "mode": "bm25",
+      "gold": [
+        "report.py"
+      ],
+      "ranked": [
+        "report.py",
+        "tests/test_report.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-000-has-close-elements",
+      "category": "humaneval",
+      "mode": "hybrid",
+      "gold": [
+        "has_close_elements.py"
+      ],
+      "ranked": [
+        "tests/test_has_close_elements.py",
+        "has_close_elements.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-000-has-close-elements",
+      "category": "humaneval",
+      "mode": "dense",
+      "gold": [
+        "has_close_elements.py"
+      ],
+      "ranked": [
+        "tests/test_has_close_elements.py",
+        "has_close_elements.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-000-has-close-elements",
+      "category": "humaneval",
+      "mode": "bm25",
+      "gold": [
+        "has_close_elements.py"
+      ],
+      "ranked": [
+        "tests/test_has_close_elements.py",
+        "has_close_elements.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-001-separate-paren-groups",
+      "category": "humaneval",
+      "mode": "hybrid",
+      "gold": [
+        "separate_paren_groups.py"
+      ],
+      "ranked": [
+        "tests/test_separate_paren_groups.py",
+        "separate_paren_groups.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-001-separate-paren-groups",
+      "category": "humaneval",
+      "mode": "dense",
+      "gold": [
+        "separate_paren_groups.py"
+      ],
+      "ranked": [
+        "tests/test_separate_paren_groups.py",
+        "separate_paren_groups.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-001-separate-paren-groups",
+      "category": "humaneval",
+      "mode": "bm25",
+      "gold": [
+        "separate_paren_groups.py"
+      ],
+      "ranked": [
+        "tests/test_separate_paren_groups.py",
+        "separate_paren_groups.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-002-truncate-number",
+      "category": "humaneval",
+      "mode": "hybrid",
+      "gold": [
+        "truncate_number.py"
+      ],
+      "ranked": [
+        "tests/test_truncate_number.py",
+        "truncate_number.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-002-truncate-number",
+      "category": "humaneval",
+      "mode": "dense",
+      "gold": [
+        "truncate_number.py"
+      ],
+      "ranked": [
+        "tests/test_truncate_number.py",
+        "truncate_number.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-002-truncate-number",
+      "category": "humaneval",
+      "mode": "bm25",
+      "gold": [
+        "truncate_number.py"
+      ],
+      "ranked": [
+        "tests/test_truncate_number.py",
+        "truncate_number.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-003-below-zero",
+      "category": "humaneval",
+      "mode": "hybrid",
+      "gold": [
+        "below_zero.py"
+      ],
+      "ranked": [
+        "tests/test_below_zero.py",
+        "below_zero.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-003-below-zero",
+      "category": "humaneval",
+      "mode": "dense",
+      "gold": [
+        "below_zero.py"
+      ],
+      "ranked": [
+        "tests/test_below_zero.py",
+        "below_zero.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-003-below-zero",
+      "category": "humaneval",
+      "mode": "bm25",
+      "gold": [
+        "below_zero.py"
+      ],
+      "ranked": [
+        "tests/test_below_zero.py",
+        "below_zero.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-004-mean-absolute-deviation",
+      "category": "humaneval",
+      "mode": "hybrid",
+      "gold": [
+        "mean_absolute_deviation.py"
+      ],
+      "ranked": [
+        "tests/test_mean_absolute_deviation.py",
+        "mean_absolute_deviation.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-004-mean-absolute-deviation",
+      "category": "humaneval",
+      "mode": "dense",
+      "gold": [
+        "mean_absolute_deviation.py"
+      ],
+      "ranked": [
+        "tests/test_mean_absolute_deviation.py",
+        "mean_absolute_deviation.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-004-mean-absolute-deviation",
+      "category": "humaneval",
+      "mode": "bm25",
+      "gold": [
+        "mean_absolute_deviation.py"
+      ],
+      "ranked": [
+        "tests/test_mean_absolute_deviation.py",
+        "mean_absolute_deviation.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-005-intersperse",
+      "category": "humaneval",
+      "mode": "hybrid",
+      "gold": [
+        "intersperse.py"
+      ],
+      "ranked": [
+        "tests/test_intersperse.py",
+        "intersperse.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-005-intersperse",
+      "category": "humaneval",
+      "mode": "dense",
+      "gold": [
+        "intersperse.py"
+      ],
+      "ranked": [
+        "tests/test_intersperse.py",
+        "intersperse.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-005-intersperse",
+      "category": "humaneval",
+      "mode": "bm25",
+      "gold": [
+        "intersperse.py"
+      ],
+      "ranked": [
+        "tests/test_intersperse.py",
+        "intersperse.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-006-parse-nested-parens",
+      "category": "humaneval",
+      "mode": "hybrid",
+      "gold": [
+        "parse_nested_parens.py"
+      ],
+      "ranked": [
+        "tests/test_parse_nested_parens.py",
+        "parse_nested_parens.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-006-parse-nested-parens",
+      "category": "humaneval",
+      "mode": "dense",
+      "gold": [
+        "parse_nested_parens.py"
+      ],
+      "ranked": [
+        "tests/test_parse_nested_parens.py",
+        "parse_nested_parens.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-006-parse-nested-parens",
+      "category": "humaneval",
+      "mode": "bm25",
+      "gold": [
+        "parse_nested_parens.py"
+      ],
+      "ranked": [
+        "tests/test_parse_nested_parens.py",
+        "parse_nested_parens.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-007-filter-by-substring",
+      "category": "humaneval",
+      "mode": "hybrid",
+      "gold": [
+        "filter_by_substring.py"
+      ],
+      "ranked": [
+        "tests/test_filter_by_substring.py",
+        "filter_by_substring.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-007-filter-by-substring",
+      "category": "humaneval",
+      "mode": "dense",
+      "gold": [
+        "filter_by_substring.py"
+      ],
+      "ranked": [
+        "tests/test_filter_by_substring.py",
+        "filter_by_substring.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-007-filter-by-substring",
+      "category": "humaneval",
+      "mode": "bm25",
+      "gold": [
+        "filter_by_substring.py"
+      ],
+      "ranked": [
+        "tests/test_filter_by_substring.py",
+        "filter_by_substring.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-008-sum-product",
+      "category": "humaneval",
+      "mode": "hybrid",
+      "gold": [
+        "sum_product.py"
+      ],
+      "ranked": [
+        "tests/test_sum_product.py",
+        "sum_product.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-008-sum-product",
+      "category": "humaneval",
+      "mode": "dense",
+      "gold": [
+        "sum_product.py"
+      ],
+      "ranked": [
+        "tests/test_sum_product.py",
+        "sum_product.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-008-sum-product",
+      "category": "humaneval",
+      "mode": "bm25",
+      "gold": [
+        "sum_product.py"
+      ],
+      "ranked": [
+        "tests/test_sum_product.py",
+        "sum_product.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-009-rolling-max",
+      "category": "humaneval",
+      "mode": "hybrid",
+      "gold": [
+        "rolling_max.py"
+      ],
+      "ranked": [
+        "tests/test_rolling_max.py",
+        "rolling_max.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-009-rolling-max",
+      "category": "humaneval",
+      "mode": "dense",
+      "gold": [
+        "rolling_max.py"
+      ],
+      "ranked": [
+        "tests/test_rolling_max.py",
+        "rolling_max.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-009-rolling-max",
+      "category": "humaneval",
+      "mode": "bm25",
+      "gold": [
+        "rolling_max.py"
+      ],
+      "ranked": [
+        "tests/test_rolling_max.py",
+        "rolling_max.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-010-make-palindrome",
+      "category": "humaneval",
+      "mode": "hybrid",
+      "gold": [
+        "make_palindrome.py"
+      ],
+      "ranked": [
+        "tests/test_make_palindrome.py",
+        "make_palindrome.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-010-make-palindrome",
+      "category": "humaneval",
+      "mode": "dense",
+      "gold": [
+        "make_palindrome.py"
+      ],
+      "ranked": [
+        "tests/test_make_palindrome.py",
+        "make_palindrome.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-010-make-palindrome",
+      "category": "humaneval",
+      "mode": "bm25",
+      "gold": [
+        "make_palindrome.py"
+      ],
+      "ranked": [
+        "tests/test_make_palindrome.py",
+        "make_palindrome.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-011-string-xor",
+      "category": "humaneval",
+      "mode": "hybrid",
+      "gold": [
+        "string_xor.py"
+      ],
+      "ranked": [
+        "tests/test_string_xor.py",
+        "string_xor.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-011-string-xor",
+      "category": "humaneval",
+      "mode": "dense",
+      "gold": [
+        "string_xor.py"
+      ],
+      "ranked": [
+        "tests/test_string_xor.py",
+        "string_xor.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-011-string-xor",
+      "category": "humaneval",
+      "mode": "bm25",
+      "gold": [
+        "string_xor.py"
+      ],
+      "ranked": [
+        "tests/test_string_xor.py",
+        "string_xor.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-012-longest",
+      "category": "humaneval",
+      "mode": "hybrid",
+      "gold": [
+        "longest.py"
+      ],
+      "ranked": [
+        "tests/test_longest.py",
+        "longest.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-012-longest",
+      "category": "humaneval",
+      "mode": "dense",
+      "gold": [
+        "longest.py"
+      ],
+      "ranked": [
+        "tests/test_longest.py",
+        "longest.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-012-longest",
+      "category": "humaneval",
+      "mode": "bm25",
+      "gold": [
+        "longest.py"
+      ],
+      "ranked": [
+        "tests/test_longest.py",
+        "longest.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-013-greatest-common-divisor",
+      "category": "humaneval",
+      "mode": "hybrid",
+      "gold": [
+        "greatest_common_divisor.py"
+      ],
+      "ranked": [
+        "tests/test_greatest_common_divisor.py",
+        "greatest_common_divisor.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-013-greatest-common-divisor",
+      "category": "humaneval",
+      "mode": "dense",
+      "gold": [
+        "greatest_common_divisor.py"
+      ],
+      "ranked": [
+        "tests/test_greatest_common_divisor.py",
+        "greatest_common_divisor.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-013-greatest-common-divisor",
+      "category": "humaneval",
+      "mode": "bm25",
+      "gold": [
+        "greatest_common_divisor.py"
+      ],
+      "ranked": [
+        "tests/test_greatest_common_divisor.py",
+        "greatest_common_divisor.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-014-all-prefixes",
+      "category": "humaneval",
+      "mode": "hybrid",
+      "gold": [
+        "all_prefixes.py"
+      ],
+      "ranked": [
+        "tests/test_all_prefixes.py",
+        "all_prefixes.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-014-all-prefixes",
+      "category": "humaneval",
+      "mode": "dense",
+      "gold": [
+        "all_prefixes.py"
+      ],
+      "ranked": [
+        "tests/test_all_prefixes.py",
+        "all_prefixes.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-014-all-prefixes",
+      "category": "humaneval",
+      "mode": "bm25",
+      "gold": [
+        "all_prefixes.py"
+      ],
+      "ranked": [
+        "tests/test_all_prefixes.py",
+        "all_prefixes.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-015-string-sequence",
+      "category": "humaneval",
+      "mode": "hybrid",
+      "gold": [
+        "string_sequence.py"
+      ],
+      "ranked": [
+        "tests/test_string_sequence.py",
+        "string_sequence.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-015-string-sequence",
+      "category": "humaneval",
+      "mode": "dense",
+      "gold": [
+        "string_sequence.py"
+      ],
+      "ranked": [
+        "tests/test_string_sequence.py",
+        "string_sequence.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-015-string-sequence",
+      "category": "humaneval",
+      "mode": "bm25",
+      "gold": [
+        "string_sequence.py"
+      ],
+      "ranked": [
+        "tests/test_string_sequence.py",
+        "string_sequence.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-016-count-distinct-characters",
+      "category": "humaneval",
+      "mode": "hybrid",
+      "gold": [
+        "count_distinct_characters.py"
+      ],
+      "ranked": [
+        "tests/test_count_distinct_characters.py",
+        "count_distinct_characters.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-016-count-distinct-characters",
+      "category": "humaneval",
+      "mode": "dense",
+      "gold": [
+        "count_distinct_characters.py"
+      ],
+      "ranked": [
+        "tests/test_count_distinct_characters.py",
+        "count_distinct_characters.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-016-count-distinct-characters",
+      "category": "humaneval",
+      "mode": "bm25",
+      "gold": [
+        "count_distinct_characters.py"
+      ],
+      "ranked": [
+        "tests/test_count_distinct_characters.py",
+        "count_distinct_characters.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-017-parse-music",
+      "category": "humaneval",
+      "mode": "hybrid",
+      "gold": [
+        "parse_music.py"
+      ],
+      "ranked": [
+        "tests/test_parse_music.py",
+        "parse_music.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-017-parse-music",
+      "category": "humaneval",
+      "mode": "dense",
+      "gold": [
+        "parse_music.py"
+      ],
+      "ranked": [
+        "tests/test_parse_music.py",
+        "parse_music.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-017-parse-music",
+      "category": "humaneval",
+      "mode": "bm25",
+      "gold": [
+        "parse_music.py"
+      ],
+      "ranked": [
+        "tests/test_parse_music.py",
+        "parse_music.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-018-how-many-times",
+      "category": "humaneval",
+      "mode": "hybrid",
+      "gold": [
+        "how_many_times.py"
+      ],
+      "ranked": [
+        "tests/test_how_many_times.py",
+        "how_many_times.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-018-how-many-times",
+      "category": "humaneval",
+      "mode": "dense",
+      "gold": [
+        "how_many_times.py"
+      ],
+      "ranked": [
+        "tests/test_how_many_times.py",
+        "how_many_times.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-018-how-many-times",
+      "category": "humaneval",
+      "mode": "bm25",
+      "gold": [
+        "how_many_times.py"
+      ],
+      "ranked": [
+        "tests/test_how_many_times.py",
+        "how_many_times.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-019-sort-numbers",
+      "category": "humaneval",
+      "mode": "hybrid",
+      "gold": [
+        "sort_numbers.py"
+      ],
+      "ranked": [
+        "tests/test_sort_numbers.py",
+        "sort_numbers.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-019-sort-numbers",
+      "category": "humaneval",
+      "mode": "dense",
+      "gold": [
+        "sort_numbers.py"
+      ],
+      "ranked": [
+        "tests/test_sort_numbers.py",
+        "sort_numbers.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-019-sort-numbers",
+      "category": "humaneval",
+      "mode": "bm25",
+      "gold": [
+        "sort_numbers.py"
+      ],
+      "ranked": [
+        "tests/test_sort_numbers.py",
+        "sort_numbers.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-020-find-closest-elements",
+      "category": "humaneval",
+      "mode": "hybrid",
+      "gold": [
+        "find_closest_elements.py"
+      ],
+      "ranked": [
+        "tests/test_find_closest_elements.py",
+        "find_closest_elements.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-020-find-closest-elements",
+      "category": "humaneval",
+      "mode": "dense",
+      "gold": [
+        "find_closest_elements.py"
+      ],
+      "ranked": [
+        "tests/test_find_closest_elements.py",
+        "find_closest_elements.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-020-find-closest-elements",
+      "category": "humaneval",
+      "mode": "bm25",
+      "gold": [
+        "find_closest_elements.py"
+      ],
+      "ranked": [
+        "tests/test_find_closest_elements.py",
+        "find_closest_elements.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-021-rescale-to-unit",
+      "category": "humaneval",
+      "mode": "hybrid",
+      "gold": [
+        "rescale_to_unit.py"
+      ],
+      "ranked": [
+        "tests/test_rescale_to_unit.py",
+        "rescale_to_unit.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-021-rescale-to-unit",
+      "category": "humaneval",
+      "mode": "dense",
+      "gold": [
+        "rescale_to_unit.py"
+      ],
+      "ranked": [
+        "tests/test_rescale_to_unit.py",
+        "rescale_to_unit.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-021-rescale-to-unit",
+      "category": "humaneval",
+      "mode": "bm25",
+      "gold": [
+        "rescale_to_unit.py"
+      ],
+      "ranked": [
+        "tests/test_rescale_to_unit.py",
+        "rescale_to_unit.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-022-filter-integers",
+      "category": "humaneval",
+      "mode": "hybrid",
+      "gold": [
+        "filter_integers.py"
+      ],
+      "ranked": [
+        "tests/test_filter_integers.py",
+        "filter_integers.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-022-filter-integers",
+      "category": "humaneval",
+      "mode": "dense",
+      "gold": [
+        "filter_integers.py"
+      ],
+      "ranked": [
+        "tests/test_filter_integers.py",
+        "filter_integers.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-022-filter-integers",
+      "category": "humaneval",
+      "mode": "bm25",
+      "gold": [
+        "filter_integers.py"
+      ],
+      "ranked": [
+        "tests/test_filter_integers.py",
+        "filter_integers.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-023-strlen",
+      "category": "humaneval",
+      "mode": "hybrid",
+      "gold": [
+        "strlen.py"
+      ],
+      "ranked": [
+        "tests/test_strlen.py",
+        "strlen.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-023-strlen",
+      "category": "humaneval",
+      "mode": "dense",
+      "gold": [
+        "strlen.py"
+      ],
+      "ranked": [
+        "tests/test_strlen.py",
+        "strlen.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-023-strlen",
+      "category": "humaneval",
+      "mode": "bm25",
+      "gold": [
+        "strlen.py"
+      ],
+      "ranked": [
+        "tests/test_strlen.py",
+        "strlen.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-024-largest-divisor",
+      "category": "humaneval",
+      "mode": "hybrid",
+      "gold": [
+        "largest_divisor.py"
+      ],
+      "ranked": [
+        "tests/test_largest_divisor.py",
+        "largest_divisor.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-024-largest-divisor",
+      "category": "humaneval",
+      "mode": "dense",
+      "gold": [
+        "largest_divisor.py"
+      ],
+      "ranked": [
+        "tests/test_largest_divisor.py",
+        "largest_divisor.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-024-largest-divisor",
+      "category": "humaneval",
+      "mode": "bm25",
+      "gold": [
+        "largest_divisor.py"
+      ],
+      "ranked": [
+        "tests/test_largest_divisor.py",
+        "largest_divisor.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-025-factorize",
+      "category": "humaneval",
+      "mode": "hybrid",
+      "gold": [
+        "factorize.py"
+      ],
+      "ranked": [
+        "tests/test_factorize.py",
+        "factorize.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-025-factorize",
+      "category": "humaneval",
+      "mode": "dense",
+      "gold": [
+        "factorize.py"
+      ],
+      "ranked": [
+        "tests/test_factorize.py",
+        "factorize.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-025-factorize",
+      "category": "humaneval",
+      "mode": "bm25",
+      "gold": [
+        "factorize.py"
+      ],
+      "ranked": [
+        "tests/test_factorize.py",
+        "conftest.py",
+        "factorize.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-026-remove-duplicates",
+      "category": "humaneval",
+      "mode": "hybrid",
+      "gold": [
+        "remove_duplicates.py"
+      ],
+      "ranked": [
+        "tests/test_remove_duplicates.py",
+        "remove_duplicates.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-026-remove-duplicates",
+      "category": "humaneval",
+      "mode": "dense",
+      "gold": [
+        "remove_duplicates.py"
+      ],
+      "ranked": [
+        "tests/test_remove_duplicates.py",
+        "remove_duplicates.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-026-remove-duplicates",
+      "category": "humaneval",
+      "mode": "bm25",
+      "gold": [
+        "remove_duplicates.py"
+      ],
+      "ranked": [
+        "tests/test_remove_duplicates.py",
+        "remove_duplicates.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-027-flip-case",
+      "category": "humaneval",
+      "mode": "hybrid",
+      "gold": [
+        "flip_case.py"
+      ],
+      "ranked": [
+        "tests/test_flip_case.py",
+        "flip_case.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-027-flip-case",
+      "category": "humaneval",
+      "mode": "dense",
+      "gold": [
+        "flip_case.py"
+      ],
+      "ranked": [
+        "tests/test_flip_case.py",
+        "flip_case.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-027-flip-case",
+      "category": "humaneval",
+      "mode": "bm25",
+      "gold": [
+        "flip_case.py"
+      ],
+      "ranked": [
+        "tests/test_flip_case.py",
+        "flip_case.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-028-concatenate",
+      "category": "humaneval",
+      "mode": "hybrid",
+      "gold": [
+        "concatenate.py"
+      ],
+      "ranked": [
+        "tests/test_concatenate.py",
+        "concatenate.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-028-concatenate",
+      "category": "humaneval",
+      "mode": "dense",
+      "gold": [
+        "concatenate.py"
+      ],
+      "ranked": [
+        "tests/test_concatenate.py",
+        "concatenate.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-028-concatenate",
+      "category": "humaneval",
+      "mode": "bm25",
+      "gold": [
+        "concatenate.py"
+      ],
+      "ranked": [
+        "tests/test_concatenate.py",
+        "concatenate.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-029-filter-by-prefix",
+      "category": "humaneval",
+      "mode": "hybrid",
+      "gold": [
+        "filter_by_prefix.py"
+      ],
+      "ranked": [
+        "tests/test_filter_by_prefix.py",
+        "filter_by_prefix.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-029-filter-by-prefix",
+      "category": "humaneval",
+      "mode": "dense",
+      "gold": [
+        "filter_by_prefix.py"
+      ],
+      "ranked": [
+        "tests/test_filter_by_prefix.py",
+        "filter_by_prefix.py",
+        "conftest.py"
+      ]
+    },
+    {
+      "task_id": "humaneval-029-filter-by-prefix",
+      "category": "humaneval",
+      "mode": "bm25",
+      "gold": [
+        "filter_by_prefix.py"
+      ],
+      "ranked": [
+        "tests/test_filter_by_prefix.py",
+        "filter_by_prefix.py",
+        "conftest.py"
+      ]
+    }
+  ]
+}

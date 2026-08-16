@@ -30,6 +30,14 @@ Task:
 
 Plan:
 {plan}
+{context}"""
+
+CONTEXT_SECTION = """\
+
+Relevant code retrieved from the repository by similarity to the task. It is a starting point,
+not a guarantee: read a file before you change it.
+
+{context}
 """
 
 REFLECT_SYSTEM = """\

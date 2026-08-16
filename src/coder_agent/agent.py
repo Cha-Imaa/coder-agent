@@ -22,7 +22,9 @@ UpdateHook = Callable[[str, dict[str, Any]], None]
 
 # Keys whose final value the ledger needs. Folded while streaming so the run needs no second
 # pass over the state (and no checkpointer) to read them back.
-_TRACKED = ("status", "iteration", "steps", "tests_passed", "test_command", "summary")
+_TRACKED = (
+    "status", "iteration", "steps", "tests_passed", "test_command", "summary", "retrieved",
+)
 
 
 @dataclass
@@ -51,11 +53,12 @@ async def run_agent(
     """
     # Imports here so `coder --version` stays fast and does not need provider packages.
     from coder_agent.graph import build_graph
+    from coder_agent.graph.retrieval import default_retriever
     from coder_agent.llm import get_llm
     from coder_agent.tools.client import load_tools
 
     tools = await load_tools(repo)
-    graph = build_graph(get_llm(), tools)
+    graph = build_graph(get_llm(), tools, retriever=default_retriever())
 
     state: dict[str, Any] = {"task": task, "repo": str(repo)}
     if test_cmd:

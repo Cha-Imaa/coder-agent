@@ -64,6 +64,12 @@ class Renderer:
         if handler:
             handler(patch)
 
+    def _on_retrieve_context(self, patch: dict[str, Any]) -> None:
+        locations = patch.get("retrieved") or []
+        if locations:
+            listed = ", ".join(locations)
+            self.console.print(f"[dim]Context · {len(locations)} chunks: {listed}[/dim]")
+
     def _on_plan(self, patch: dict[str, Any]) -> None:
         title = f"Plan · iteration {patch.get('iteration', 1)}"
         self.console.print(Panel(patch.get("plan", ""), title=title, border_style="magenta"))

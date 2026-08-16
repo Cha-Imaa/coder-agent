@@ -66,7 +66,8 @@ class FastEmbedder:
     """fastembed wrapper: CPU inference through ONNX Runtime, model cached under `models_dir`.
 
     The model object is created on first use so importing this module (or constructing the index
-    to look at its stats) never pays the load time.
+    to look at its stats) never pays the load time. Pick float32 models: the int8-quantised ones
+    fastembed serves for `BAAI/bge-*` run an order of magnitude slower on CPUs without VNNI.
     """
 
     def __init__(
@@ -74,10 +75,15 @@ class FastEmbedder:
         model_name: str | None = None,
         cache_dir: Path | None = None,
         batch_size: int | None = None,
+        query_prefix: str | None = None,
     ) -> None:
         self.model_name = model_name or settings.embedding_model
         self.cache_dir = cache_dir or settings.models_dir
         self.batch_size = batch_size or settings.embed_batch_size
+        # Asymmetric retrieval models (arctic, bge) are trained with an instruction in front of
+        # the query and nothing in front of the documents. fastembed does not add it, and without
+        # it a question ranks prose that shares its words above the code that answers it.
+        self.query_prefix = settings.embedding_query_prefix if query_prefix is None else query_prefix
         self._model = None
 
     def _load(self):  # untyped on purpose: fastembed types are not worth a module-level import
@@ -94,7 +100,7 @@ class FastEmbedder:
 
     def embed_query(self, text: str) -> Vector:
         model = self._load()
-        return next(iter(model.query_embed(text))).tolist()
+        return next(iter(model.query_embed(self.query_prefix + text))).tolist()
 
 
 def default_embedder() -> Embedder:

@@ -26,6 +26,11 @@ class AgentState(TypedDict, total=False):
     # Conversation with the model: tool calls and tool results live here.
     messages: Annotated[list[AnyMessage], add_messages]
 
+    # Produced by `retrieve_context` before the first plan: the chunks that look most relevant
+    # to the task, rendered for the prompt, and their locations for the UI and the ledger.
+    context: str
+    retrieved: list[str]
+
     # Produced by `plan`, injected into every `act` prompt.
     plan: str
 

@@ -19,11 +19,16 @@ from langgraph.graph.message import REMOVE_ALL_MESSAGES
 from coder_agent.config import settings
 from coder_agent.graph import testing
 from coder_agent.graph.context import manage_context
-from coder_agent.graph.prompts import ACT_SYSTEM, PLAN_SYSTEM, REFLECT_SYSTEM
+from coder_agent.graph.prompts import ACT_SYSTEM, CONTEXT_SECTION, PLAN_SYSTEM, REFLECT_SYSTEM
 from coder_agent.graph.state import AgentState
 from coder_agent.telemetry.ledger import usage_from_message
 
 Node = Callable[[AgentState], dict[str, Any]]
+
+
+def context_section(context: str) -> str:
+    """The retrieved-code block for a prompt, or nothing when retrieval found nothing or is off."""
+    return CONTEXT_SECTION.format(context=context) if context else ""
 
 
 def make_plan_node(llm: BaseChatModel) -> Node:
@@ -36,6 +41,8 @@ def make_plan_node(llm: BaseChatModel) -> Node:
 
     def plan(state: AgentState) -> dict[str, Any]:
         user = f"Repository: {state['repo']}\n\nTask:\n{state['task']}"
+        if state.get("context"):
+            user += context_section(state["context"])
         if state.get("tests_passed") is False:
             user += (
                 "\n\nA previous attempt was made and the tests failed with:\n"
@@ -67,7 +74,13 @@ def make_act_node(llm: BaseChatModel, tools: list[BaseTool]) -> Node:
 
     def act(state: AgentState) -> dict[str, Any]:
         history, rewritten = manage_context(llm, state["messages"])
-        system = SystemMessage(ACT_SYSTEM.format(task=state["task"], plan=state.get("plan", "")))
+        system = SystemMessage(
+            ACT_SYSTEM.format(
+                task=state["task"],
+                plan=state.get("plan", ""),
+                context=context_section(state.get("context", "")),
+            )
+        )
         response = model.invoke([system, *history])
         # If context management changed the history, replace the stored conversation with the
         # compacted one: `add_messages` cannot edit in place, so remove all and re-add in order.

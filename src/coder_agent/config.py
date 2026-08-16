@@ -43,16 +43,24 @@ class Settings(BaseSettings):
     chunk_window_lines: int = 60
     chunk_overlap_lines: int = 10
 
-    # Embeddings run on the CPU through fastembed (ONNX). bge-small is 67 MB, 384 dimensions and
-    # good at code for its size; the model is downloaded once into `models_dir`.
-    embedding_model: str = "BAAI/bge-small-en-v1.5"
+    # Embeddings run on the CPU through fastembed (ONNX). arctic-embed-xs is 22M parameters,
+    # 384 dimensions, a 512-token window, and ships as float32: the int8-quantised bge-small that
+    # fastembed serves ran 14x slower on a laptop CPU without VNNI. Downloaded once to `models_dir`.
+    embedding_model: str = "snowflake/snowflake-arctic-embed-xs"
+    # Instruction the model was trained to see in front of a query (not in front of documents).
+    # This exact string is the one arctic-embed and bge-en-v1.5 both use.
+    embedding_query_prefix: str = "Represent this sentence for searching relevant passages: "
     embed_batch_size: int = 64
     index_collection: str = "chunks"
 
-    # Retrieval (see rag/retriever.py). `retrieval_mode` is what the ablation flips; `candidates`
-    # is how many hits each side contributes before rank fusion picks the final k.
+    # Retrieval (see rag/retriever.py and graph/retrieval.py). `retrieval_mode` is what the
+    # ablation flips: hybrid | dense | bm25 | off. `candidates` is how many hits each side
+    # contributes before rank fusion picks the final `retrieval_k`, and `context_chars` caps what
+    # the planner is shown.
     retrieval_mode: str = "hybrid"
     retrieval_candidates: int = 20
+    retrieval_k: int = 6
+    retrieval_context_chars: int = 6_000
 
     # Where local state (vector index, checkpoints) is stored, relative to the target repo.
     state_dir_name: str = ".coder-agent"
