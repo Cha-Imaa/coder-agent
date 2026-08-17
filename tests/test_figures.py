@@ -12,6 +12,8 @@ from pathlib import Path
 import pytest
 
 from coder_agent.evals.figures import (
+    ablation_rows,
+    ablation_suites,
     iteration_curve,
     latest_results,
     max_iterations,
@@ -114,6 +116,40 @@ def test_results_files_round_trip_usage_and_load_without_it(tmp_path: Path):
     old = tmp_path / "old.json"
     old.write_text(json.dumps(data), encoding="utf-8")
     assert load_result(old).results[0].usage == {}
+
+
+def _ablation(mode: str, started_at: float, passed: int) -> SuiteResult:
+    suite = _suite(f"m-retrieval-{mode}", started_at=started_at)
+    suite.meta["retrieval_mode"] = mode
+    for i, r in enumerate(suite.results):
+        r.passed = i < passed
+    return suite
+
+
+def test_ablation_suites_take_newest_per_mode_in_fixed_order():
+    suites = [
+        _ablation("hybrid", 3.0, 4),
+        _ablation("off", 1.0, 1),
+        _ablation("off", 2.0, 2),  # newer run of the same arm replaces the older one
+        _suite("plain", started_at=9.0),  # no retrieval_mode in meta: not part of the ablation
+    ]
+    chosen = ablation_suites(suites)
+    assert [s.meta["retrieval_mode"] for s in chosen] == ["off", "hybrid"]
+    assert chosen[0].started_at == 2.0
+
+
+def test_ablation_rows_report_pass_rate_and_tokens_over_graded_tasks():
+    rows = ablation_rows([_ablation("off", 1.0, 2), _ablation("bm25", 1.0, 3)])
+    assert [(r["mode"], r["passed"], r["tasks"]) for r in rows] == [("off", 2, 5), ("bm25", 3, 5)]
+    assert rows[0]["pass_rate"] == pytest.approx(0.4)
+    assert rows[0]["avg_tokens"] == 110  # four graded tasks at 110 tokens; the errored one is out
+
+
+def test_render_all_adds_the_ablation_figure_when_two_modes_exist(tmp_path: Path):
+    pytest.importorskip("matplotlib")
+    suites = [_ablation("off", 1.0, 1), _ablation("hybrid", 2.0, 3)]
+    paths = render_all(suites, tmp_path)
+    assert paths[-1].name == "retrieval_ablation.png" and paths[-1].stat().st_size > 1000
 
 
 def test_render_all_writes_three_pngs(tmp_path: Path):

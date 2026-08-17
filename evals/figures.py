@@ -4,7 +4,8 @@
     uv run python evals/figures.py evals/results/20260909-*.json    # specific file(s)
     uv run python evals/figures.py --out docs/figures --no-ledger
 
-Writes `pass_rate.png`, `iteration_curve.png` and `cost_profile.png` to `docs/figures/`. The
+Writes `pass_rate.png`, `iteration_curve.png` and `cost_profile.png` to `docs/figures/`, plus
+`retrieval_ablation.png` once results for two or more `--retrieval` modes exist. The
 cost profile needs per-node usage; results written before it was stored in the file fall back to
 the local run ledger, matched by task id.
 """

@@ -7,6 +7,8 @@
     uv run python evals/run_evals.py --task add-feature-slugify --task fix-bug-duration-units
     uv run python evals/run_evals.py --agent solution     # harness self-check, must be 100%
     uv run python evals/run_evals.py --agent noop         # harness self-check, must be 0%
+    uv run python evals/run_evals.py --retrieval off      # ablation: one run per mode, then
+    uv run python evals/run_evals.py --retrieval hybrid   #   `evals/figures.py` draws the chart
 
 Results go to `evals/results/<timestamp>-<label>.json`; the table is also printed as Markdown
 so it can be pasted into the README.
@@ -52,6 +54,10 @@ def main(
     label: Annotated[str | None, typer.Option(help="Name for the results file.")] = None,
     model: Annotated[str | None, typer.Option(help="provider:model, overrides CODER_MODEL.")] = None,
     max_iterations: Annotated[int | None, typer.Option(help="Plan/act/test cycles per task.")] = None,
+    retrieval: Annotated[
+        str | None,
+        typer.Option(help="Retrieval mode for this run: hybrid, dense, bm25 or off (ablation)."),
+    ] = None,
     pause: Annotated[float, typer.Option(help="Seconds to wait between tasks (rate limits).")] = 0.0,
     keep_workdirs: Annotated[bool, typer.Option(help="Leave the materialised repos on disk.")] = False,
     results_dir: Annotated[Path, typer.Option(help="Where to write the JSON.")] = RESULTS_DIR,
@@ -64,6 +70,11 @@ def main(
         settings.model = model
     if max_iterations is not None:
         settings.max_iterations = max_iterations
+    if retrieval is not None:
+        if retrieval not in ("hybrid", "dense", "bm25", "off"):
+            console.print(f"[red]Unknown retrieval mode:[/red] {retrieval}")
+            raise typer.Exit(code=2)
+        settings.retrieval_mode = retrieval
 
     try:
         tasks = load_suites([suite], category=category)
@@ -101,11 +112,13 @@ def main(
         raise typer.Exit(code=2)
 
     label = label or (agent if agent != "graph" else settings.model.split(":")[-1].replace("/", "-"))
+    if retrieval is not None and agent == "graph":
+        label = f"{label}-retrieval-{retrieval}"  # one results label per ablation arm
     if suite != "inhouse":
         label = f"{suite}-{label}"
     console.print(
         f"[bold]{len(tasks)} task(s)[/bold] · agent={agent} · model={model_name} · "
-        f"max_iterations={settings.max_iterations}"
+        f"max_iterations={settings.max_iterations} · retrieval={settings.retrieval_mode}"
     )
 
     def on_result(r: TaskResult) -> None:
