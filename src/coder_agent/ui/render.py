@@ -55,9 +55,10 @@ class Renderer:
         self.console = console or Console()
         self.verbose = verbose
 
-    def header(self, repo: str, task: str, model: str) -> None:
-        self.console.print(Panel(Text(task, style="bold"), title=f"coder run · {model}",
-                                 subtitle=repo, border_style="cyan"))
+    def header(self, repo: str, task: str, model: str, thread: str | None = None) -> None:
+        title = f"coder run · {model}" + (f" · thread {thread}" if thread else "")
+        self.console.print(Panel(Text(task, style="bold"), title=title, subtitle=repo,
+                                 border_style="cyan"))
 
     def update(self, node: str, patch: dict[str, Any]) -> None:
         handler = getattr(self, f"_on_{node}", None)
