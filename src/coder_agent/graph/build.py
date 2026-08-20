@@ -1,7 +1,8 @@
-"""Assemble the graph.
+r"""Assemble the graph.
 
     START -> prepare -> retrieve_context -> plan -> act -> (tools -> act)* -> run_tests -> finish
-                                              ^                                   |
+                                              ^          \--> approve --/  |      |
+                                              |         (risky call, human says yes/no)
                                               +------- reflect <-- failed & iteration < max_iterations
 
 `ToolNode` is LangGraph's prebuilt node that reads the tool calls on the last AI message, runs
@@ -21,6 +22,7 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import ToolNode
 
 from coder_agent.graph import testing
+from coder_agent.graph.approval import approve, pending_risky_calls, route_after_approve
 from coder_agent.graph.nodes import (
     finish,
     make_act_node,
@@ -46,8 +48,14 @@ def build_graph(
     tools: list[BaseTool],
     checkpointer=None,
     retriever: Retriever | None = None,
+    require_approval: bool = False,
 ) -> CompiledStateGraph:
-    """`retriever=None` leaves the retrieve_context node in place but inert (empty context)."""
+    """`retriever=None` leaves the retrieve_context node in place but inert (empty context).
+
+    `require_approval=True` adds an `approve` node between `act` and `tools` that interrupts the
+    run whenever the model asks for a tool in `approval.RISKY_TOOLS`; it needs a checkpointer,
+    because an interrupted run is resumed from its checkpoint.
+    """
     g = StateGraph(AgentState)
     g.add_node("prepare", prepare)
     g.add_node("retrieve_context", make_retrieve_node(retriever))
@@ -62,9 +70,23 @@ def build_graph(
     g.add_edge("prepare", "retrieve_context")
     g.add_edge("retrieve_context", "plan")
     g.add_edge("plan", "act")
-    g.add_conditional_edges(
-        "act", route_after_act, {"tools": "tools", "run_tests": "run_tests", "finish": "finish"}
-    )
+
+    if require_approval:
+        g.add_node("approve", approve)
+
+        def route(state: AgentState) -> str:
+            target = route_after_act(state)
+            return "approve" if target == "tools" and pending_risky_calls(state) else target
+
+        g.add_conditional_edges(
+            "act", route,
+            {"approve": "approve", "tools": "tools", "run_tests": "run_tests", "finish": "finish"},
+        )
+        g.add_conditional_edges("approve", route_after_approve, {"tools": "tools", "act": "act"})
+    else:
+        g.add_conditional_edges(
+            "act", route_after_act, {"tools": "tools", "run_tests": "run_tests", "finish": "finish"}
+        )
     g.add_edge("tools", "act")
     g.add_conditional_edges("run_tests", route_after_tests, {"reflect": "reflect", "finish": "finish"})
     g.add_edge("reflect", "plan")

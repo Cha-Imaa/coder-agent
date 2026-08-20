@@ -60,9 +60,16 @@ def run(
         str | None,
         typer.Option("--resume", metavar="THREAD", help="Continue an interrupted run by thread id."),
     ] = None,
+    yes: Annotated[
+        bool, typer.Option("--yes", "-y", help="Do not ask before file edits and shell commands.")
+    ] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Show full tool output.")] = False,
 ) -> None:
-    """Plan a change, edit files with tools, run the tests, iterate."""
+    """Plan a change, edit files with tools, run the tests, iterate.
+
+    Before every file edit, file write or shell command the run pauses and shows what the agent
+    wants to do; answer y, n, or type a reason to reject and steer it. `--yes` skips the prompt.
+    """
     repo = repo.resolve()
     if not repo.is_dir():
         console.print(f"[red]Not a directory:[/red] {repo}")
@@ -79,7 +86,7 @@ def run(
 
     thread = resume or new_thread_id()
     try:
-        code = asyncio.run(_run(repo, task, verbose, test_cmd, resume, thread))
+        code = asyncio.run(_run(repo, task, verbose, test_cmd, resume, thread, yes))
     except KeyboardInterrupt:
         # Ctrl+C cancels the event loop, not the coroutine, so the hint is printed here. The
         # checkpoint of the last finished node is already on disk.
@@ -96,6 +103,7 @@ async def _run(
     test_cmd: str | None,
     resume: str | None,
     thread: str,
+    yes: bool,
 ) -> int:
     # Imports here so `coder --version` stays fast and does not need provider packages.
     from coder_agent.agent import UnknownThread, resume_agent, run_agent
@@ -103,13 +111,17 @@ async def _run(
 
     renderer = Renderer(console, verbose=verbose)
     renderer.header(str(repo), task or f"resume thread {thread}", settings.model, thread=thread)
+    approve = None if yes else renderer.ask_approval
 
     try:
         if resume:
-            outcome = await resume_agent(repo, resume, on_update=renderer.update)
+            outcome = await resume_agent(
+                repo, resume, on_update=renderer.update, approve=approve
+            )
         else:
             outcome = await run_agent(
-                repo, task or "", thread_id=thread, test_cmd=test_cmd, on_update=renderer.update
+                repo, task or "", thread_id=thread, test_cmd=test_cmd,
+                on_update=renderer.update, approve=approve,
             )
     except UnknownThread:
         console.print(f"[red]No checkpoint for thread[/red] {resume} in {repo}")

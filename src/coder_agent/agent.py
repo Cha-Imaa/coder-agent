@@ -26,6 +26,10 @@ from coder_agent.telemetry import Ledger, RunRecord, merge_usage
 
 # Called once per node update with (node_name, patch). The CLI renders; the eval runner ignores.
 UpdateHook = Callable[[str, dict[str, Any]], None]
+# Called when the graph interrupts before a risky tool call, with the interrupt payload
+# (`approval.Payload`). Returns True to run the calls, False or a reason string to reject them.
+# `None` means nobody is watching: the gate is not built and pending interrupts are approved.
+ApproveHook = Callable[[dict[str, Any]], bool | str]
 
 # Keys whose final value the ledger needs. Folded while streaming so the run needs no second
 # pass over the state to read them back.
@@ -73,14 +77,17 @@ async def _open_saver(repo: Path) -> AsyncIterator[Any]:
         yield saver
 
 
-async def _build(repo: Path, saver: Any):
+async def _build(repo: Path, saver: Any, require_approval: bool):
     from coder_agent.graph import build_graph
     from coder_agent.graph.retrieval import default_retriever
     from coder_agent.llm import get_llm
     from coder_agent.tools.client import load_tools
 
     tools = await load_tools(repo)
-    return build_graph(get_llm(), tools, checkpointer=saver, retriever=default_retriever())
+    return build_graph(
+        get_llm(), tools, checkpointer=saver, retriever=default_retriever(),
+        require_approval=require_approval,
+    )
 
 
 async def run_agent(
@@ -90,6 +97,7 @@ async def run_agent(
     thread_id: str | None = None,
     test_cmd: str | None = None,
     on_update: UpdateHook | None = None,
+    approve: ApproveHook | None = None,
     tags: dict[str, Any] | None = None,
     ledger_path: Path | None = None,
 ) -> RunOutcome:
@@ -104,9 +112,9 @@ async def run_agent(
         state["test_command"] = test_cmd
 
     async with _open_saver(repo) as saver:
-        graph = await _build(repo, saver)
+        graph = await _build(repo, saver, require_approval=approve is not None)
         return await _drive(
-            graph, thread_id, state, seed=state, on_update=on_update,
+            graph, thread_id, state, seed=state, on_update=on_update, approve=approve,
             tags={**(tags or {}), "thread_id": thread_id}, ledger_path=ledger_path,
         )
 
@@ -116,6 +124,7 @@ async def resume_agent(
     thread_id: str,
     *,
     on_update: UpdateHook | None = None,
+    approve: ApproveHook | None = None,
     tags: dict[str, Any] | None = None,
     ledger_path: Path | None = None,
 ) -> RunOutcome:
@@ -123,19 +132,20 @@ async def resume_agent(
 
     Passing `None` as the input tells LangGraph to take the saved state and run whatever nodes
     were scheduled next, so the node that failed (typically `act` on a 429) is retried with the
-    conversation intact. A thread whose graph already reached END is returned as-is.
+    conversation intact. A thread whose graph already reached END is returned as-is. A thread
+    that stopped at an approval prompt asks again (with `approve=None` it is waved through).
     """
     async with _open_saver(repo) as saver:
         if await saver.aget_tuple(_config(thread_id)) is None:
             raise UnknownThread(thread_id)
-        graph = await _build(repo, saver)
+        graph = await _build(repo, saver, require_approval=approve is not None)
         snapshot = await graph.aget_state(_config(thread_id))
         values = dict(snapshot.values)
         if not snapshot.next:
             record = RunRecord.from_state(values, model=settings.model, wall_seconds=0.0)
             return RunOutcome(final=values, record=record, thread_id=thread_id, ran=False)
         return await _drive(
-            graph, thread_id, None, seed=values, on_update=on_update,
+            graph, thread_id, None, seed=values, on_update=on_update, approve=approve,
             tags={**(tags or {}), "thread_id": thread_id, "resumed": True},
             ledger_path=ledger_path,
         )
@@ -144,30 +154,46 @@ async def resume_agent(
 async def _drive(
     graph: Any,
     thread_id: str,
-    graph_input: dict[str, Any] | None,
+    graph_input: Any,
     *,
     seed: dict[str, Any],
     on_update: UpdateHook | None,
+    approve: ApproveHook | None,
     tags: dict[str, Any],
     ledger_path: Path | None,
 ) -> RunOutcome:
     """Stream the graph, fold the ledger values, write one record. `seed` is the state already
     known before streaming: the inputs for a fresh run, the checkpoint for a resumed one, so the
-    record covers the whole thread and not only the part that ran now."""
+    record covers the whole thread and not only the part that ran now.
+
+    An interrupt ends the stream early with an `__interrupt__` event. The decision is asked for,
+    and the stream is restarted with `Command(resume=decision)` until the graph reaches END."""
+    from langgraph.types import Command
+
     started = time.time()
     final: dict[str, Any] = {k: seed[k] for k in _TRACKED if k in seed}
     if seed.get("usage"):
         final["usage"] = merge_usage(None, seed["usage"])
 
-    async for update in graph.astream(graph_input, _config(thread_id), stream_mode="updates"):
-        for node, patch in update.items():
-            if on_update is not None:
-                on_update(node, patch)
-            for key in _TRACKED:
-                if key in patch:
-                    final[key] = patch[key]
-            if "usage" in patch:
-                final["usage"] = merge_usage(final.get("usage"), patch["usage"])
+    while True:
+        pending: list[Any] = []
+        async for update in graph.astream(graph_input, _config(thread_id), stream_mode="updates"):
+            for node, patch in update.items():
+                if node == "__interrupt__":
+                    pending.extend(patch)
+                    continue
+                patch = patch or {}  # a node that changes nothing (approve) streams as None
+                if on_update is not None:
+                    on_update(node, patch)
+                for key in _TRACKED:
+                    if key in patch:
+                        final[key] = patch[key]
+                if "usage" in patch:
+                    final["usage"] = merge_usage(final.get("usage"), patch["usage"])
+        if not pending:
+            break
+        decision = approve(pending[0].value) if approve is not None else True
+        graph_input = Command(resume=decision)
 
     record = RunRecord.from_state(
         {**seed, **final}, model=settings.model, wall_seconds=time.time() - started, tags=tags
