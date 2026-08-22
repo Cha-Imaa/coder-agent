@@ -37,6 +37,15 @@ class Settings(BaseSettings):
     max_steps: int = 40  # model calls inside `act` per run; guards against tool-call loops
     command_timeout: int = 120  # seconds, for any shell command the agent runs
 
+    # Where shell commands run (see sandbox/). `local` is the host behind a denylist; `docker` is
+    # a fresh container per command with the repo as its only mount. The MCP server is a separate
+    # process and reads these from its environment, so the client mirrors them into it.
+    sandbox_mode: str = "local"
+    sandbox_image: str = "coder-sandbox"  # built from sandbox/Dockerfile on first use
+    sandbox_network: str = "none"
+    sandbox_memory: str = "1g"
+    sandbox_cpus: float = 1.0
+
     # Context management (see graph/context.py). Budget is well under gpt-oss-120b's 131k so
     # the fallback model and the tool schemas always fit too.
     context_budget_tokens: int = 60_000

@@ -37,6 +37,8 @@ from coder_agent.evals.runner import (
     run_suite,
     solution_agent,
 )
+from coder_agent.sandbox import SandboxError
+from coder_agent.sandbox import configure as configure_sandbox
 
 logging.getLogger("langchain_google_genai").setLevel(logging.ERROR)
 logging.getLogger("google_genai").setLevel(logging.ERROR)
@@ -58,6 +60,9 @@ def main(
         str | None,
         typer.Option(help="Retrieval mode for this run: hybrid, dense, bm25 or off (ablation)."),
     ] = None,
+    sandbox: Annotated[
+        str | None, typer.Option(help="Where the agent's commands run: local or docker.")
+    ] = None,
     pause: Annotated[float, typer.Option(help="Seconds to wait between tasks (rate limits).")] = 0.0,
     keep_workdirs: Annotated[bool, typer.Option(help="Leave the materialised repos on disk.")] = False,
     results_dir: Annotated[Path, typer.Option(help="Where to write the JSON.")] = RESULTS_DIR,
@@ -75,6 +80,11 @@ def main(
             console.print(f"[red]Unknown retrieval mode:[/red] {retrieval}")
             raise typer.Exit(code=2)
         settings.retrieval_mode = retrieval
+    try:
+        configure_sandbox(sandbox)
+    except SandboxError as exc:  # unknown mode, or Docker not usable on this machine
+        console.print(f"[red]Sandbox:[/red] {exc}")
+        raise typer.Exit(code=2) from None
 
     try:
         tasks = load_suites([suite], category=category)
@@ -118,7 +128,8 @@ def main(
         label = f"{suite}-{label}"
     console.print(
         f"[bold]{len(tasks)} task(s)[/bold] · agent={agent} · model={model_name} · "
-        f"max_iterations={settings.max_iterations} · retrieval={settings.retrieval_mode}"
+        f"max_iterations={settings.max_iterations} · retrieval={settings.retrieval_mode} · "
+        f"sandbox={settings.sandbox_mode}"
     )
 
     def on_result(r: TaskResult) -> None:
