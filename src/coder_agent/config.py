@@ -24,6 +24,14 @@ class Settings(BaseSettings):
     model: str = "groq:openai/gpt-oss-120b"
     fallback_model: str | None = "google_genai:gemini-2.5-flash"
 
+    # Resilience (see llm.py). `llm_sdk_retries` is the provider SDK's own retry count (429/5xx
+    # with Retry-After); `llm_attempts` is how many times the primary is tried at LangChain level
+    # before the fallback model gets the call; the wait between attempts grows from
+    # `llm_retry_initial_seconds` with jitter.
+    llm_sdk_retries: int = 2
+    llm_attempts: int = 2
+    llm_retry_initial_seconds: float = 1.0
+
     # Agent loop
     max_iterations: int = 4
     max_steps: int = 40  # model calls inside `act` per run; guards against tool-call loops

@@ -23,6 +23,7 @@ from typing import Any
 
 from coder_agent.config import settings
 from coder_agent.telemetry import Ledger, RunRecord, merge_usage
+from coder_agent.telemetry.events import ProviderEvents
 
 # Called once per node update with (node_name, patch). The CLI renders; the eval runner ignores.
 UpdateHook = Callable[[str, dict[str, Any]], None]
@@ -223,29 +224,50 @@ async def _drive(
     final: dict[str, Any] = {k: seed[k] for k in _TRACKED if k in seed}
     if seed.get("usage"):
         final["usage"] = merge_usage(None, seed["usage"])
+    # Callbacks in the run config reach every node's model call: this is where failed attempts
+    # (retried or handed to the fallback) get counted for the ledger.
+    events = ProviderEvents()
+    config = {**_config(thread_id), "callbacks": [events]}
 
-    while True:
-        pending: list[Any] = []
-        async for update in graph.astream(graph_input, _config(thread_id), stream_mode="updates"):
-            for node, patch in update.items():
-                if node == "__interrupt__":
-                    pending.extend(patch)
-                    continue
-                patch = patch or {}  # a node that changes nothing (approve) streams as None
-                if on_update is not None:
-                    on_update(node, patch)
-                for key in _TRACKED:
-                    if key in patch:
-                        final[key] = patch[key]
-                if "usage" in patch:
-                    final["usage"] = merge_usage(final.get("usage"), patch["usage"])
-        if not pending:
-            break
-        decision = approve(pending[0].value) if approve is not None else True
-        graph_input = Command(resume=decision)
+    def make_record(status: str | None = None, **extra_tags: Any) -> RunRecord:
+        state = {**seed, **final}
+        if status:
+            state["status"] = status
+        return RunRecord.from_state(
+            state, model=settings.model, wall_seconds=time.time() - started,
+            tags={**tags, **extra_tags}, provider_errors=events.errors,
+        )
 
-    record = RunRecord.from_state(
-        {**seed, **final}, model=settings.model, wall_seconds=time.time() - started, tags=tags
-    )
+    try:
+        while True:
+            pending: list[Any] = []
+            async for update in graph.astream(graph_input, config, stream_mode="updates"):
+                for node, patch in update.items():
+                    if node == "__interrupt__":
+                        pending.extend(patch)
+                        continue
+                    patch = patch or {}  # a node that changes nothing (approve) streams as None
+                    if on_update is not None:
+                        on_update(node, patch)
+                    for key in _TRACKED:
+                        if key in patch:
+                            final[key] = patch[key]
+                    if "usage" in patch:
+                        final["usage"] = merge_usage(final.get("usage"), patch["usage"])
+            if not pending:
+                break
+            decision = approve(pending[0].value) if approve is not None else True
+            graph_input = Command(resume=decision)
+    except Exception as exc:
+        # A run that dies still cost tokens and still says something about the providers, so
+        # it gets a ledger row with status "error" and the exception type before propagating.
+        # The record rides along on the exception: `with_fallbacks` re-raises only the primary's
+        # error, and the record's provider_errors is where the fallback's failure shows up.
+        record = make_record("error", error=type(exc).__name__)
+        Ledger(ledger_path or settings.ledger_path).record(record)
+        exc.run_record = record  # type: ignore[attr-defined]
+        raise
+
+    record = make_record()
     Ledger(ledger_path or settings.ledger_path).record(record)
     return RunOutcome(final=final, record=record, thread_id=thread_id)

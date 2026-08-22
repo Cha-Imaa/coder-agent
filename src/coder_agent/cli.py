@@ -128,6 +128,7 @@ async def _run(
         return 2
     except Exception as exc:  # noqa: BLE001 - the whole point is to tell the user how to go on
         console.print(f"[red]Run stopped:[/red] {type(exc).__name__}: {exc}")
+        _print_failed_record(exc)
         console.print(f'[dim]Resume with:[/dim] coder run "{repo}" --resume {thread}')
         return 1
 
@@ -223,10 +224,19 @@ async def _chat(repo: Path, thread: str, yes: bool, verbose: bool) -> int:
             continue
         except Exception as exc:  # noqa: BLE001 - keep the session alive, the checkpoint is safe
             console.print(f"[red]Turn stopped:[/red] {type(exc).__name__}: {exc}")
+            _print_failed_record(exc)
             console.print("[dim]Type /resume to continue it, or give a new task.[/dim]")
             continue
         if outcome.ran:
             console.print(f"[dim]{outcome.record.footer()}[/dim]")
+
+
+def _print_failed_record(exc: BaseException) -> None:
+    """The ledger record of a run that died, if the agent attached one: it names every failed
+    provider attempt, including the fallback's, which the exception itself does not."""
+    record = getattr(exc, "run_record", None)
+    if record is not None:
+        console.print(f"[dim]{record.footer()}[/dim]")
 
 
 @app.command()
@@ -313,6 +323,12 @@ def stats(
         f"[bold]{summary['runs']} runs[/bold] · pass rate {summary['pass_rate']:.0%} · "
         f"avg {summary['avg_tokens']:,.0f} tokens · avg {summary['avg_seconds']:.0f}s · "
         f"avg {summary['avg_iterations']:.1f} iterations"
+    )
+    errors = summary["provider_errors"]
+    failed = ", ".join(f"{n} {name}" for name, n in sorted(errors.items())) or "none"
+    console.print(
+        f"[dim]providers · fallback answered in {summary['fallback_runs']} run(s) · "
+        f"failed attempts: {failed}[/dim]"
     )
 
     per_node = Table(title="Tokens by node", show_edge=False)
