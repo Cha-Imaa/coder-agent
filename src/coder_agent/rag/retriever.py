@@ -24,7 +24,8 @@ from typing import Literal
 
 from coder_agent.config import settings
 from coder_agent.rag.chunker import Chunk
-from coder_agent.rag.index import Hit, RepoIndex
+from coder_agent.rag.index import Hit, RepoIndex, embedding_text
+from coder_agent.rag.reranker import Reranker
 
 Mode = Literal["hybrid", "dense", "bm25"]
 MODES: tuple[Mode, ...] = ("hybrid", "dense", "bm25")
@@ -171,6 +172,8 @@ class HybridRetriever:
         *,
         candidates: int | None = None,
         rrf_k: int = 60,
+        reranker: Reranker | None = None,
+        rerank_candidates: int | None = None,
     ) -> None:
         if mode is not None and mode not in MODES:
             raise ValueError(f"mode must be one of {MODES}, got {mode!r}")
@@ -180,6 +183,10 @@ class HybridRetriever:
         # sixth on both lists should beat one that is first on one list and absent from the other.
         self.candidates = candidates or settings.retrieval_candidates
         self.rrf_k = rrf_k
+        # Optional second stage. The first stage is asked for `rerank_candidates` hits instead of
+        # k, the reranker scores each against the query, and the top k of that order are returned.
+        self.reranker = reranker
+        self.rerank_candidates = rerank_candidates or settings.rerank_candidates
         self._bm25: BM25 | None = None
         self._chunks: dict[str, Chunk] | None = None
 
@@ -204,8 +211,36 @@ class HybridRetriever:
 
     # -- public -------------------------------------------------------------------------------
 
-    def search(self, query: str, k: int = 8, mode: Mode | None = None) -> list[Hit]:
-        """Top-k chunks for `query`. In hybrid mode the score is the RRF score, not a similarity."""
+    def search(
+        self, query: str, k: int = 8, mode: Mode | None = None, rerank: bool | None = None
+    ) -> list[Hit]:
+        """Top-k chunks for `query`.
+
+        The score is whatever the last stage produced: cosine similarity for dense, BM25 for
+        lexical, the RRF sum for hybrid, the cross-encoder logit when reranked. Only the order
+        is meaningful across modes. `rerank` overrides per call; the default is "whenever a
+        reranker was given".
+        """
+        rerank = (self.reranker is not None) if rerank is None else rerank
+        if not rerank:
+            return self._first_stage(query, k, mode)
+        if self.reranker is None:
+            raise ValueError("rerank=True but this retriever has no reranker")
+        candidates = self._first_stage(query, max(k, self.rerank_candidates), mode)
+        return self._rerank(query, candidates)[:k]
+
+    def _rerank(self, query: str, hits: list[Hit]) -> list[Hit]:
+        """Re-score `hits` with the cross-encoder, best first. Ties keep the first-stage order."""
+        if not hits:
+            return []
+        assert self.reranker is not None
+        # Score the same text the embedder saw (path and symbol header plus code) so the
+        # reranker can use the file name too; a query often names the module, not the function.
+        scores = self.reranker.score(query, [embedding_text(h.chunk) for h in hits])
+        order = sorted(range(len(hits)), key=lambda i: (-scores[i], i))
+        return [Hit(chunk=hits[i].chunk, score=scores[i]) for i in order]
+
+    def _first_stage(self, query: str, k: int, mode: Mode | None) -> list[Hit]:
         mode = mode or self.mode
         if mode == "dense":
             return self.index.search(query, k=k)

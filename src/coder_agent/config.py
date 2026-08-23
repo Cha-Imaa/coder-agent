@@ -79,6 +79,14 @@ class Settings(BaseSettings):
     retrieval_k: int = 6
     retrieval_context_chars: int = 6_000
 
+    # Optional second stage (see rag/reranker.py): a cross-encoder re-scores the top
+    # `rerank_candidates` chunks from the first stage and the best `retrieval_k` go to the
+    # planner. Off by default: it adds about 1.5 s per query on a laptop CPU and its value is
+    # what the retrieval eval measures.
+    rerank: bool = False
+    rerank_model: str = "Xenova/ms-marco-MiniLM-L-6-v2"
+    rerank_candidates: int = 20
+
     # Where local state (vector index, checkpoints) is stored, relative to the target repo.
     state_dir_name: str = ".coder-agent"
 

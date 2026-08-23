@@ -55,11 +55,13 @@ def repo_retriever(repo: Path, query: str) -> list[Hit]:
     installed. The first call on a repository embeds everything; later calls only re-embed files
     whose hash changed, which for a repo the agent just edited is one or two.
     """
-    from coder_agent.rag import HybridRetriever, RepoIndex
+    from coder_agent.rag import HybridRetriever, RepoIndex, default_reranker
 
     index = RepoIndex(repo)
     index.update()
-    retriever = HybridRetriever(index, settings.retrieval_mode)  # type: ignore[arg-type]
+    retriever = HybridRetriever(
+        index, settings.retrieval_mode, reranker=default_reranker()  # type: ignore[arg-type]
+    )
     return retriever.search(query, k=settings.retrieval_k)
 
 

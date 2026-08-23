@@ -115,6 +115,30 @@ def test_evaluate_indexes_the_repo_and_scores_every_mode(task: EvalTask) -> None
     assert not (task.repo_dir / ".coder-agent").exists()
 
 
+def test_evaluate_reranked_mode_uses_the_given_reranker(task: EvalTask) -> None:
+    class Inverting:
+        """Prefers whatever does not mention the ledger, so a reranked row must look different."""
+
+        calls = 0
+
+        def score(self, query, texts):
+            Inverting.calls += 1
+            return [0.0 if "ledger" in t else 1.0 for t in texts]
+
+    # Hybrid, not bm25: the lexical side alone returns only chunks that share a term with the
+    # prompt, which here is the ledger file by itself, and one candidate cannot be reordered.
+    report = evaluate(
+        [task], ("hybrid", "hybrid+rerank"), ks=(1, 3), embedder=HashEmbedder(),
+        reranker=Inverting(),
+    )
+    plain, reranked = report.results
+    assert (plain.mode, reranked.mode) == ("hybrid", "hybrid+rerank")
+    assert plain.ranked[0] == "src/ledger.py"
+    assert reranked.ranked[0] != "src/ledger.py" and Inverting.calls == 1
+    assert set(plain.ranked) == set(reranked.ranked), "same candidates, different order"
+    assert [row["mode"] for row in report.rows()] == ["hybrid", "hybrid+rerank"]
+
+
 def test_evaluate_skips_tasks_without_gold_files(task: EvalTask) -> None:
     (task.solution_dir / "src" / "ledger.py").write_text(
         (task.repo_dir / "src" / "ledger.py").read_text()
