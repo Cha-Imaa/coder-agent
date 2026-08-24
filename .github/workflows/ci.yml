@@ -1,0 +1,71 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A new push to the same branch supersedes the run in flight; the free minutes are finite.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: py${{ matrix.python }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10
+        with:
+          python-version: ${{ matrix.python }}
+          enable-cache: true
+
+      # --frozen installs exactly what uv.lock pins; a stale lock fails here instead of drifting.
+      - run: uv sync --extra dev --frozen
+
+      - run: uv run ruff check .
+
+      # ubuntu-latest ships a Docker daemon, so the sandbox integration tests build the image
+      # and run for real here; locally they skip unless Docker Desktop is up.
+      - run: uv run pytest -q -p no:cacheprovider --cov --cov-report=term --cov-report=json
+
+      - uses: actions/upload-artifact@v7
+        if: matrix.python == '3.11'
+        with:
+          name: coverage
+          path: coverage.json
+
+  # Coverage badge with no third-party service: the number becomes a shields.io "endpoint" JSON
+  # committed to an orphan `badges` branch that the README links to. Only main updates it.
+  badge:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: coverage
+      - run: python scripts/coverage_badge.py coverage.json badge/coverage.json
+      - name: Push the badge branch
+        run: |
+          cd badge
+          git init -q -b badges
+          git add coverage.json
+          git -c user.name=github-actions[bot] \
+              -c user.email=41898282+github-actions[bot]@users.noreply.github.com \
+              commit -q -m "coverage badge for ${GITHUB_SHA::7}"
+          git push -q --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" badges
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

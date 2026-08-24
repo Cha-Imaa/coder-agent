@@ -15,3 +15,8 @@ build/
 # local assistant notes
 CLAUDE.md
 .claude/
+
+# coverage output (CI turns it into the README badge)
+.coverage
+coverage.json
+htmlcov/
