@@ -133,7 +133,17 @@ def run_command(
     # Use the platform shell so the model can write natural commands (pipes, &&).
     # On Windows that is cmd.exe via shell=True; tests and tools should still prefer
     # cross-platform commands such as `python -m pytest`.
-    env = {**os.environ, "PYTHONUNBUFFERED": "1", "NO_COLOR": "1"}
+    # PYTHONDONTWRITEBYTECODE: the agent edits a module and re-runs the tests within the same
+    # second. CPython trusts a cached .pyc whose recorded source mtime and size still match, so
+    # a same-length fix (`x * 3` -> `x * 2`) can be shadowed by the bytecode of the buggy version
+    # and the loop burns its remaining iterations on a fix that already landed. Never writing the
+    # cache in the first place is cheaper than invalidating it. The Docker sandbox sets the same.
+    env = {
+        **os.environ,
+        "PYTHONUNBUFFERED": "1",
+        "NO_COLOR": "1",
+        "PYTHONDONTWRITEBYTECODE": "1",
+    }
     try:
         proc = subprocess.run(
             command,

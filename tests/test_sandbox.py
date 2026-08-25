@@ -1,5 +1,6 @@
 """Sandbox tests: the model must not be able to escape the repo or run destructive commands."""
 
+import os
 from pathlib import Path
 
 import pytest
@@ -128,3 +129,22 @@ def test_output_is_truncated_head_and_tail(repo: Path) -> None:
 def test_run_command_refuses_blocked_command(repo: Path) -> None:
     with pytest.raises(SandboxError):
         run_command(repo, "git push")
+
+
+def test_python_does_not_cache_bytecode_inside_the_sandbox(tmp_path: Path):
+    """A same-length edit within the same second must not be shadowed by a stale .pyc.
+
+    Reproduces what CI hit on a fast runner: iteration 1 imports the buggy module and writes its
+    bytecode, iteration 2 rewrites the source with the same size and mtime second, and CPython
+    keeps serving the cached buggy code. With bytecode writing off there is nothing stale to serve.
+    """
+    (tmp_path / "calc.py").write_text("def double(x):\n    return x * 3\n", encoding="utf-8")
+    probe = 'python -c "import calc; print(calc.double(2))"'
+
+    assert run_command(tmp_path, probe).output.strip() == "6"
+    stat = (tmp_path / "calc.py").stat()
+    (tmp_path / "calc.py").write_text("def double(x):\n    return x * 2\n", encoding="utf-8")
+    os.utime(tmp_path / "calc.py", ns=(stat.st_atime_ns, stat.st_mtime_ns))
+
+    assert run_command(tmp_path, probe).output.strip() == "4"
+    assert not (tmp_path / "__pycache__").exists()
