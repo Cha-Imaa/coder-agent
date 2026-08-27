@@ -1,5 +1,5 @@
 """Command-line entry point: `coder run <repo> "<task>"`, `coder run <repo> --resume <thread>`,
-`coder index <repo>`, `coder stats`.
+`coder chat <repo>`, `coder fix-issue <url>`, `coder index <repo>`, `coder stats`.
 
 The CLI is deliberately thin. It resolves the repo, loads the MCP tools, builds the graph, and
 streams node updates to the renderer. All behaviour lives in the graph so the same code path is
@@ -262,6 +262,104 @@ async def _chat(repo: Path, thread: str, yes: bool, verbose: bool) -> int:
             continue
         if outcome.ran:
             console.print(f"[dim]{outcome.record.footer()}[/dim]")
+
+
+@app.command(name="fix-issue")
+def fix_issue(
+    url: Annotated[str, typer.Argument(help="GitHub issue URL, or OWNER/REPO#N.")],
+    repo: Annotated[
+        Path | None,
+        typer.Option("--repo", help="Existing clone to work in; cloned under ~/.coder-agent otherwise."),
+    ] = None,
+    pr: Annotated[
+        bool, typer.Option("--pr", help="After the tests pass: commit, push and open a pull request.")
+    ] = False,
+    base: Annotated[
+        str | None, typer.Option("--base", help="Base branch for the pull request (default branch).")
+    ] = None,
+    model: Annotated[str | None, typer.Option(help="provider:model, overrides CODER_MODEL.")] = None,
+    max_iterations: Annotated[int | None, typer.Option(help="Plan/act/test cycles.")] = None,
+    yes: Annotated[
+        bool, typer.Option("--yes", "-y", help="Do not ask before file edits and shell commands.")
+    ] = False,
+    sandbox: Annotated[
+        str | None,
+        typer.Option(help="Where commands run: local (host, denylist) or docker (container)."),
+    ] = None,
+    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Show full tool output.")] = False,
+) -> None:
+    """Fix a GitHub issue: read it, branch, run the agent, and with --pr open the pull request.
+
+    The issue text becomes the task. Work happens on a `coder/issue-N` branch of the clone (a
+    fresh one under ~/.coder-agent/checkouts unless --repo names yours). Without --pr the edits
+    are left uncommitted on that branch for review. Reads of public repositories need no token;
+    --pr needs GITHUB_TOKEN with permission to push and open pull requests.
+    """
+    _configure_sandbox(sandbox)
+    if model:
+        settings.model = model
+    if max_iterations is not None:
+        settings.max_iterations = max_iterations
+    try:
+        code = asyncio.run(_fix_issue(url, repo, pr, base, yes, verbose))
+    except KeyboardInterrupt:
+        console.print()
+        console.print("[dim]Interrupted. The clone keeps the branch; rerun the same command.[/dim]")
+        code = 130
+    raise typer.Exit(code=code)
+
+
+async def _fix_issue(
+    url: str, repo: Path | None, pr: bool, base: str | None, yes: bool, verbose: bool
+) -> int:
+    from coder_agent.fix_issue import FixIssueError, fix_issue, parse_issue_url
+    from coder_agent.mcp_server.github import GitHubAPI, GitHubError
+    from coder_agent.ui.render import Renderer
+
+    renderer = Renderer(console, verbose=verbose)
+    api = GitHubAPI.from_env()
+    if pr and not api.authenticated:
+        console.print("[red]--pr needs GITHUB_TOKEN in the environment[/red] (push and open the PR).")
+        return 2
+
+    def stage(name: str, detail: str) -> None:
+        labels = {
+            "issue": "Reading issue", "checkout": "Checkout", "agent": "Running the agent on branch",
+            "commit": "Committing", "push": "Pushing", "pull-request": "Opening pull request",
+        }
+        console.print(f"[bold cyan]{labels.get(name, name)}[/bold cyan] · {detail}")
+
+    try:
+        ref = parse_issue_url(url)
+        renderer.header(ref.url, f"fix issue #{ref.number}", settings.model)
+        result = await fix_issue(
+            url, repo_path=repo, open_pr=pr, base=base, api=api, on_stage=stage,
+            on_update=renderer.update, approve=None if yes else renderer.ask_approval,
+        )
+    except (FixIssueError, GitHubError) as exc:
+        console.print(f"[red]fix-issue stopped:[/red] {exc}")
+        return 2
+    except Exception as exc:  # noqa: BLE001 - the branch and checkpoint survive; say how to go on
+        console.print(f"[red]Run stopped:[/red] {type(exc).__name__}: {exc}")
+        _print_failed_record(exc)
+        return 1
+
+    console.print(f"[dim]{result.outcome.record.footer()} · thread {result.outcome.thread_id}[/dim]")
+    if not result.passed:
+        console.print(
+            f"[yellow]Tests did not pass[/yellow] (status {result.outcome.status}). "
+            f"The attempt is on branch {result.branch} in {result.repo}."
+        )
+        return 1
+    if result.pull_request:
+        console.print(f"[green]Pull request opened:[/green] {result.pull_request['url']}")
+        return 0
+    console.print(
+        f"[green]Tests pass.[/green] Changes are uncommitted on branch {result.branch} in "
+        f"{result.repo}. [dim]Review them, then rerun with --pr to commit, push and open the "
+        "pull request.[/dim]"
+    )
+    return 0
 
 
 def _print_failed_record(exc: BaseException) -> None:
