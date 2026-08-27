@@ -29,7 +29,7 @@ def wired(monkeypatch, tmp_path):
 
     llm = scripted("plan one", "done one", "plan two", "done two")
 
-    async def fake_load_tools(repo):
+    async def fake_load_tools(repo, github=False):
         return [echo]
 
     monkeypatch.setattr(llm_mod, "get_llm", lambda: llm)

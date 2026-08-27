@@ -95,13 +95,16 @@ class FakeGitHub:
                 path = self.path.split("?")[0]
                 headers = dict(self.headers)
                 fake.requests.append(("POST", path, headers))
+                # Read the body before answering, even on an error: replying while the client is
+                # still writing makes Windows reset the connection and the client sees a
+                # ReadError instead of the status code.
+                length = int(self.headers.get("Content-Length", "0"))
+                data = json.loads(self.rfile.read(length) or b"{}")
                 if fake.require_token and headers.get("Authorization") != f"Bearer {fake.require_token}":
                     return self._send(401, {"message": "Bad credentials"})
                 m = re.fullmatch(r"/repos/([^/]+)/([^/]+)/pulls", path)
                 if not m:
                     return self._send(404, {"message": "Not Found"})
-                length = int(self.headers.get("Content-Length", "0"))
-                data = json.loads(self.rfile.read(length) or b"{}")
                 missing = [k for k in ("title", "head", "base") if not data.get(k)]
                 if missing:
                     return self._send(422, {
