@@ -1,0 +1,51 @@
+name: Bug report
+description: Something the agent, the CLI or the evals did wrong
+title: "bug: "
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you ran and what you saw. Paste the command and the output.
+      placeholder: |
+        uv run coder run ./myrepo "make the failing tests pass"
+        ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - coder run / chat
+        - coder fix-issue (GitHub)
+        - coder index / retrieval
+        - sandbox (local or docker)
+        - evals or figures
+        - docs
+        - other
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Model that answered
+      description: "`coder stats` prints it per run; the default is groq:openai/gpt-oss-120b."
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      description: OS, Python version, output of `uv --version`.
+      placeholder: Windows 11, Python 3.11, uv 0.8
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: A LangSmith trace link, the thread id from `--resume`, a minimal repository.

@@ -1,0 +1,25 @@
+name: Feature request
+description: A tool, a node, a provider, a flag or a measurement the agent should have
+title: "feat: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you are trying to do
+      description: The task or workflow, not the solution. What does the agent get wrong or not do today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like
+      description: If you have a design in mind, sketch it. Which node, tool or command changes?
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Constraints
+      options:
+        - label: Works on the free tiers the project uses (Groq, Gemini, local embeddings)
+        - label: Every file or shell action still goes through the sandbox
+        - label: Comes with a way to measure it (a test, an eval task, a figure)
