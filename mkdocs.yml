@@ -1,0 +1,71 @@
+# Docs site: `uv run mkdocs serve` locally, built with --strict and published to GitHub Pages by
+# .github/workflows/docs.yml on every push to main that touches docs/ or this file.
+site_name: coder-agent
+site_description: A terminal coding agent built on LangGraph, MCP and local RAG, on a zero-cost stack.
+site_url: https://cha-imaa.github.io/coder-agent/
+repo_url: https://github.com/Cha-Imaa/coder-agent
+repo_name: Cha-Imaa/coder-agent
+edit_uri: edit/main/docs/
+copyright: MIT licence
+
+docs_dir: docs
+
+nav:
+  - Home: index.md
+  - Results: results.md
+  - Learning log: TEACH.md
+  - System design: system_design_coding_agent.md
+  - Roadmap: PLAN.md
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: deep orange
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: deep orange
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
