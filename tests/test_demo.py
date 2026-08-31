@@ -147,3 +147,26 @@ def test_cli_colours_a_pipe_only_when_force_color_is_set(forced: bool) -> None:
     assert proc.returncode == 2
     assert "Not a directory" in proc.stdout
     assert ("\x1b[31m" in proc.stdout) is forced
+
+
+def test_cli_survives_a_stdout_that_cannot_encode_the_ui() -> None:
+    """A redirected stdout on a cp1252 Windows install must not kill a run mid-flight.
+
+    The child writes the re-planning arrow through the CLI's own console with the locale
+    encoding forced to cp1252, the situation `coder run ... > run.log` creates.
+    """
+    child = (
+        "import sys\n"
+        "from coder_agent.cli import console\n"
+        "console.print('\u21bb re-planning')\n"
+        "print('survived', file=sys.stderr)\n"
+    )
+    env = {k: v for k, v in os.environ.items() if k != "PYTHONIOENCODING"}
+    env["PYTHONIOENCODING"] = "cp1252"
+    proc = subprocess.run(
+        [sys.executable, "-c", child],
+        capture_output=True, env=env, cwd=ROOT, check=False,
+    )
+    assert proc.returncode == 0, proc.stderr.decode("utf-8", "replace")
+    assert b"survived" in proc.stderr
+    assert "\u21bb re-planning" in proc.stdout.decode("utf-8", "replace")

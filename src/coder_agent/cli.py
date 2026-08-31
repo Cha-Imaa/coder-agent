@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import sys
 import time
 from pathlib import Path
 from typing import Annotated
@@ -30,6 +31,36 @@ logging.getLogger("google_genai").setLevel(logging.ERROR)
 app = typer.Typer(no_args_is_help=True, add_completion=False, rich_markup_mode="rich")
 
 
+# One character from each family the UI prints: the re-planning arrow, a box-drawing border and
+# a status tick. If the stream can encode these it can encode the rest of the interface.
+_UI_GLYPHS = "↻├✓"
+
+
+def _encodable(stream: object) -> None:
+    """Re-encode `stream` as UTF-8 if it cannot carry the characters the UI prints.
+
+    A redirected stdout is not a console, so Python picks the locale encoding for it: cp1252 on
+    a Western Windows install, which has no `↻`. The first re-planning arrow then raises
+    `UnicodeEncodeError` from inside Rich and kills a run that was otherwise fine, which is a
+    miserable way to lose ten minutes of local-model inference to `coder run ... > run.log`.
+    A real console is left alone (Python talks to it through the console API, which is already
+    Unicode), and so is any stream whose encoding already copes, so an explicit
+    `PYTHONIOENCODING` still wins. `errors="replace"` is the backstop: a character that survives
+    all of that prints as `?` instead of ending the run.
+    """
+    reconfigure = getattr(stream, "reconfigure", None)
+    encoding = getattr(stream, "encoding", None)
+    if reconfigure is None or encoding is None:
+        return
+    try:
+        _UI_GLYPHS.encode(encoding)
+    except (UnicodeEncodeError, LookupError):
+        try:
+            reconfigure(encoding="utf-8", errors="replace")
+        except (ValueError, OSError):  # pragma: no cover - a detached or already-used stream
+            pass
+
+
 def _console() -> Console:
     """Honour FORCE_COLOR the way most CLIs do, so a piped run can still be recorded in colour.
 
@@ -37,6 +68,8 @@ def _console() -> Console:
     legacy win32 API, which produces no ANSI codes at all; on other systems it simply disables
     colour. Both are right for logs and wrong for the demo recorder and CI transcripts.
     """
+    _encodable(sys.stdout)
+    _encodable(sys.stderr)
     if os.environ.get("FORCE_COLOR"):
         return Console(force_terminal=True, legacy_windows=False)
     return Console()

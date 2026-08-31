@@ -54,6 +54,9 @@ The first release, `0.1.0`, is tagged once the acceptance walkthrough in `docs/P
   architecture diagrams and results; MIT licence, contributing guide, issue and PR templates.
 
 ### Fixed
+- `coder run` survives a stdout that cannot encode the interface: redirecting the output to
+  a file on a Western Windows install gave the process a cp1252 stdout, and the first
+  re-planning arrow ended the run with `UnicodeEncodeError` from inside Rich (2026-09-14).
 - Local sandbox stops Python writing bytecode, so a same-length edit is not shadowed by a stale
   `.pyc` (2026-09-11).
 - `setup-uv` pinned to an exact release; the action has no `v10` major tag (2026-09-11).
