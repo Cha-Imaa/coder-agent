@@ -19,7 +19,7 @@ from coder_agent import llm as llm_mod
 from coder_agent.agent import run_agent
 from coder_agent.cli import app
 from coder_agent.config import settings
-from coder_agent.llm import ChatModelRetry, get_llm
+from coder_agent.llm import ChatModelRetry, get_llm, model_kwargs, provider_of
 from coder_agent.telemetry import Ledger, RunRecord
 from coder_agent.telemetry.events import ProviderEvents
 from coder_agent.telemetry.ledger import fallback_calls
@@ -183,3 +183,26 @@ async def test_run_records_provider_errors_in_the_ledger(monkeypatch, tmp_path):
     assert out.record.provider_errors == {"RuntimeError": 1}
     row = Ledger(tmp_path / "ledger.sqlite").recent()[0]
     assert json.loads(row["provider_errors_json"]) == {"RuntimeError": 1}
+
+
+def test_ollama_gets_context_size_and_address_instead_of_sdk_retries(monkeypatch):
+    monkeypatch.setattr(settings, "ollama_num_ctx", 4096)
+    monkeypatch.setattr(settings, "ollama_base_url", "http://box:11434")
+    assert provider_of("ollama:qwen2.5-coder:7b") == "ollama"
+    assert model_kwargs("ollama:qwen2.5-coder:7b") == {"base_url": "http://box:11434", "num_ctx": 4096}
+    assert model_kwargs("groq:openai/gpt-oss-120b") == {"max_retries": settings.llm_sdk_retries}
+
+
+def test_ollama_model_builds_without_a_daemon_and_keeps_its_tag(monkeypatch):
+    """Constructing the client is offline; only `invoke` talks to the daemon. The retry wrapper
+    must still expose the model's own fields, since the graph reads them for the ledger."""
+    pytest.importorskip("langchain_ollama")
+    monkeypatch.setattr(settings, "model", "ollama:qwen2.5-coder:7b")
+    monkeypatch.setattr(settings, "fallback_model", None)
+    llm = get_llm()
+    assert isinstance(llm, ChatModelRetry)
+    assert llm.bound.model == "qwen2.5-coder:7b"  # the tag's second colon survives the split
+    assert llm.bound.num_ctx == settings.ollama_num_ctx
+    import ollama
+
+    assert ollama.ResponseError in llm_mod.TRANSIENT_ERRORS

@@ -10,6 +10,11 @@ The first release, `0.1.0`, is tagged once the acceptance walkthrough in `docs/P
 (milestone 9) has been run on a fresh clone and every rough edge it finds is fixed.
 
 ### Added
+- **Ollama as a third provider** (2026-09-11): `--model ollama:<tag>` runs the same graph
+  against a model served locally, with the daemon's address and context size as settings
+  (`uv sync --extra ollama`). `evals/figures.py` draws `model_comparison.png` (pass rate, tokens
+  and seconds per task per model) once two models have run the in-house suite, and no longer
+  trips over the retrieval eval's JSON in the same results directory.
 - **Demo recorder** (2026-09-11): `scripts/demo.py` records a `coder run` through a pipe to an
   asciinema v2 cast, answering the approval prompt, and renders the cast to a GIF with Rich and
   Pillow, no ffmpeg or asciinema needed; `scripts/record_demo.ps1` does both on a fresh copy of

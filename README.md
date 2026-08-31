@@ -51,7 +51,7 @@ Flags worth knowing on `coder run`:
 | `--yes` / `-y` | Skip the approval prompt before file edits and shell commands |
 | `--sandbox docker` | Run the agent's commands in a fresh container, no network, repo mounted at `/work` |
 | `--resume THREAD` | Continue a run that was interrupted by a crash, a rate limit or a declined approval |
-| `--model provider:model` | Override `CODER_MODEL` for one run, e.g. `google_genai:gemini-2.5-flash` |
+| `--model provider:model` | Override `CODER_MODEL` for one run: `google_genai:gemini-2.5-flash`, or a local `ollama:qwen2.5-coder:7b` |
 | `--max-iterations N` | Plan/act/test cycles before the agent gives up (default 4) |
 | `--test-command "..."` | The command that decides success; auto-detected (pytest, npm test, ...) if omitted |
 
@@ -188,7 +188,8 @@ query for a change in ordering, not in which chunks are present.
   tasks in; the rest waits on the daily quota, and the figure draws itself once two arms are
   complete.
 - HumanEval slice (thirty problems packaged as repository tasks) and a model comparison with a
-  local Ollama model.
+  local Ollama model. The provider is wired (`--model ollama:<tag>`, `uv sync --extra ollama`);
+  the figure draws itself once a second model has run the suite.
 
 ### Reproduce
 

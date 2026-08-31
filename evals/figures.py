@@ -5,7 +5,8 @@
     uv run python evals/figures.py --out docs/figures --no-ledger
 
 Writes `pass_rate.png`, `iteration_curve.png` and `cost_profile.png` to `docs/figures/`, plus
-`retrieval_ablation.png` once results for two or more `--retrieval` modes exist. The
+`retrieval_ablation.png` once results for two or more `--retrieval` modes exist and
+`model_comparison.png` once two or more `--model`s have run the in-house suite. The
 cost profile needs per-node usage; results written before it was stored in the file fall back to
 the local run ledger, matched by task id.
 """
