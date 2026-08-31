@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import time
 from pathlib import Path
 from typing import Annotated
@@ -27,7 +28,21 @@ logging.getLogger("langchain_google_genai").setLevel(logging.ERROR)
 logging.getLogger("google_genai").setLevel(logging.ERROR)
 
 app = typer.Typer(no_args_is_help=True, add_completion=False, rich_markup_mode="rich")
-console = Console()
+
+
+def _console() -> Console:
+    """Honour FORCE_COLOR the way most CLIs do, so a piped run can still be recorded in colour.
+
+    When stdout is a pipe on Windows, Rich cannot query the console mode and falls back to the
+    legacy win32 API, which produces no ANSI codes at all; on other systems it simply disables
+    colour. Both are right for logs and wrong for the demo recorder and CI transcripts.
+    """
+    if os.environ.get("FORCE_COLOR"):
+        return Console(force_terminal=True, legacy_windows=False)
+    return Console()
+
+
+console = _console()
 
 
 def _configure_sandbox(mode: str | None) -> None:

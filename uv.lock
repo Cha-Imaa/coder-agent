@@ -642,6 +642,7 @@ dependencies = [
 [package.optional-dependencies]
 dev = [
     { name = "matplotlib" },
+    { name = "pillow" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
@@ -672,6 +673,7 @@ requires-dist = [
     { name = "mcp", specifier = ">=1.10" },
     { name = "mkdocs-material", marker = "extra == 'docs'", specifier = ">=9" },
     { name = "pathspec", specifier = ">=1.1.1" },
+    { name = "pillow", marker = "extra == 'dev'", specifier = ">=10" },
     { name = "pydantic", specifier = ">=2" },
     { name = "pydantic-settings", specifier = ">=2" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
