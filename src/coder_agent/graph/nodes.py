@@ -20,6 +20,7 @@ from coder_agent.config import settings
 from coder_agent.graph import testing
 from coder_agent.graph.context import manage_context
 from coder_agent.graph.prompts import ACT_SYSTEM, CONTEXT_SECTION, PLAN_SYSTEM, REFLECT_SYSTEM
+from coder_agent.graph.repair import repair_tool_calls
 from coder_agent.graph.state import AgentState
 from coder_agent.telemetry.ledger import usage_from_message
 
@@ -71,6 +72,7 @@ def make_act_node(llm: BaseChatModel, tools: list[BaseTool]) -> Node:
     change between iterations without editing history.
     """
     model = llm.bind_tools(tools)
+    tool_names = {t.name for t in tools}
 
     def act(state: AgentState) -> dict[str, Any]:
         history, rewritten = manage_context(llm, state["messages"])
@@ -81,7 +83,9 @@ def make_act_node(llm: BaseChatModel, tools: list[BaseTool]) -> Node:
                 context=context_section(state.get("context", "")),
             )
         )
-        response = model.invoke([system, *history])
+        # Small local models write the call as JSON text instead of a structured field; the
+        # repair step turns that into real tool calls and leaves other replies alone.
+        response = repair_tool_calls(model.invoke([system, *history]), tool_names)
         # If context management changed the history, replace the stored conversation with the
         # compacted one: `add_messages` cannot edit in place, so remove all and re-add in order.
         patch = [RemoveMessage(id=REMOVE_ALL_MESSAGES), *history] if rewritten else []

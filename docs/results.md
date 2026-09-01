@@ -75,4 +75,7 @@ Gemini, most of them a single Groq `tool_use_failed` glitch handed straight to t
 - **HumanEval slice** (thirty problems packaged as repository tasks): needs a full quota window.
 - **Model comparison** (Groq, Gemini, a local Ollama model): the Ollama provider is wired
   (`run_evals.py --model ollama:qwen2.5-coder:7b`); `figures.py` draws pass rate, tokens and
-  seconds per task side by side once a second model has run the in-house suite.
+  seconds per task side by side once a second model has run the in-house suite. A first local
+  run is a useful warning about what a 7B on a laptop CPU is: `fix-bug-duration-units` failed
+  after 8 model calls, 15.5k tokens and 744 seconds, because the model narrates the edit in
+  markdown and claims success instead of calling the tools (see step 7.2 in TEACH).
