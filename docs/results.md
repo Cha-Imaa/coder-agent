@@ -69,9 +69,25 @@ Gemini, most of them a single Groq `tool_use_failed` glitch handed straight to t
 
 ## Still being measured
 
-- **Retrieval ablation** (pass rate and tokens with retrieval off, BM25, dense, hybrid): the
-  `off` arm has five of twelve tasks graded so far; the other arms wait on the daily quota.
-  The figure is drawn automatically once two or more arms are complete.
+- **Retrieval ablation** (pass rate and tokens with retrieval off, BM25, dense, hybrid). The
+  cost of an arm is now measured: twelve tasks with retrieval off spent 199,198 of the free
+  tier's 200,000 daily tokens and the last four tasks died on 429s, with the Gemini fallback
+  exhausted the same day. So the ablation advances one arm per quota window, and a full run of
+  four arms is roughly five of them.
+
+  The `off` arm stands at eight of twelve tasks graded at commit `23650e6`, eight passed. On the
+  eight tasks also graded in the hybrid baseline, retrieval off used 23% more tokens per task
+  (25.0k against 20.3k) for the same 8/8 pass rate:
+
+  | | mean tokens / task | passed |
+  |---|---|---|
+  | retrieval off | 24,967 | 8/8 |
+  | hybrid (baseline) | 20,341 | 8/8 |
+
+  Read this as a direction, not a number: eight tasks, one run each, and the two runs are at
+  different commits. It does match what the cost profile predicts, since the tokens retrieval
+  saves are `act` tokens spent locating the file. The figure is drawn automatically once two or
+  more arms are complete.
 - **HumanEval slice** (thirty problems packaged as repository tasks): needs a full quota window.
 - **Model comparison** (Groq, Gemini, a local Ollama model): the Ollama provider is wired
   (`run_evals.py --model ollama:qwen2.5-coder:7b`); `figures.py` draws pass rate, tokens and

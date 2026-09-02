@@ -1,0 +1,406 @@
+{
+  "label": "openai-gpt-oss-120b-retrieval-off",
+  "model": "groq:openai/gpt-oss-120b",
+  "started_at": 1789339514.178075,
+  "meta": {
+    "commit": "23650e6",
+    "python": "3.11.7",
+    "platform": "Windows-10-10.0.26200-SP0",
+    "max_iterations": 4,
+    "max_steps": 40,
+    "fallback_model": "google_genai:gemini-2.5-flash",
+    "retrieval_mode": "off",
+    "embedding_model": "snowflake/snowflake-arctic-embed-xs",
+    "suite": "inhouse"
+  },
+  "pass_rate": 0.6666666666666666,
+  "errors": 4,
+  "by_category": [
+    {
+      "category": "fix-bug",
+      "tasks": 3,
+      "passed": 3,
+      "errors": 0,
+      "pass_rate": 1.0,
+      "avg_tokens": 19650.666666666668,
+      "avg_iterations": 1.0,
+      "avg_seconds": 126.76779540379842
+    },
+    {
+      "category": "add-feature",
+      "tasks": 3,
+      "passed": 3,
+      "errors": 0,
+      "pass_rate": 1.0,
+      "avg_tokens": 33820.333333333336,
+      "avg_iterations": 1.0,
+      "avg_seconds": 251.77546294530234
+    },
+    {
+      "category": "refactor",
+      "tasks": 2,
+      "passed": 0,
+      "errors": 2,
+      "pass_rate": 0.0,
+      "avg_tokens": 0.0,
+      "avg_iterations": 0.0,
+      "avg_seconds": 30.403712272644043
+    },
+    {
+      "category": "add-test",
+      "tasks": 2,
+      "passed": 2,
+      "errors": 0,
+      "pass_rate": 1.0,
+      "avg_tokens": 19662.0,
+      "avg_iterations": 1.0,
+      "avg_seconds": 144.1361484527588
+    },
+    {
+      "category": "multi-file",
+      "tasks": 2,
+      "passed": 0,
+      "errors": 2,
+      "pass_rate": 0.0,
+      "avg_tokens": 0.0,
+      "avg_iterations": 0.0,
+      "avg_seconds": 33.57857704162598
+    },
+    {
+      "category": "total",
+      "tasks": 12,
+      "passed": 8,
+      "errors": 4,
+      "pass_rate": 0.6666666666666666,
+      "avg_tokens": 16644.75,
+      "avg_iterations": 0.6666666666666666,
+      "avg_seconds": 129.32222088178
+    }
+  ],
+  "results": [
+    {
+      "task_id": "add-feature-inventory-remove",
+      "category": "add-feature",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 14,
+      "input_tokens": 45541,
+      "output_tokens": 2984,
+      "agent_seconds": 376.18122935295105,
+      "grade_exit_code": 0,
+      "grade_output": ".............                                                            [100%]\n13 passed in 0.02s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 259,
+          "output_tokens": 454,
+          "models": {
+            "openai/gpt-oss-120b": 1
+          }
+        },
+        "act": {
+          "calls": 14,
+          "input_tokens": 45282,
+          "output_tokens": 2530,
+          "models": {
+            "openai/gpt-oss-120b": 12,
+            "gemini-2.5-flash": 2
+          }
+        }
+      }
+    },
+    {
+      "task_id": "add-feature-slugify",
+      "category": "add-feature",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 13,
+      "input_tokens": 30284,
+      "output_tokens": 2599,
+      "agent_seconds": 225.7558467388153,
+      "grade_exit_code": 0,
+      "grade_output": "................                                                         [100%]\n16 passed in 0.03s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 252,
+          "output_tokens": 387,
+          "models": {
+            "openai/gpt-oss-120b": 1
+          }
+        },
+        "act": {
+          "calls": 13,
+          "input_tokens": 30032,
+          "output_tokens": 2212,
+          "models": {
+            "openai/gpt-oss-120b": 12,
+            "gemini-2.5-flash": 1
+          }
+        }
+      }
+    },
+    {
+      "task_id": "add-feature-stack-peek",
+      "category": "add-feature",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 10,
+      "input_tokens": 18493,
+      "output_tokens": 1560,
+      "agent_seconds": 153.38931274414062,
+      "grade_exit_code": 0,
+      "grade_output": "........                                                                 [100%]\n8 passed in 0.04s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 242,
+          "output_tokens": 281,
+          "models": {
+            "openai/gpt-oss-120b": 1
+          }
+        },
+        "act": {
+          "calls": 10,
+          "input_tokens": 18251,
+          "output_tokens": 1279,
+          "models": {
+            "openai/gpt-oss-120b": 9,
+            "gemini-2.5-flash": 1
+          }
+        }
+      }
+    },
+    {
+      "task_id": "add-test-bounded-queue",
+      "category": "add-test",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 9,
+      "input_tokens": 18430,
+      "output_tokens": 1654,
+      "agent_seconds": 173.21502566337585,
+      "grade_exit_code": 0,
+      "grade_output": "..........                                                               [100%]\n10 passed in 5.58s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 255,
+          "output_tokens": 452,
+          "models": {
+            "openai/gpt-oss-120b": 1
+          }
+        },
+        "act": {
+          "calls": 9,
+          "input_tokens": 18175,
+          "output_tokens": 1202,
+          "models": {
+            "openai/gpt-oss-120b": 8,
+            "gemini-2.5-flash": 1
+          }
+        }
+      }
+    },
+    {
+      "task_id": "add-test-mathx",
+      "category": "add-test",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 8,
+      "input_tokens": 17416,
+      "output_tokens": 1824,
+      "agent_seconds": 115.05727124214172,
+      "grade_exit_code": 0,
+      "grade_output": ".....................................                                    [100%]\n37 passed in 4.74s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 250,
+          "output_tokens": 481,
+          "models": {
+            "openai/gpt-oss-120b": 1
+          }
+        },
+        "act": {
+          "calls": 8,
+          "input_tokens": 17166,
+          "output_tokens": 1343,
+          "models": {
+            "openai/gpt-oss-120b": 7,
+            "gemini-2.5-flash": 1
+          }
+        }
+      }
+    },
+    {
+      "task_id": "fix-bug-chunk-drops-tail",
+      "category": "fix-bug",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 7,
+      "input_tokens": 11873,
+      "output_tokens": 969,
+      "agent_seconds": 118.6277859210968,
+      "grade_exit_code": 0,
+      "grade_output": ".......                                                                  [100%]\n7 passed in 0.02s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 224,
+          "output_tokens": 340,
+          "models": {
+            "openai/gpt-oss-120b": 1
+          }
+        },
+        "act": {
+          "calls": 7,
+          "input_tokens": 11649,
+          "output_tokens": 629,
+          "models": {
+            "openai/gpt-oss-120b": 5,
+            "gemini-2.5-flash": 2
+          }
+        }
+      }
+    },
+    {
+      "task_id": "fix-bug-duration-units",
+      "category": "fix-bug",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 12,
+      "input_tokens": 24480,
+      "output_tokens": 2894,
+      "agent_seconds": 193.56045651435852,
+      "grade_exit_code": 0,
+      "grade_output": "..........                                                               [100%]\n10 passed in 0.02s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 226,
+          "output_tokens": 366,
+          "models": {
+            "openai/gpt-oss-120b": 1
+          }
+        },
+        "act": {
+          "calls": 12,
+          "input_tokens": 24254,
+          "output_tokens": 2528,
+          "models": {
+            "openai/gpt-oss-120b": 11,
+            "gemini-2.5-flash": 1
+          }
+        }
+      }
+    },
+    {
+      "task_id": "fix-bug-shared-default-list",
+      "category": "fix-bug",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 9,
+      "input_tokens": 17417,
+      "output_tokens": 1319,
+      "agent_seconds": 68.11514377593994,
+      "grade_exit_code": 0,
+      "grade_output": "......                                                                   [100%]\n6 passed in 0.02s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 230,
+          "output_tokens": 436,
+          "models": {
+            "openai/gpt-oss-120b": 1
+          }
+        },
+        "act": {
+          "calls": 9,
+          "input_tokens": 17187,
+          "output_tokens": 883,
+          "models": {
+            "openai/gpt-oss-120b": 6,
+            "gemini-2.5-flash": 3
+          }
+        }
+      }
+    },
+    {
+      "task_id": "multi-file-cart-discount",
+      "category": "multi-file",
+      "passed": false,
+      "agent_status": "error",
+      "iterations": 0,
+      "steps": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "agent_seconds": 26.746357679367065,
+      "grade_exit_code": 1,
+      "grade_output": "......F.                                                                 [100%]\n================================== FAILURES ===================================\n____________________ test_cart_total_with_code_before_tax _____________________\n\n    def test_cart_total_with_code_before_tax():\n>       assert _cart().total(code=\"SAVE10\") == 22.5\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: Cart.total() got an unexpected keyword argument 'code'\n\ntests\\test_discount_hidden.py:36: TypeError\n=========================== short test summary info ===========================\nFAILED tests/test_discount_hidden.py::test_cart_total_with_code_before_tax - ...\n1 failed, 7 passed in 0.15s",
+      "error": "Traceback (most recent call last):\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\src\\coder_agent\\evals\\runner.py\", line 204, in run_task\n    final = await agent(repo, task.prompt)\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\src\\coder_agent\\evals\\runner.py\", line 169, in graph_agent\n    outcome = await run_agent(repo, prompt, tags={\"suite\": \"in-house\", \"task_id\": repo.name})\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\src\\coder_agent\\agent.py\", line 143, in run_agent\n    return await _drive(\n           ^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\src\\coder_agent\\agent.py\", line 248, in _drive\n    async for update in graph.astream(graph_input, config, stream_mode=\"updates\"):\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langgraph\\pregel\\main.py\", line 3440, in astream\n    async for _ in runner.atick(\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langgraph\\pregel\\_runner.py\", line 396, in atick\n    await arun_with_retry(\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langgraph\\pregel\\_retry.py\", line 744, in arun_with_retry\n    return await task.proc.ainvoke(task.input, config)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langgraph\\_internal\\_runnable.py\", line 756, in ainvoke\n    input = await asyncio.create_task(\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langgraph\\_internal\\_runnable.py\", line 522, in ainvoke\n    ret = await self.afunc(*args, **kwargs)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\config.py\", line 707, in run_in_executor\n    return await asyncio.get_running_loop().run_in_executor(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\concurrent\\futures\\thread.py\", line 58, in run\n    result = self.fn(*self.args, **self.kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\config.py\", line 698, in wrapper\n    return func(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\src\\coder_agent\\graph\\nodes.py\", line 88, in act\n    response = repair_tool_calls(model.invoke([system, *history]), tool_names)\n                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\fallbacks.py\", line 212, in invoke\n    raise first_error\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\fallbacks.py\", line 192, in invoke\n    output = context.run(\n             ^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\retry.py\", line 201, in invoke\n    return self._call_with_config(self._invoke, input, config, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\base.py\", line 2301, in _call_with_config\n    context.run(\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\config.py\", line 526, in call_func_with_variable_args\n    return func(input, **kwargs)  # type: ignore[call-arg]\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\retry.py\", line 186, in _invoke\n    for attempt in self._sync_retrying(reraise=True):\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\tenacity\\__init__.py\", line 438, in __iter__\n    do = self.iter(retry_state=retry_state)\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\tenacity\\__init__.py\", line 371, in iter\n    result = action(retry_state)\n             ^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\tenacity\\__init__.py\", line 413, in exc_check\n    raise retry_exc.reraise()\n          ^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\tenacity\\__init__.py\", line 184, in reraise\n    raise self.last_attempt.result()\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\concurrent\\futures\\_base.py\", line 449, in result\n    return self.__get_result()\n           ^^^^^^^^^^^^^^^^^^^\n  File \"~\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\concurrent\\futures\\_base.py\", line 401, in __get_result\n    raise self._exception\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\retry.py\", line 188, in _invoke\n    result = super().invoke(\n             ^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\base.py\", line 6014, in invoke\n    return self.bound.invoke(\n           ^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\base.py\", line 6014, in invoke\n    return self.bound.invoke(\n           ^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\language_models\\chat_models.py\", line 488, in invoke\n    self.generate_prompt(\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\language_models\\chat_models.py\", line 1877, in generate_prompt\n    return self.generate(prompt_messages, stop=stop, callbacks=callbacks, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\language_models\\chat_models.py\", line 1684, in generate\n    self._generate_with_cache(\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\language_models\\chat_models.py\", line 2022, in _generate_with_cache\n    result = self._generate(\n             ^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_groq\\chat_models.py\", line 627, in _generate\n    response = self.client.create(messages=message_dicts, **params)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\groq\\resources\\chat\\completions.py\", line 461, in create\n    return self._post(\n           ^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\groq\\_base_client.py\", line 1242, in post\n    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\groq\\_base_client.py\", line 1044, in request\n    raise self._make_status_error_from_response(err.response) from None\ngroq.RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01knytxmpyeajbnrjwmbfgbk6z` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199198, Requested 3173. Please try again in 17m4.271999999s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}\nDuring task with name 'act' and id '26cb7ad9-5e86-c535-49d4-56587f3d2140'\n",
+      "usage": {}
+    },
+    {
+      "task_id": "multi-file-notes-delete",
+      "category": "multi-file",
+      "passed": false,
+      "agent_status": "error",
+      "iterations": 0,
+      "steps": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "agent_seconds": 40.41079640388489,
+      "grade_exit_code": 1,
+      "grade_output": "..FFF                                                                    [100%]\n================================== FAILURES ===================================\n______________ test_storage_delete_removes_and_raises_on_unknown ______________\n\n    def test_storage_delete_removes_and_raises_on_unknown():\n        s = Storage()\n        nid = s.put(\"x\")\n>       s.delete(nid)\n        ^^^^^^^^\nE       AttributeError: 'Storage' object has no attribute 'delete'\n\ntests\\test_notes_delete_hidden.py:11: AttributeError\n______________________ test_service_delete_returns_bool _______________________\n\n    def test_service_delete_returns_bool():\n        svc = NoteService()\n        nid = svc.create(\"x\")\n>       assert svc.delete(nid) is True\n               ^^^^^^^^^^\nE       AttributeError: 'NoteService' object has no attribute 'delete'\n\ntests\\test_notes_delete_hidden.py:20: AttributeError\n__________________________ test_cli_delete_messages ___________________________\n\n    def test_cli_delete_messages():\n        svc = NoteService()\n        main([\"add\", \"hello\"], svc)\n>       assert main([\"delete\", \"1\"], svc) == \"deleted 1\"\nE       AssertionError: assert 'unknown command: delete' == 'deleted 1'\nE         \nE         - deleted 1\nE         + unknown command: delete\n\ntests\\test_notes_delete_hidden.py:28: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_notes_delete_hidden.py::test_storage_delete_removes_and_raises_on_unknown\nFAILED tests/test_notes_delete_hidden.py::test_service_delete_returns_bool - ...\nFAILED tests/test_notes_delete_hidden.py::test_cli_delete_messages - Assertio...\n3 failed, 2 passed in 0.15s",
+      "error": "Traceback (most recent call last):\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\src\\coder_agent\\evals\\runner.py\", line 204, in run_task\n    final = await agent(repo, task.prompt)\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\src\\coder_agent\\evals\\runner.py\", line 169, in graph_agent\n    outcome = await run_agent(repo, prompt, tags={\"suite\": \"in-house\", \"task_id\": repo.name})\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\src\\coder_agent\\agent.py\", line 143, in run_agent\n    return await _drive(\n           ^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\src\\coder_agent\\agent.py\", line 248, in _drive\n    async for update in graph.astream(graph_input, config, stream_mode=\"updates\"):\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langgraph\\pregel\\main.py\", line 3440, in astream\n    async for _ in runner.atick(\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langgraph\\pregel\\_runner.py\", line 396, in atick\n    await arun_with_retry(\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langgraph\\pregel\\_retry.py\", line 744, in arun_with_retry\n    return await task.proc.ainvoke(task.input, config)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langgraph\\_internal\\_runnable.py\", line 756, in ainvoke\n    input = await asyncio.create_task(\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langgraph\\_internal\\_runnable.py\", line 522, in ainvoke\n    ret = await self.afunc(*args, **kwargs)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\config.py\", line 707, in run_in_executor\n    return await asyncio.get_running_loop().run_in_executor(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\concurrent\\futures\\thread.py\", line 58, in run\n    result = self.fn(*self.args, **self.kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\config.py\", line 698, in wrapper\n    return func(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\src\\coder_agent\\graph\\nodes.py\", line 88, in act\n    response = repair_tool_calls(model.invoke([system, *history]), tool_names)\n                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\fallbacks.py\", line 212, in invoke\n    raise first_error\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\fallbacks.py\", line 192, in invoke\n    output = context.run(\n             ^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\retry.py\", line 201, in invoke\n    return self._call_with_config(self._invoke, input, config, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\base.py\", line 2301, in _call_with_config\n    context.run(\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\config.py\", line 526, in call_func_with_variable_args\n    return func(input, **kwargs)  # type: ignore[call-arg]\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\retry.py\", line 186, in _invoke\n    for attempt in self._sync_retrying(reraise=True):\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\tenacity\\__init__.py\", line 438, in __iter__\n    do = self.iter(retry_state=retry_state)\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\tenacity\\__init__.py\", line 371, in iter\n    result = action(retry_state)\n             ^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\tenacity\\__init__.py\", line 413, in exc_check\n    raise retry_exc.reraise()\n          ^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\tenacity\\__init__.py\", line 184, in reraise\n    raise self.last_attempt.result()\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\concurrent\\futures\\_base.py\", line 449, in result\n    return self.__get_result()\n           ^^^^^^^^^^^^^^^^^^^\n  File \"~\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\concurrent\\futures\\_base.py\", line 401, in __get_result\n    raise self._exception\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\retry.py\", line 188, in _invoke\n    result = super().invoke(\n             ^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\base.py\", line 6014, in invoke\n    return self.bound.invoke(\n           ^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\base.py\", line 6014, in invoke\n    return self.bound.invoke(\n           ^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\language_models\\chat_models.py\", line 488, in invoke\n    self.generate_prompt(\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\language_models\\chat_models.py\", line 1877, in generate_prompt\n    return self.generate(prompt_messages, stop=stop, callbacks=callbacks, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\language_models\\chat_models.py\", line 1684, in generate\n    self._generate_with_cache(\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\language_models\\chat_models.py\", line 2022, in _generate_with_cache\n    result = self._generate(\n             ^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_groq\\chat_models.py\", line 627, in _generate\n    response = self.client.create(messages=message_dicts, **params)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\groq\\resources\\chat\\completions.py\", line 461, in create\n    return self._post(\n           ^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\groq\\_base_client.py\", line 1242, in post\n    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\groq\\_base_client.py\", line 1044, in request\n    raise self._make_status_error_from_response(err.response) from None\ngroq.RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01knytxmpyeajbnrjwmbfgbk6z` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199089, Requested 3282. Please try again in 17m4.271999999s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}\nDuring task with name 'act' and id 'fea89804-cc0c-9e4d-672a-bf941b9a6069'\n",
+      "usage": {}
+    },
+    {
+      "task_id": "refactor-config-dataclass",
+      "category": "refactor",
+      "passed": false,
+      "agent_status": "error",
+      "iterations": 0,
+      "steps": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "agent_seconds": 53.71917414665222,
+      "grade_exit_code": 2,
+      "grade_output": "=================================== ERRORS ====================================\n__________________ ERROR collecting tests/test_appconfig.py ___________________\nImportError while importing test module 'C:\\Users\\chaim\\AppData\\Local\\Temp\\coder-evals-apmuzjek\\refactor-config-dataclass\\tests\\test_appconfig.py'.\nHint: make sure your test modules/packages have valid Python names.\nTraceback:\n..\\..\\..\\Programs\\Python\\Python311\\Lib\\importlib\\__init__.py:126: in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntests\\test_appconfig.py:3: in <module>\n    from appconfig import Config, load_config\nE   ImportError: cannot import name 'Config' from 'appconfig' (C:\\Users\\chaim\\AppData\\Local\\Temp\\coder-evals-apmuzjek\\refactor-config-dataclass\\appconfig.py)\n=========================== short test summary info ===========================\nERROR tests/test_appconfig.py\n!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!\n1 error in 0.19s",
+      "error": "Traceback (most recent call last):\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\src\\coder_agent\\evals\\runner.py\", line 204, in run_task\n    final = await agent(repo, task.prompt)\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\src\\coder_agent\\evals\\runner.py\", line 169, in graph_agent\n    outcome = await run_agent(repo, prompt, tags={\"suite\": \"in-house\", \"task_id\": repo.name})\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\src\\coder_agent\\agent.py\", line 143, in run_agent\n    return await _drive(\n           ^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\src\\coder_agent\\agent.py\", line 248, in _drive\n    async for update in graph.astream(graph_input, config, stream_mode=\"updates\"):\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langgraph\\pregel\\main.py\", line 3440, in astream\n    async for _ in runner.atick(\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langgraph\\pregel\\_runner.py\", line 396, in atick\n    await arun_with_retry(\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langgraph\\pregel\\_retry.py\", line 744, in arun_with_retry\n    return await task.proc.ainvoke(task.input, config)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langgraph\\_internal\\_runnable.py\", line 756, in ainvoke\n    input = await asyncio.create_task(\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langgraph\\_internal\\_runnable.py\", line 522, in ainvoke\n    ret = await self.afunc(*args, **kwargs)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\config.py\", line 707, in run_in_executor\n    return await asyncio.get_running_loop().run_in_executor(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\concurrent\\futures\\thread.py\", line 58, in run\n    result = self.fn(*self.args, **self.kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\config.py\", line 698, in wrapper\n    return func(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\src\\coder_agent\\graph\\nodes.py\", line 88, in act\n    response = repair_tool_calls(model.invoke([system, *history]), tool_names)\n                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\fallbacks.py\", line 212, in invoke\n    raise first_error\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\fallbacks.py\", line 192, in invoke\n    output = context.run(\n             ^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\retry.py\", line 201, in invoke\n    return self._call_with_config(self._invoke, input, config, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\base.py\", line 2301, in _call_with_config\n    context.run(\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\config.py\", line 526, in call_func_with_variable_args\n    return func(input, **kwargs)  # type: ignore[call-arg]\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\retry.py\", line 186, in _invoke\n    for attempt in self._sync_retrying(reraise=True):\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\tenacity\\__init__.py\", line 438, in __iter__\n    do = self.iter(retry_state=retry_state)\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\tenacity\\__init__.py\", line 371, in iter\n    result = action(retry_state)\n             ^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\tenacity\\__init__.py\", line 413, in exc_check\n    raise retry_exc.reraise()\n          ^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\tenacity\\__init__.py\", line 184, in reraise\n    raise self.last_attempt.result()\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\concurrent\\futures\\_base.py\", line 449, in result\n    return self.__get_result()\n           ^^^^^^^^^^^^^^^^^^^\n  File \"~\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\concurrent\\futures\\_base.py\", line 401, in __get_result\n    raise self._exception\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\retry.py\", line 188, in _invoke\n    result = super().invoke(\n             ^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\base.py\", line 6014, in invoke\n    return self.bound.invoke(\n           ^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\base.py\", line 6014, in invoke\n    return self.bound.invoke(\n           ^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\language_models\\chat_models.py\", line 488, in invoke\n    self.generate_prompt(\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\language_models\\chat_models.py\", line 1877, in generate_prompt\n    return self.generate(prompt_messages, stop=stop, callbacks=callbacks, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\language_models\\chat_models.py\", line 1684, in generate\n    self._generate_with_cache(\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\language_models\\chat_models.py\", line 2022, in _generate_with_cache\n    result = self._generate(\n             ^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_groq\\chat_models.py\", line 627, in _generate\n    response = self.client.create(messages=message_dicts, **params)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\groq\\resources\\chat\\completions.py\", line 461, in create\n    return self._post(\n           ^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\groq\\_base_client.py\", line 1242, in post\n    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\groq\\_base_client.py\", line 1044, in request\n    raise self._make_status_error_from_response(err.response) from None\ngroq.RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01knytxmpyeajbnrjwmbfgbk6z` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199699, Requested 2174. Please try again in 13m29.136s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}\nDuring task with name 'act' and id 'ac5eeaff-28db-eb62-34e1-906a1c1aeada'\n",
+      "usage": {}
+    },
+    {
+      "task_id": "refactor-extract-format-row",
+      "category": "refactor",
+      "passed": false,
+      "agent_status": "error",
+      "iterations": 0,
+      "steps": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "agent_seconds": 7.088250398635864,
+      "grade_exit_code": 2,
+      "grade_output": "=================================== ERRORS ====================================\n________________ ERROR collecting tests/test_report_hidden.py _________________\nImportError while importing test module 'C:\\Users\\chaim\\AppData\\Local\\Temp\\coder-evals-apmuzjek\\refactor-extract-format-row\\tests\\test_report_hidden.py'.\nHint: make sure your test modules/packages have valid Python names.\nTraceback:\n..\\..\\..\\Programs\\Python\\Python311\\Lib\\importlib\\__init__.py:126: in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntests\\test_report_hidden.py:1: in <module>\n    from report import format_row, render_report, render_summary\nE   ImportError: cannot import name 'format_row' from 'report' (C:\\Users\\chaim\\AppData\\Local\\Temp\\coder-evals-apmuzjek\\refactor-extract-format-row\\report.py)\n=========================== short test summary info ===========================\nERROR tests/test_report_hidden.py\n!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!\n1 error in 0.20s",
+      "error": "Traceback (most recent call last):\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\src\\coder_agent\\evals\\runner.py\", line 204, in run_task\n    final = await agent(repo, task.prompt)\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\src\\coder_agent\\evals\\runner.py\", line 169, in graph_agent\n    outcome = await run_agent(repo, prompt, tags={\"suite\": \"in-house\", \"task_id\": repo.name})\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\src\\coder_agent\\agent.py\", line 143, in run_agent\n    return await _drive(\n           ^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\src\\coder_agent\\agent.py\", line 248, in _drive\n    async for update in graph.astream(graph_input, config, stream_mode=\"updates\"):\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langgraph\\pregel\\main.py\", line 3440, in astream\n    async for _ in runner.atick(\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langgraph\\pregel\\_runner.py\", line 396, in atick\n    await arun_with_retry(\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langgraph\\pregel\\_retry.py\", line 744, in arun_with_retry\n    return await task.proc.ainvoke(task.input, config)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langgraph\\_internal\\_runnable.py\", line 756, in ainvoke\n    input = await asyncio.create_task(\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langgraph\\_internal\\_runnable.py\", line 522, in ainvoke\n    ret = await self.afunc(*args, **kwargs)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\config.py\", line 707, in run_in_executor\n    return await asyncio.get_running_loop().run_in_executor(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\concurrent\\futures\\thread.py\", line 58, in run\n    result = self.fn(*self.args, **self.kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\config.py\", line 698, in wrapper\n    return func(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\src\\coder_agent\\graph\\nodes.py\", line 52, in plan\n    response = llm.invoke([SystemMessage(PLAN_SYSTEM), HumanMessage(user)])\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\fallbacks.py\", line 212, in invoke\n    raise first_error\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\fallbacks.py\", line 192, in invoke\n    output = context.run(\n             ^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\retry.py\", line 201, in invoke\n    return self._call_with_config(self._invoke, input, config, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\base.py\", line 2301, in _call_with_config\n    context.run(\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\config.py\", line 526, in call_func_with_variable_args\n    return func(input, **kwargs)  # type: ignore[call-arg]\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\retry.py\", line 186, in _invoke\n    for attempt in self._sync_retrying(reraise=True):\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\tenacity\\__init__.py\", line 438, in __iter__\n    do = self.iter(retry_state=retry_state)\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\tenacity\\__init__.py\", line 371, in iter\n    result = action(retry_state)\n             ^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\tenacity\\__init__.py\", line 413, in exc_check\n    raise retry_exc.reraise()\n          ^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\tenacity\\__init__.py\", line 184, in reraise\n    raise self.last_attempt.result()\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\concurrent\\futures\\_base.py\", line 449, in result\n    return self.__get_result()\n           ^^^^^^^^^^^^^^^^^^^\n  File \"~\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\concurrent\\futures\\_base.py\", line 401, in __get_result\n    raise self._exception\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\retry.py\", line 188, in _invoke\n    result = super().invoke(\n             ^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\runnables\\base.py\", line 6014, in invoke\n    return self.bound.invoke(\n           ^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\language_models\\chat_models.py\", line 488, in invoke\n    self.generate_prompt(\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\language_models\\chat_models.py\", line 1877, in generate_prompt\n    return self.generate(prompt_messages, stop=stop, callbacks=callbacks, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\language_models\\chat_models.py\", line 1684, in generate\n    self._generate_with_cache(\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_core\\language_models\\chat_models.py\", line 2022, in _generate_with_cache\n    result = self._generate(\n             ^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\langchain_groq\\chat_models.py\", line 627, in _generate\n    response = self.client.create(messages=message_dicts, **params)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\groq\\resources\\chat\\completions.py\", line 461, in create\n    return self._post(\n           ^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\groq\\_base_client.py\", line 1242, in post\n    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"~\\OneDrive\\Desktop\\projects Resume\\coder-agent\\.venv\\Lib\\site-packages\\groq\\_base_client.py\", line 1044, in request\n    raise self._make_status_error_from_response(err.response) from None\ngroq.RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01knytxmpyeajbnrjwmbfgbk6z` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199667, Requested 984. Please try again in 4m41.232s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}\nDuring task with name 'plan' and id '37209f4f-ce5d-31ad-cde8-48c7c38dba86'\n",
+      "usage": {}
+    }
+  ]
+}

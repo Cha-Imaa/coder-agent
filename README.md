@@ -186,9 +186,13 @@ query for a change in ordering, not in which chunks are present.
 
 ### Still being measured
 
-- Retrieval ablation on the suite (off, BM25, dense, hybrid): the `off` arm is five of twelve
-  tasks in; the rest waits on the daily quota, and the figure draws itself once two arms are
-  complete.
+- Retrieval ablation on the suite (off, BM25, dense, hybrid). The Groq free tier allows 200k
+  tokens per day and one twelve-task arm spends all of it, so the ablation advances one arm per
+  quota window. The `off` arm is eight of twelve tasks graded at the current commit, all eight
+  passed, and on the eight tasks also graded in the hybrid baseline it used **23% more tokens
+  for the same pass rate** (25.0k against 20.3k per task). That is the shape the ablation is
+  expected to show, on eight tasks and two runs, which is not yet a result. The figure draws
+  itself once two arms are complete.
 - HumanEval slice (thirty problems packaged as repository tasks) and a model comparison with a
   local Ollama model. The provider is wired (`--model ollama:<tag>`, `uv sync --extra ollama`);
   the figure draws itself once a second model has run the suite.
