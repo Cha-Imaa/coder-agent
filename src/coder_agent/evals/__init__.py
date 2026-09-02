@@ -27,6 +27,7 @@ from coder_agent.evals.tasks import (
     load_suite,
     load_suites,
     load_task,
+    quick_subset,
 )
 
 __all__ = [
@@ -49,6 +50,7 @@ __all__ = [
     "load_suites",
     "load_task",
     "noop_agent",
+    "quick_subset",
     "run_suite",
     "run_task",
     "solution_agent",

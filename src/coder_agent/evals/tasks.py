@@ -34,6 +34,20 @@ _EVALS_DIR = Path(__file__).resolve().parents[3] / "evals"
 SUITE_DIR = _EVALS_DIR / "suite"
 SUITES: dict[str, Path] = {"inhouse": SUITE_DIR, "humaneval": _EVALS_DIR / "humaneval"}
 
+# The default arm of `run_evals.py`: the cheapest task in each of four categories, measured from
+# a full run. Together they cost about 57k tokens and five minutes, against 356k and half an hour
+# for all twelve, which matters because the Groq free tier allows 200k tokens per day - a full
+# suite is the whole day's budget, so it must be asked for rather than be what happens by default.
+# `multi-file` is left out deliberately: its two tasks cost more than these four put together.
+# Headline numbers still come from the full suite; see `--full` and `subset` in the results meta.
+QUICK_TASK_IDS: tuple[str, ...] = (
+    "fix-bug-chunk-drops-tail",
+    "add-test-bounded-queue",
+    "add-feature-stack-peek",
+    "refactor-extract-format-row",
+)
+
+
 # Same flags the agent's own `run_tests` node uses, so grading and self-verification agree.
 GRADE_COMMAND = "python -m pytest -q --no-header -p no:cacheprovider tests"
 
@@ -130,6 +144,19 @@ def grade(repo: Path, timeout: int = 300) -> CommandResult:
     timeout and output cap apply to grading as to the agent's own test runs.
     """
     return run_command(repo, GRADE_COMMAND, timeout=timeout)
+
+
+def quick_subset(tasks: list[EvalTask], count: int = len(QUICK_TASK_IDS)) -> list[EvalTask]:
+    """A cheap, representative slice of `tasks`.
+
+    The named in-house tasks when any of them are present, in the order `QUICK_TASK_IDS` lists
+    them; otherwise the first `count`. The fallback is what makes this work for the HumanEval
+    slice, whose problems are named differently and cost much the same as each other, so any few
+    of them are as representative as any other few.
+    """
+    by_id = {task.id: task for task in tasks}
+    named = [by_id[task_id] for task_id in QUICK_TASK_IDS if task_id in by_id]
+    return named or tasks[:count]
 
 
 def load_suites(names: Iterable[str], category: str | None = None) -> list[EvalTask]:

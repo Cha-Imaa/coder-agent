@@ -202,9 +202,10 @@ query for a change in ordering, not in which chunks are present.
 ### Reproduce
 
 ```bash
-uv run python evals/run_evals.py                          # 12-task suite, JSON to evals/results/
+uv run python evals/run_evals.py                          # quick subset: 4 tasks, ~57k tokens
+uv run python evals/run_evals.py --full                   # all 12, ~356k tokens: a day's quota
 uv run python evals/run_evals.py --suite humaneval        # 30 HumanEval problems as repo tasks
-uv run python evals/run_evals.py --retrieval off          # one ablation arm
+uv run python evals/run_evals.py --retrieval off --full   # one ablation arm
 uv run python evals/retrieval_eval.py                     # recall@k per retrieval mode
 uv run python evals/figures.py                            # redraw docs/figures/*.png
 uv run pytest                                             # the test suite, no API key needed

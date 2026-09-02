@@ -20,7 +20,9 @@ from coder_agent.evals import (
     load_suite,
     load_suites,
     load_task,
+    quick_subset,
 )
+from coder_agent.evals.tasks import QUICK_TASK_IDS
 
 SUITE = load_suite()
 HUMANEVAL = load_suite(SUITES["humaneval"])
@@ -45,6 +47,29 @@ def test_humaneval_slice_has_thirty_tasks_in_dataset_order():
         assert len(list((task.repo_dir / "tests").glob("test_*.py"))) == 1
         assert len(list(task.hidden_tests_dir.glob("*.py"))) == 1
         assert "def check(candidate)" in next(task.hidden_tests_dir.glob("*.py")).read_text()
+
+
+def test_quick_subset_names_real_tasks_across_distinct_categories():
+    """The cheap default has to stay a real, representative slice as the suite changes.
+
+    Nothing else would notice an id going stale: `quick_subset` skips ids it cannot find, so a
+    renamed task would quietly shrink the default run instead of failing.
+    """
+    chosen = quick_subset(SUITE)
+    assert [task.id for task in chosen] == list(QUICK_TASK_IDS)
+    assert len({task.category for task in chosen}) == len(chosen)  # one per category
+    assert set(QUICK_TASK_IDS) <= {task.id for task in SUITE}
+
+
+def test_quick_subset_falls_back_to_the_first_few_for_other_suites():
+    """HumanEval ids are not in the constant; its problems cost much the same as each other."""
+    chosen = quick_subset(HUMANEVAL)
+    assert chosen == HUMANEVAL[: len(QUICK_TASK_IDS)]
+    assert quick_subset(HUMANEVAL, count=2) == HUMANEVAL[:2]
+
+
+def test_quick_subset_is_much_cheaper_than_the_full_suite():
+    assert len(quick_subset(SUITE)) * 2 < len(SUITE)
 
 
 def test_load_suites_concatenates_and_rejects_unknown_names():

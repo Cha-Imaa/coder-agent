@@ -8,10 +8,12 @@ tests that matter most. The rest covers isolation, crash handling and the result
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
 import pytest
+from typer.testing import CliRunner
 
 from coder_agent.evals import (
     EvalTask,
@@ -23,6 +25,7 @@ from coder_agent.evals import (
     solution_agent,
 )
 from coder_agent.evals.runner import label_for_model
+from coder_agent.evals.tasks import QUICK_TASK_IDS
 
 SUITE = load_suite()
 # Two cheap tasks from different categories keep the module under ten seconds.
@@ -178,3 +181,48 @@ def test_label_for_model_drops_the_provider_and_keeps_ollama_tags_whole():
     assert label_for_model("groq:openai/gpt-oss-120b") == "openai-gpt-oss-120b"
     assert label_for_model("google_genai:gemini-2.5-flash") == "gemini-2.5-flash"
     assert label_for_model("ollama:qwen2.5-coder:7b") == "qwen2.5-coder-7b"
+
+
+# --- the run_evals CLI ------------------------------------------------------------------------
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "evals"))
+
+import run_evals
+
+
+def _run_evals(tmp_path: Path, *args: str):
+    """`run_evals.py --agent noop` into a temporary results directory. No model is called."""
+    result = CliRunner().invoke(
+        run_evals.app, ["--agent", "noop", "--results-dir", str(tmp_path), *args]
+    )
+    assert result.exit_code == 0, result.output
+    written = list(tmp_path.glob("*.json"))
+    assert len(written) == 1
+    return result, json.loads(written[0].read_text(encoding="utf-8"))
+
+
+def test_the_default_run_is_the_quick_subset(tmp_path: Path):
+    """The expensive thing has to be the one you ask for.
+
+    A full pass over the in-house suite costs roughly a day of the Groq free tier, so running it
+    by accident is the failure this guards against.
+    """
+    result, data = _run_evals(tmp_path)
+    assert [r["task_id"] for r in data["results"]] == list(QUICK_TASK_IDS)
+    assert data["meta"]["subset"] == "quick"
+    assert data["label"].endswith("-quick")  # cannot be mistaken for the headline number
+    assert "--full" in result.output
+
+
+def test_full_runs_the_whole_suite_and_is_marked_as_such(tmp_path: Path):
+    _, data = _run_evals(tmp_path, "--full")
+    assert len(data["results"]) == len(load_suite())
+    assert data["meta"]["subset"] == "full"
+    assert not data["label"].endswith("-quick")
+
+
+def test_naming_tasks_explicitly_overrides_the_quick_default(tmp_path: Path):
+    """`--task` is already a narrower request; the subset must not narrow it further."""
+    _, data = _run_evals(tmp_path, "--task", "multi-file-cart-discount")
+    assert [r["task_id"] for r in data["results"]] == ["multi-file-cart-discount"]
+    assert data["meta"]["subset"] == "full"

@@ -56,6 +56,15 @@ The first release, `0.1.0`, is tagged once the acceptance walkthrough in `docs/P
   coverage badge from an orphan branch; MkDocs Material site on GitHub Pages; README with
   architecture diagrams and results; MIT licence, contributing guide, issue and PR templates.
 
+### Changed
+- `evals/run_evals.py` runs a four-task quick subset by default instead of the whole in-house
+  suite: the cheapest task in each of four categories, about 57k tokens and five minutes against
+  356k and half an hour. The Groq free tier allows 200k tokens per day, so a full pass is the
+  whole day's budget and now has to be asked for with `--full`. Quick results are labelled
+  `-quick` and carry `subset: quick` in their metadata, and every figure ignores them, so a
+  four-task pass rate cannot be mistaken for the twelve-task number the README quotes.
+  `--task`, `--category` and `--rerun-errors` are unaffected (2026-09-14).
+
 ### Fixed
 - A local run no longer needs cloud keys: `--model ollama:<tag>` on a machine with no
   `GOOGLE_API_KEY` died before the first token, because the fallback model is constructed
