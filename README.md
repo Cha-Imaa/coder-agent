@@ -28,6 +28,8 @@ sandbox jail.
 
 The [docs site](https://cha-imaa.github.io/coder-agent/) has the learning log (one entry per
 step: what was built, why, how production agents do it), the system design and the results.
+[Try it](https://cha-imaa.github.io/coder-agent/try-it/) walks from an empty directory to the
+agent opening a pull request.
 
 ## Quick start
 

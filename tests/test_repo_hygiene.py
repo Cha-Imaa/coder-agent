@@ -6,14 +6,20 @@ licence the metadata does not mention is invisible on PyPI, so both are checked 
 
 from __future__ import annotations
 
+import subprocess
 import tomllib
 from pathlib import Path
 
+import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 TEMPLATES = ROOT / ".github" / "ISSUE_TEMPLATE"
 BLOCK_TYPES = {"input", "textarea", "dropdown", "checkboxes", "markdown"}
+
+# 260 (Windows MAX_PATH) minus room for a reasonably deep clone directory. The longest
+# tracked path today is a HumanEval hidden test at 109 characters.
+MAX_RELATIVE_PATH = 120
 
 
 def test_licence_is_mit_and_declared_in_metadata() -> None:
@@ -58,3 +64,28 @@ def test_contributing_names_the_same_commands_as_ci() -> None:
     ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
     for command in ("uv run ruff check .", "uv sync --extra dev"):
         assert command in text and command in ci
+
+
+def test_tracked_paths_stay_short_enough_for_windows() -> None:
+    """No tracked path may grow past `MAX_RELATIVE_PATH`.
+
+    Windows caps a full path at 260 characters unless long paths are enabled, and `git clone`
+    fails outright on the first file that crosses it. The repository's own paths are only half
+    the sum; the rest is wherever someone cloned it. Capping the tracked half well under the
+    limit leaves room for a reasonably deep checkout, and turns "please keep eval task names
+    short" from advice in CONTRIBUTING into something that fails here first.
+    """
+    result = subprocess.run(
+        ["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=False
+    )
+    if result.returncode != 0:  # not a git checkout (a source tarball, say): nothing to check
+        pytest.skip("not a git checkout")
+    too_long = sorted(
+        (path for path in result.stdout.splitlines() if len(path) > MAX_RELATIVE_PATH),
+        key=len,
+        reverse=True,
+    )
+    assert not too_long, (
+        f"tracked paths longer than {MAX_RELATIVE_PATH} characters: "
+        + ", ".join(f"{path} ({len(path)})" for path in too_long[:5])
+    )
