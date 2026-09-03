@@ -43,16 +43,22 @@ def is_full_suite(suite: SuiteResult) -> bool:
     """
     return suite.meta.get("subset", "full") == "full"
 
-# One light palette, applied by role. Categorical hues are used in this fixed order; the lighter
-# blue is a step of the same ramp and marks the share of a bar that was never graded.
-SURFACE = "#fcfcfb"
-INK = "#0b0b0b"
-INK_SOFT = "#52514e"
-MUTED = "#898781"
-GRID = "#e1e0d9"
-AXIS = "#c3c2b7"
-SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#4a3aa7", "#e34948"]
-NOT_GRADED = "#9ec5f4"
+# One light palette, applied by role: a deep navy, a bright royal blue and a teal on a white card,
+# with every non-data element a step of the same blue-grey. Categorical hues are used in this
+# fixed order, never cycled by rank; the pale blue marks the share of a bar that was never graded.
+SURFACE = "#f5f8fc"       # page behind the card
+CARD = "#ffffff"          # the card the chart sits on
+CARD_EDGE = "#e6ecf5"     # its hairline border
+CHIP = "#eaf0f7"          # badge and callout fills
+GRID = "#d8e1ec"          # dashed horizontal guides
+INK = "#102a56"           # title and value labels
+INK_SOFT = "#40557d"      # subtitles and axis labels
+MUTED = "#7c8da8"         # tick labels
+SERIES = ["#1e4a8a", "#2f80ed", "#1fb8a6", "#6b5bd2", "#e8973a", "#d9536f", "#0f766e", "#9333ea"]
+NOT_GRADED = "#c7d8ef"
+
+SERIF = ["Georgia", "Times New Roman", "DejaVu Serif"]
+SANS = ["Segoe UI", "Helvetica Neue", "Arial", "DejaVu Sans"]
 
 
 # --------------------------------------------------------------------------------------------
@@ -258,9 +264,18 @@ def category_rows(suite: SuiteResult) -> dict[str, dict[str, Any]]:
 # --------------------------------------------------------------------------------------------
 # Drawing
 # --------------------------------------------------------------------------------------------
+#
+# Every figure is one card: a rounded white panel with a hairline border, a header (badge, title,
+# subtitle, and a callout that says which direction is good), the plot, and direct labels on the
+# marks. Layout is done in inches rather than by `tight_layout`, because the decorations - the
+# card, the badge, the category icons - are drawn in a transparent overlay axes whose coordinates
+# *are* inches, so a circle stays a circle and a margin means the same thing in every figure.
+
+PAD = 0.14  # figure edge to card edge, inches
+INSET = 0.30  # card edge to its contents
 
 
-def _figure(width: float, height: float):
+def _plt():
     import matplotlib
 
     matplotlib.use("Agg")
@@ -269,30 +284,95 @@ def _figure(width: float, height: float):
     plt.rcParams.update(
         {
             "font.family": "sans-serif",
-            "font.sans-serif": ["Segoe UI", "Helvetica Neue", "Arial", "DejaVu Sans"],
+            "font.sans-serif": SANS,
+            "font.serif": SERIF,
             "font.size": 10,
             "text.color": INK,
             "axes.labelcolor": INK_SOFT,
             "xtick.color": MUTED,
             "ytick.color": MUTED,
-            "axes.edgecolor": AXIS,
-            "axes.facecolor": SURFACE,
+            "axes.facecolor": "none",
             "figure.facecolor": SURFACE,
             "savefig.facecolor": SURFACE,
             "legend.frameon": False,
             "legend.fontsize": 9,
         }
     )
-    fig, ax = plt.subplots(figsize=(width, height), dpi=160)
-    for side in ("top", "right"):
+    return plt
+
+
+def _canvas(width: float, height: float):
+    """A figure whose only content so far is the card, plus an overlay axes measured in inches."""
+    from matplotlib.patches import FancyBboxPatch
+
+    plt = _plt()
+    fig = plt.figure(figsize=(width, height), dpi=170)
+    deco = fig.add_axes([0, 0, 1, 1])
+    deco.set_xlim(0, width)
+    deco.set_ylim(0, height)
+    deco.set_axis_off()
+    deco.patch.set_alpha(0)
+    deco.add_patch(
+        FancyBboxPatch(
+            (PAD, PAD), width - 2 * PAD, height - 2 * PAD,
+            boxstyle="round,pad=0,rounding_size=0.16",
+            facecolor=CARD, edgecolor=CARD_EDGE, linewidth=1.0,
+        )
+    )
+    return fig, deco
+
+
+def _header(
+    deco, width: float, height: float, title: str, subtitle: str,
+    callout: tuple[str, str] | None = None, size: float = 15.5,
+) -> None:
+    """Title and subtitle on the left; the callout chip, if any, on the right.
+
+    The callout says which way is better and what the numbers on the marks mean, so a reader who
+    only looks at the picture is not left inferring the direction of the axis."""
+    from matplotlib.patches import FancyBboxPatch
+
+    top = height - PAD - INSET
+    tx = PAD + INSET
+    deco.text(tx, top - 0.20, title, ha="left", va="center", family="serif", fontsize=size,
+              color=INK)
+    deco.text(tx, top - 0.53, subtitle, ha="left", va="center", fontsize=8.8, color=INK_SOFT)
+    if not callout:
+        return
+    lead, note = callout
+    box_w = 0.30 + 0.062 * max(len(lead), len(note))
+    box_h = 0.62
+    cx = width - PAD - INSET - box_w
+    deco.add_patch(
+        FancyBboxPatch(
+            (cx, top - box_h - 0.02), box_w, box_h, boxstyle="round,pad=0,rounding_size=0.10",
+            facecolor=CHIP, edgecolor="none",
+        )
+    )
+    deco.text(cx + 0.16, top - 0.23, lead, ha="left", va="center", fontsize=8.8,
+              color=SERIES[1], fontweight="semibold")
+    deco.text(cx + 0.16, top - 0.45, note, ha="left", va="center", fontsize=7.8, color=INK_SOFT)
+
+
+def _axes(fig, width: float, height: float, left: float, right: float, top: float, bottom: float):
+    """One plotting axes placed by inch margins, styled down to grid and baseline."""
+    ax = fig.add_axes(
+        [left / width, bottom / height, 1 - (left + right) / width, 1 - (top + bottom) / height]
+    )
+    for side in ("top", "right", "left"):
         ax.spines[side].set_visible(False)
-    ax.tick_params(length=0)
-    return fig, ax
+    ax.spines["bottom"].set_color(GRID)
+    ax.spines["bottom"].set_linewidth(1.0)
+    ax.tick_params(length=0, labelsize=9)
+    ax.set_facecolor("none")
+    ax.set_axisbelow(True)
+    return ax
 
 
-def _title(ax, title: str, subtitle: str) -> None:
-    ax.set_title(title, loc="left", fontsize=12, fontweight="semibold", color=INK, pad=22)
-    ax.text(0, 1.03, subtitle, transform=ax.transAxes, fontsize=9, color=INK_SOFT, va="bottom")
+def _grid(ax, axis: str = "y") -> None:
+    (ax.yaxis if axis == "y" else ax.xaxis).grid(
+        True, color=GRID, linewidth=0.9, linestyle=(0, (4, 4))
+    )
 
 
 def _percent_axis(ax, axis: str = "y") -> None:
@@ -300,82 +380,325 @@ def _percent_axis(ax, axis: str = "y") -> None:
 
     target = ax.yaxis if axis == "y" else ax.xaxis
     target.set_major_formatter(PercentFormatter(1.0, decimals=0))
-    target.grid(True, color=GRID, linewidth=0.8)
-    ax.set_axisbelow(True)
+    _grid(ax, axis)
     (ax.set_ylim if axis == "y" else ax.set_xlim)(0, 1.05)
+
+
+def _radius(ax, points: float) -> tuple[float, float]:
+    """`points` of corner radius expressed in data units on each axis.
+
+    Bars are drawn as paths rather than `ax.bar` rectangles so the end that carries the value can
+    be rounded. The radius has to be the same number of pixels on both axes or the corner reads
+    as an ellipse, which means converting through the axes transform - so the limits must be
+    final before a bar is drawn. Every figure here sets them first for that reason."""
+    pixels = points * ax.figure.dpi / 72
+    inv = ax.transData.inverted()
+    (x0, y0), (x1, y1) = inv.transform([(0, 0), (pixels, pixels)])
+    return abs(x1 - x0), abs(y1 - y0)
+
+
+def _bar(ax, x: float, height: float, width: float, colour: str, bottom: float = 0.0,
+         radius: float = 5.0, round_end: bool = True):
+    """A vertical bar with its top corners rounded and its base square on the baseline."""
+    from matplotlib.patches import PathPatch
+    from matplotlib.path import Path as MPath
+
+    if height <= 0:
+        return None
+    x0, x1 = x - width / 2, x + width / 2
+    y0, y1 = bottom, bottom + height
+    rx, ry = _radius(ax, radius) if round_end else (0.0, 0.0)
+    rx, ry = min(rx, width / 2), min(ry, height)
+    verts = [
+        (x0, y0), (x0, y1 - ry), (x0, y1), (x0 + rx, y1),
+        (x1 - rx, y1), (x1, y1), (x1, y1 - ry), (x1, y0), (x0, y0),
+    ]
+    codes = [
+        MPath.MOVETO, MPath.LINETO, MPath.CURVE3, MPath.CURVE3,
+        MPath.LINETO, MPath.CURVE3, MPath.CURVE3, MPath.LINETO, MPath.CLOSEPOLY,
+    ]
+    patch = PathPatch(MPath(verts, codes), facecolor=colour, edgecolor="none", zorder=3)
+    ax.add_patch(patch)
+    return patch
+
+
+def _hbar(ax, y: float, length: float, thickness: float, colour: str, left: float = 0.0,
+          radius: float = 5.0, round_end: bool = True):
+    """The same shape lying down: rounded at the far end, square where it meets the axis."""
+    from matplotlib.patches import PathPatch
+    from matplotlib.path import Path as MPath
+
+    if length <= 0:
+        return None
+    y0, y1 = y - thickness / 2, y + thickness / 2
+    x0, x1 = left, left + length
+    rx, ry = _radius(ax, radius) if round_end else (0.0, 0.0)
+    rx, ry = min(rx, length), min(ry, thickness / 2)
+    verts = [
+        (x0, y0), (x1 - rx, y0), (x1, y0), (x1, y0 + ry),
+        (x1, y1 - ry), (x1, y1), (x1 - rx, y1), (x0, y1), (x0, y0),
+    ]
+    codes = [
+        MPath.MOVETO, MPath.LINETO, MPath.CURVE3, MPath.CURVE3,
+        MPath.LINETO, MPath.CURVE3, MPath.CURVE3, MPath.LINETO, MPath.CLOSEPOLY,
+    ]
+    patch = PathPatch(MPath(verts, codes), facecolor=colour, edgecolor="none", zorder=3)
+    ax.add_patch(patch)
+    return patch
+
+
+def _value(ax, x: float, y: float, text: str, dy: float = 0.02) -> None:
+    ax.text(x, y + dy, text, ha="center", va="bottom", fontsize=8.8, color=INK,
+            fontweight="semibold")
+
+
+def _legend(deco, width: float, y: float, entries: list[tuple[str, str]]) -> None:
+    """A centred row of rounded swatches in a bordered pill, matching the header chips.
+
+    Drawn by hand rather than with `ax.legend` because the swatch is a rounded rectangle and the
+    row has to sit at a known height inside the card; widths are estimated from the label length,
+    which is close enough for centring."""
+    from matplotlib.patches import FancyBboxPatch
+
+    swatch, gap, lead = 0.30, 0.42, 0.14
+    widths = [swatch + lead + 0.058 * len(label) for _, label in entries]
+    total = sum(widths) + gap * (len(entries) - 1)
+    box_h = 0.42
+    x = (width - total) / 2
+    deco.add_patch(
+        FancyBboxPatch(
+            (x - 0.28, y - box_h / 2), total + 0.56, box_h,
+            boxstyle="round,pad=0,rounding_size=0.10",
+            facecolor=CARD, edgecolor=CARD_EDGE, linewidth=1.0,
+        )
+    )
+    for (colour, label), entry_w in zip(entries, widths, strict=True):
+        deco.add_patch(
+            FancyBboxPatch(
+                (x, y - 0.075), swatch, 0.15, boxstyle="round,pad=0,rounding_size=0.055",
+                facecolor=colour, edgecolor="none",
+            )
+        )
+        deco.text(x + swatch + lead, y, label, ha="left", va="center", fontsize=8.6, color=INK)
+        x += entry_w + gap
+
+
+# -- category glyphs ---------------------------------------------------------------------------
+# Six line drawings, one per task category, sitting between the axis and its labels. They are
+# built from primitives in the inch-measured overlay, so they never depend on an icon font being
+# installed on the machine that regenerates the figures.
+
+
+def _stroke(deco, xs, ys, linewidth: float = 1.2) -> None:
+    from matplotlib.lines import Line2D
+
+    deco.add_line(Line2D(xs, ys, color=INK, linewidth=linewidth, solid_capstyle="round"))
+
+
+def _ring(deco, cx: float, cy: float, r: float, linewidth: float = 1.2) -> None:
+    from matplotlib.patches import Circle
+
+    deco.add_patch(Circle((cx, cy), r, facecolor="none", edgecolor=INK, linewidth=linewidth))
+
+
+def _icon_bug(deco, cx, cy, s):
+    from matplotlib.patches import Ellipse
+
+    deco.add_patch(
+        Ellipse((cx, cy - 0.1 * s), 1.15 * s, 1.5 * s, facecolor="none", edgecolor=INK,
+                linewidth=1.2)
+    )
+    _ring(deco, cx, cy + 0.85 * s, 0.3 * s)
+    _stroke(deco, [cx - 0.25 * s, cx - 0.45 * s], [cy + 1.05 * s, cy + 1.35 * s])
+    _stroke(deco, [cx + 0.25 * s, cx + 0.45 * s], [cy + 1.05 * s, cy + 1.35 * s])
+    for dy in (0.35, 0.0, -0.35):
+        _stroke(deco, [cx - 0.58 * s, cx - 1.0 * s], [cy + dy * s, cy + (dy + 0.2) * s])
+        _stroke(deco, [cx + 0.58 * s, cx + 1.0 * s], [cy + dy * s, cy + (dy + 0.2) * s])
+
+
+def _icon_plus(deco, cx, cy, s):
+    _ring(deco, cx, cy, 0.95 * s)
+    _stroke(deco, [cx - 0.45 * s, cx + 0.45 * s], [cy, cy])
+    _stroke(deco, [cx, cx], [cy - 0.45 * s, cy + 0.45 * s])
+
+
+def _icon_refresh(deco, cx, cy, s):
+    from matplotlib.patches import Arc, Polygon
+
+    deco.add_patch(
+        Arc((cx, cy), 1.7 * s, 1.7 * s, theta1=45, theta2=340, edgecolor=INK, linewidth=1.2)
+    )
+    tx, ty = cx + 0.85 * s * 0.71, cy + 0.85 * s * 0.71  # the open end, at 45 degrees
+    deco.add_patch(
+        Polygon(
+            [(tx - 0.34 * s, ty + 0.10 * s), (tx + 0.30 * s, ty + 0.22 * s),
+             (tx + 0.10 * s, ty - 0.36 * s)],
+            closed=True, facecolor=INK, edgecolor="none",
+        )
+    )
+
+
+def _icon_doc(deco, cx, cy, s):
+    from matplotlib.patches import FancyBboxPatch
+
+    deco.add_patch(
+        FancyBboxPatch(
+            (cx - 0.62 * s, cy - 0.9 * s), 1.24 * s, 1.8 * s,
+            boxstyle="round,pad=0,rounding_size=0.012", facecolor="none", edgecolor=INK,
+            linewidth=1.2,
+        )
+    )
+    for dy in (0.42, 0.06, -0.3):
+        _stroke(deco, [cx - 0.34 * s, cx + 0.34 * s], [cy + dy * s, cy + dy * s], linewidth=1.0)
+
+
+def _icon_layers(deco, cx, cy, s):
+    from matplotlib.patches import Polygon
+
+    for i, dy in enumerate((0.62, 0.0, -0.62)):
+        deco.add_patch(
+            Polygon(
+                [(cx, cy + (dy + 0.34) * s), (cx + 1.0 * s, cy + dy * s),
+                 (cx, cy + (dy - 0.34) * s), (cx - 1.0 * s, cy + dy * s)],
+                closed=True, facecolor=INK if i == 0 else "none", edgecolor=INK, linewidth=1.1,
+            )
+        )
+
+
+def _icon_brain(deco, cx, cy, s):
+    """A ring around a wave: a plus or a pair of arcs at this size just reads as a cross."""
+    import math
+
+    _ring(deco, cx, cy, 0.95 * s)
+    xs = [cx + (-0.6 + 1.2 * k / 24) * s for k in range(25)]
+    ys = [cy + 0.30 * s * math.sin(2 * math.pi * (k / 24) * 1.5) for k in range(25)]
+    _stroke(deco, xs, ys, linewidth=1.1)
+
+
+# A marker per suite, and the dash a suite falls back to when its curve repeats an earlier one.
+MARKERS = ["o", "s", "D", "^"]
+REPEAT_DASH = (0, (6, 4))
+
+CATEGORY_ICONS = {
+    "fix-bug": _icon_bug,
+    "add-feature": _icon_plus,
+    "refactor": _icon_refresh,
+    "add-test": _icon_doc,
+    "multi-file": _icon_layers,
+    "humaneval": _icon_brain,
+}
+
+
+def _inches(fig, ax, x: float, y: float) -> tuple[float, float]:
+    """A point in data coordinates, as inches on the overlay axes."""
+    px, py = ax.transData.transform((x, y))
+    return px / fig.dpi, py / fig.dpi
+
+
+# --------------------------------------------------------------------------------------------
 
 
 def draw_pass_rate(suites: list[SuiteResult], out: Path) -> Path:
     """Grouped bars: pass@1 per category, one group of bars per suite. The pale segment stacked
     on top is the share of tasks that errored before grading (quota, crash), so the eye can
     separate "the agent failed" from "the agent never ran"."""
-    fig, ax = _figure(9.5, 4.4)
     cats = [c for c in CATEGORIES if any(c in category_rows(s) for s in suites)]
-    width = 0.8 / max(len(suites), 1)
+    width, height = 11.0, 5.2
+    fig, deco = _canvas(width, height)
+    models = ", ".join(sorted({s.model for s in suites}))
+    _header(
+        deco, width, height, "pass@1 by task category", f"Hidden-test pass rate · {models}",
+        callout=("Higher is better", "Numbers show passes / total"),
+    )
+    ax = _axes(fig, width, height, left=1.0, right=0.45, top=1.20, bottom=1.65)
+    ax.set_xlim(-0.6, len(cats) - 0.4)
+    ax.set_xticks(range(len(cats)), cats)
+    _percent_axis(ax)
+    ax.set_ylabel("pass rate", fontsize=9)
+    ax.tick_params(axis="x", pad=28)
+
+    slot = 0.78 / max(len(suites), 1)
+    errored = False
     for i, suite in enumerate(suites):
         rows = category_rows(suite)
         colour = SERIES[i % len(SERIES)]
-        labelled = False  # the legend entry goes on the first bar this suite draws, whichever
-        for j, cat in enumerate(cats):  # category that is: a HumanEval run has no fix-bug bar
+        for j, cat in enumerate(cats):
             row = rows.get(cat)
             if not row:
-                continue
-            x = j - 0.4 + width * (i + 0.5)
+                continue  # a HumanEval run has no fix-bug bar
+            x = j - 0.39 + slot * (i + 0.5)
             passed, errs = row["pass_rate"], row["errors"] / row["tasks"]
-            ax.bar(
-                x, passed, width * 0.9, color=colour, edgecolor=SURFACE, linewidth=1.5,
-                label=None if labelled else suite.label,
-            )
-            labelled = True
+            _bar(ax, x, passed, slot * 0.88, colour, round_end=not errs)
             if errs:
-                ax.bar(
-                    x, errs, width * 0.9, bottom=passed, color=NOT_GRADED, edgecolor=SURFACE,
-                    linewidth=1.5, label="errored, not graded" if (i, j) == (0, 0) else None,
-                )
-            ax.text(
-                x, passed + errs + 0.02, f"{row['passed']}/{row['tasks']}", ha="center",
-                va="bottom", fontsize=8.5, color=INK_SOFT,
-            )
-    ax.set_xticks(range(len(cats)), cats, fontsize=9)
-    _percent_axis(ax)
-    ax.spines["left"].set_visible(False)
-    models = ", ".join(sorted({s.model for s in suites}))
-    _title(ax, "pass@1 by task category", f"Hidden-test pass rate · {models}")
-    ax.legend(loc="upper left", bbox_to_anchor=(0, -0.12), ncol=3)
-    fig.tight_layout()
+                _bar(ax, x, errs, slot * 0.88, NOT_GRADED, bottom=passed)
+                errored = True
+            _value(ax, x, passed + errs, f"{row['passed']}/{row['tasks']}")
+
+    for j, cat in enumerate(cats):
+        icon = CATEGORY_ICONS.get(cat)
+        if icon:
+            cx, cy = _inches(fig, ax, j, 0)
+            icon(deco, cx, cy - 0.23, 0.10)
+
+    entries = [(SERIES[i % len(SERIES)], s.label) for i, s in enumerate(suites)]
+    if errored:
+        entries.append((NOT_GRADED, "errored, not graded"))
+    _legend(deco, width, PAD + INSET + 0.13, entries)
     fig.savefig(out)
+    _plt().close(fig)
     return out
 
 
 def draw_iteration_curve(suites: list[SuiteResult], out: Path) -> Path:
     """Cumulative share of tasks solved after k plan/act/test cycles. Flat means more cycles
     would not have helped; still rising at the ceiling means `max_iterations` is binding."""
-    fig, ax = _figure(6.5, 4)
+    width, height = 8.0, 4.8
+    fig, deco = _canvas(width, height)
+    _header(
+        deco, width, height, "Tasks solved within k iterations",
+        "Cumulative; the last point is pass@1",
+        callout=("Higher is better", "Flat means more cycles do not help"),
+    )
+    ax = _axes(fig, width, height, left=1.0, right=0.85, top=1.20,
+               bottom=1.30 if len(suites) > 1 else 0.85)
     k_max = max(max_iterations(s) for s in suites)
     ks = list(range(1, k_max + 1))
+    ax.set_xticks(ks)
+    ax.set_xlim(0.75, k_max + 0.35)
+    ax.set_xlabel("iterations allowed", fontsize=9)
+    _percent_axis(ax)
+    ax.set_ylabel("tasks solved", fontsize=9)
+    # Two suites can trace exactly the same curve - a full pass rate at every k is common on a
+    # small suite - and the one drawn last would hide the other entirely. A repeated curve is
+    # drawn dashed so the line underneath shows through; distinct curves stay solid.
+    drawn: list[list[float]] = []
+    ends: dict[float, str] = {}  # final value -> the colour of the only suite that reaches it
     for i, suite in enumerate(suites):
         ys = iteration_curve(suite, k_max)
         colour = SERIES[i % len(SERIES)]
-        ax.plot(
-            ks, ys, color=colour, linewidth=2, marker="o", markersize=7,
-            markeredgecolor=SURFACE, markeredgewidth=1.5, label=suite.label,
-        )
-        ax.text(ks[-1] + 0.08, ys[-1], f"{ys[-1]:.0%}", va="center", fontsize=9, color=INK_SOFT)
-    ax.set_xticks(ks)
-    ax.set_xlim(0.8, k_max + 0.5)
-    ax.set_xlabel("iterations allowed")
-    _percent_axis(ax)
-    ax.spines["left"].set_visible(False)
-    _title(ax, "Tasks solved within k iterations", "Cumulative; the last point is pass@1")
+        style = REPEAT_DASH if ys in drawn else "solid"
+        drawn.append(ys)
+        ax.plot(ks, ys, color=colour, linewidth=2.2, linestyle=style,
+                marker=MARKERS[i % len(MARKERS)], markersize=8, markeredgecolor=CARD,
+                markeredgewidth=1.8, zorder=3 + i, label=suite.label)
+        # One label per distinct end value, in ink when it belongs to more than one suite:
+        # stacking two identical percentages would just render the text twice.
+        ends[ys[-1]] = colour if ys[-1] not in ends else INK
+    for value, colour in ends.items():
+        ax.text(ks[-1] + 0.14, value, f"{value:.0%}", va="center", fontsize=9, color=colour,
+                fontweight="semibold")
     if len(suites) > 1:
-        ax.legend(loc="lower right")
-    fig.tight_layout()
+        _legend(deco, width, PAD + INSET + 0.13,
+                [(SERIES[i % len(SERIES)], s.label) for i, s in enumerate(suites)])
     fig.savefig(out)
+    _plt().close(fig)
     return out
 
 
 def _kilo(value: float) -> str:
     """1234 -> "1.2k", 23456 -> "23k": one decimal only while it carries information."""
+    if value < 1:
+        return "0"
     return f"{value / 1000:.1f}k" if value < 10_000 else f"{value / 1000:.0f}k"
 
 
@@ -383,50 +706,60 @@ def _bar_panels(
     rows: list[dict[str, Any]],
     labels: list[str],
     colours: list[str],
+    title: str,
+    subtitle: str,
     panels: list[tuple[str, str, str]],
     out: Path,
+    callout: tuple[str, str] | None = None,
 ) -> Path:
-    """One row of bar panels, one axis each, the same bar colour per row across every panel.
+    """One card, one row of bar panels, the same bar colour per row across every panel.
 
     `panels` lists (title, subtitle, key); the "pass_rate" key gets a percent axis and a
     passed/total annotation, every other key a compact count axis. Each quantity sits in its own
     panel rather than on a second y-axis: two scales on one plot invite reading a crossing as
-    meaningful. Colour, not a legend, ties a model or mode across the panels.
+    meaningful. Colour, plus the label under every bar, ties a model or mode across the panels.
     """
-    import matplotlib.pyplot as plt
+    plt = _plt()
+    n = len(panels)
+    width, height = 0.9 + 3.6 * n, 4.8
+    fig, deco = _canvas(width, height)
+    _header(deco, width, height, title, subtitle, callout=callout)
 
-    fig, _ = _figure(4.2 * len(panels), 4)
-    fig.clf()
-    ratios = [1.15 if key == "pass_rate" else 1 for _, _, key in panels]
-    axes = fig.subplots(1, len(panels), gridspec_kw={"width_ratios": ratios, "wspace": 0.35})
-    axes = list(axes) if len(panels) > 1 else [axes]
+    left, right, gap = 0.95, 0.45, 0.9
+    span = (width - left - right - gap * (n - 1)) / n
     xs = list(range(len(rows)))
-
-    for panel, (title, subtitle, key) in zip(axes, panels, strict=True):
-        for side in ("top", "right", "left"):
-            panel.spines[side].set_visible(False)
-        panel.tick_params(length=0)
-        panel.set_xticks(xs, labels)
+    for i, (panel_title, panel_sub, key) in enumerate(panels):
+        panel_left = left + i * (span + gap)
+        ax = _axes(fig, width, height, left=panel_left, right=width - panel_left - span,
+                   top=1.80, bottom=0.85)
+        ax.set_xlim(-0.7, len(rows) - 0.3)
+        ax.set_xticks(xs, labels)
+        if key == "pass_rate":
+            _percent_axis(ax)
+        else:
+            ax.set_ylim(0, max((r[key] for r in rows), default=1) * 1.22 or 1)
+            _grid(ax)
+            fmt = (lambda v, _: f"{v:.0f}s") if key == "avg_seconds" else (lambda v, _: _kilo(v))
+            ax.yaxis.set_major_formatter(plt.FuncFormatter(fmt))
+        headroom = ax.get_ylim()[1] * 0.015
         for x, row, colour in zip(xs, rows, colours, strict=True):
             value = row[key]
-            panel.bar(x, value, 0.62, color=colour, edgecolor=SURFACE, linewidth=1.5)
+            _bar(ax, x, value, 0.52, colour)
             if key == "pass_rate":
-                text, dy = f"{row['passed']}/{row['tasks']}", 0.02
+                text = f"{row['passed']}/{row['tasks']}"
             elif key == "avg_seconds":
-                text, dy = f"{value:.0f}s", 0.0
+                text = f"{value:.0f}s"
             else:
-                text, dy = _kilo(value), 0.0
-            panel.text(x, value + dy, text, ha="center", va="bottom", fontsize=9, color=INK_SOFT)
-        if key == "pass_rate":
-            _percent_axis(panel)
-        else:
-            panel.yaxis.grid(True, color=GRID, linewidth=0.8)
-            panel.set_axisbelow(True)
-            fmt = (lambda v, _: f"{v:.0f}s") if key == "avg_seconds" else (lambda v, _: _kilo(v))
-            panel.yaxis.set_major_formatter(plt.FuncFormatter(fmt))
-            panel.set_ylim(0, max((r[key] for r in rows), default=1) * 1.2 or 1)
-        _title(panel, title, subtitle)
-    fig.savefig(out, bbox_inches="tight")
+                text = _kilo(value)
+            _value(ax, x, value, text, dy=headroom)
+        px, _py = _inches(fig, ax, -0.7, 0)
+        title_y = height - PAD - INSET - 0.98
+        deco.text(px, title_y, panel_title, ha="left", va="center", family="serif", fontsize=11.5,
+                  color=INK)
+        deco.text(px, title_y - 0.22, panel_sub, ha="left", va="center", fontsize=7.8,
+                  color=INK_SOFT)
+    fig.savefig(out)
+    plt.close(fig)
     return out
 
 
@@ -439,11 +772,14 @@ def draw_ablation(suites: list[SuiteResult], out: Path) -> Path:
         rows,
         labels=[r["mode"] for r in rows],
         colours=[colours[r["mode"]] for r in rows],
+        title="Retrieval ablation",
+        subtitle=f"Same agent, same tasks · {', '.join(models)}",
         panels=[
-            ("pass@1 by retrieval mode", f"Same agent and tasks · {', '.join(models)}", "pass_rate"),
+            ("pass@1 by retrieval mode", "Hidden-test pass rate", "pass_rate"),
             ("tokens per task", "Mean over graded tasks, all model calls", "avg_tokens"),
         ],
         out=out,
+        callout=("One run per arm", "Gaps here sit under the noise floor"),
     )
 
 
@@ -467,47 +803,51 @@ def draw_model_comparison(suites: list[SuiteResult], out: Path) -> Path:
         rows,
         labels=[short_model_name(r["model"]) for r in rows],
         colours=[SERIES[i % len(SERIES)] for i in range(len(rows))],
+        title="Model comparison",
+        subtitle=f"Same suite, graph and retrieval · {', '.join(providers)}",
         panels=[
-            ("pass@1 by model", f"Same suite and retrieval · {', '.join(providers)}", "pass_rate"),
+            ("pass@1 by model", "Hidden-test pass rate", "pass_rate"),
             ("tokens per task", "Mean over graded tasks, all model calls", "avg_tokens"),
             ("seconds per task", "Mean wall time over graded tasks", "avg_seconds"),
         ],
         out=out,
+        callout=("Left: higher is better", "Middle and right: lower is better"),
     )
 
 
 def draw_cost_profile(suite: SuiteResult, out: Path, ledger: Ledger | None = None) -> Path:
     """Where the context budget goes: average input and output tokens per node per run."""
     rows = node_costs(suite, ledger)
-    fig, ax = _figure(7, 1.6 + 0.55 * max(len(rows), 1))
-    nodes = [r["node"] for r in rows]
+    width = 8.8
+    height = 2.85 + 0.52 * max(len(rows), 1)
+    fig, deco = _canvas(width, height)
+    runs = rows[0]["runs"] if rows else 0
+    _header(
+        deco, width, height, "Tokens per run, by graph node",
+        f"Average over {runs} run{'s' if runs != 1 else ''} · {suite.model}",
+        callout=("Lower is better", "Input + output, every call in the node"),
+    )
+    ax = _axes(fig, width, height, left=1.15, right=0.45, top=1.35, bottom=1.10)
     inp = [r["input_tokens"] for r in rows]
     outp = [r["output_tokens"] for r in rows]
     y = list(range(len(rows)))[::-1]
-    ax.barh(y, inp, 0.6, color=SERIES[0], edgecolor=SURFACE, linewidth=1.5, label="input tokens")
-    ax.barh(
-        y, outp, 0.6, left=inp, color=SERIES[1], edgecolor=SURFACE, linewidth=1.5,
-        label="output tokens",
-    )
-    for yi, row, i_tok, o_tok in zip(y, rows, inp, outp):
-        ax.text(
-            i_tok + o_tok, yi, f"  {i_tok + o_tok:,.0f}  ({row['calls']:.1f} calls)",
-            va="center", fontsize=9, color=INK_SOFT,
-        )
-    ax.set_yticks(y, nodes)
-    ax.xaxis.grid(True, color=GRID, linewidth=0.8)
-    ax.set_axisbelow(True)
-    ax.spines["left"].set_visible(False)
-    ax.set_xlim(0, max([a + b for a, b in zip(inp, outp)], default=1) * 1.35)
+    ax.set_ylim(-0.7, len(rows) - 0.3)
+    ax.set_xlim(0, max([a + b for a, b in zip(inp, outp)], default=1) * 1.34)
+    ax.set_yticks(y, [r["node"] for r in rows])
+    _grid(ax, "x")
     ax.xaxis.set_major_formatter(lambda v, _pos: f"{v / 1000:.0f}k" if v else "0")
-    runs = rows[0]["runs"] if rows else 0
-    _title(
-        ax, "Tokens per run, by graph node",
-        f"Average over {runs} run(s) · {suite.label} ({suite.model})",
-    )
-    ax.legend(loc="upper left", bbox_to_anchor=(0, -0.18), ncol=2)
-    fig.tight_layout()
+    for yi, row, i_tok, o_tok in zip(y, rows, inp, outp):
+        _hbar(ax, yi, i_tok, 0.5, SERIES[0], round_end=not o_tok)
+        _hbar(ax, yi, o_tok, 0.5, SERIES[1], left=i_tok)
+        ax.text(
+            i_tok + o_tok + ax.get_xlim()[1] * 0.015, yi,
+            f"{i_tok + o_tok:,.0f}  ({row['calls']:.1f} calls)",
+            va="center", fontsize=8.8, color=INK, fontweight="semibold",
+        )
+    _legend(deco, width, PAD + INSET + 0.13,
+            [(SERIES[0], "input tokens"), (SERIES[1], "output tokens")])
     fig.savefig(out)
+    _plt().close(fig)
     return out
 
 
