@@ -186,20 +186,65 @@ reranking the first hit is almost always the visible test file; the cross-encode
 source module to rank one in half of the cases. It stays off by default: about 1.5 seconds per
 query for a change in ordering, not in which chunks are present.
 
-### Still being measured
+### Model comparison
 
-- Retrieval ablation on the suite (off, BM25, dense, hybrid). The Groq free tier allows 200k
-  tokens per day and one twelve-task arm spends all of it, so the ablation advances one arm per
-  quota window. The `off` arm is eight of twelve tasks graded at the current commit, all eight
-  passed, and on the eight tasks also graded in the hybrid baseline it used **23% more tokens
-  for the same pass rate** (25.0k against 20.3k per task). That is the shape the ablation is
-  expected to show, on eight tasks and two runs, which is not yet a result. The figure draws
-  itself once two arms are complete.
-- HumanEval slice (thirty problems packaged as repository tasks) and a model comparison across
-  K2 Think, a local Ollama model and the Groq baseline. Both providers are wired (`--model
-  k2think:MBZUAI-IFM/K2-Think-v2`; `--model ollama:<tag>` after `uv sync --extra ollama`); the
-  figure draws itself once a second model has run the suite. K2 Think's quota is 10M tokens a
-  day, which is what lets the remaining arms run in one sitting instead of one per day.
+The same twelve tasks, the same graph and retrieval, a second model. Both runs are single
+passes; K2 Think ran three tasks at a time (`--parallel 3`).
+
+| model | passed | pass@1 | mean tokens / task | mean seconds / task | steps / task |
+|---|---|---|---|---|---|
+| `groq:openai/gpt-oss-120b` | 12/12 | 100% | 29,663 | 174 | 10.8 |
+| `k2think:MBZUAI-IFM/K2-Think-v2` | 11/12 | 92% | 69,818 | 111 | 15.2 |
+
+![pass@1, tokens and seconds per task by model](docs/figures/model_comparison.png)
+
+K2 Think is faster per task and spends more than twice the tokens getting there: it takes more
+tool-calling steps, and each step resends the conversation. Its one failure is a multi-file
+task where it hit the forty-step cap with the edits half done. Groq's gpt-oss-120b solved the
+same task in 25 steps.
+
+### Retrieval ablation
+
+Four runs of the twelve-task suite on K2 Think, one per retrieval mode, all in one afternoon.
+`off` sends the planner no retrieved context at all.
+
+| mode | passed | pass@1 | mean tokens / task | median | mean steps | mean seconds |
+|---|---|---|---|---|---|---|
+| off | 12/12 | 100% | 60,534 | 40.0k | 14.9 | 72 |
+| bm25 | 9/12 | 75% | 66,654 | 31.9k | 12.4 | 90 |
+| dense | 10/12 | 83% | 69,958 | 33.6k | 15.2 | 111 |
+| hybrid (default) | 11/12 | 92% | 69,818 | 40.0k | 15.2 | 111 |
+
+![pass@1 and tokens per task by retrieval mode](docs/figures/retrieval_ablation.png)
+
+**The honest reading is that retrieval mode makes no measurable difference on this suite.**
+The pass rates sit within three tasks of each other on twelve, and the token means within 15%,
+while the same task varies far more between arms than the arms do between themselves: one
+task cost 20k tokens in three arms and 160k in the fourth, another 67k to 256k. With one run
+per arm that spread is the noise floor, and every difference in the table is under it. The
+retrieval eval above predicted this: the benchmark repositories have three to five files,
+recall@3 is 0.99 for every mode, and the planner is shown the right file whichever way it
+is found. Retrieval is built for repositories where finding the file is the problem; on ones
+this small the model finds it in one `list_dir`.
+
+The six failures across the arms have two shapes: two runs that hit the forty-step cap with
+the edits half done (256k and 392k tokens), and four fixes that passed the visible tests and
+failed a hidden one, each after one iteration and under twelve steps. The second shape is the
+one the harness exists to catch: the agent's own verdict was "passed" every time.
+
+### HumanEval slice
+
+Thirty HumanEval problems packaged as repository tasks (a stub module, a visible smoke test,
+the official tests hidden), run on K2 Think.
+
+| Tasks | Passed | pass@1 | mean tokens / task | mean steps | mean seconds |
+|---|---|---|---|---|---|
+| 30 | 30 | 100% | 13,174 | 5.4 | 57 |
+
+These are single-function problems that current hosted models solve on their own, so the
+number says the harness does not get in the model's way; the in-house suite, with its
+multi-file tasks and hidden tests that differ from the visible ones, is where the agent is
+actually measured.
 
 ### Reproduce
 

@@ -88,20 +88,30 @@ def is_suite_file(path: Path) -> bool:
 
 
 def ablation_suites(suites: list[SuiteResult]) -> list[SuiteResult]:
-    """The newest suite per retrieval mode, in `ABLATION_MODES` order; empty if none recorded one.
+    """The newest suite per retrieval mode for one model, in `ABLATION_MODES` order.
 
-    A suite belongs to the ablation when its `meta` carries `retrieval_mode`, which `run_evals.py
-    --retrieval <mode>` writes. Suites from before that flag existed have no mode and are not
-    guessed at.
+    A suite belongs to the ablation when its `meta` carries `retrieval_mode`, which `run_evals.py`
+    writes for every run (a plain run is the hybrid arm), and it ran the in-house suite. Suites
+    from before that key existed have no mode and are not guessed at. The arms must come from
+    one model, or the figure compares models as much as retrieval: the model with the most arms
+    is chosen, the newest run on a tie, and other models' arms are left out even when they are
+    more recent.
     """
-    newest: dict[str, SuiteResult] = {}
+    by_model: dict[str, dict[str, SuiteResult]] = {}
     for suite in suites:
         mode = suite.meta.get("retrieval_mode")
         if mode not in ABLATION_MODES or not is_full_suite(suite):
             continue
-        if mode not in newest or suite.started_at >= newest[mode].started_at:
-            newest[mode] = suite
-    return [newest[m] for m in ABLATION_MODES if m in newest]
+        if suite.meta.get("suite", COMPARISON_SUITE) != COMPARISON_SUITE:
+            continue  # a HumanEval run in hybrid mode is not the hybrid arm of this ablation
+        arms = by_model.setdefault(suite.model, {})
+        if mode not in arms or suite.started_at >= arms[mode].started_at:
+            arms[mode] = suite
+    if not by_model:
+        return []
+    newest = {model: max(s.started_at for s in arms.values()) for model, arms in by_model.items()}
+    chosen = max(by_model, key=lambda m: (len(by_model[m]), newest[m]))
+    return [by_model[chosen][m] for m in ABLATION_MODES if m in by_model[chosen]]
 
 
 def ablation_rows(suites: list[SuiteResult]) -> list[dict[str, Any]]:
@@ -142,6 +152,24 @@ def comparison_suites(suites: list[SuiteResult]) -> list[SuiteResult]:
         if suite.model not in newest or suite.started_at >= newest[suite.model].started_at:
             newest[suite.model] = suite
     return sorted(newest.values(), key=lambda s: s.started_at)
+
+
+def headline_suites(suites: list[SuiteResult]) -> list[SuiteResult]:
+    """The suites the pass-rate and iteration figures draw: every full run in the default
+    retrieval mode, whatever the model or the task suite, oldest first.
+
+    Ablation arms are left out because they exist to be compared with each other in their own
+    figure; drawn here they would stand next to the baseline as if they were other agents. What
+    remains is one bar group per (model, suite): the in-house baseline per model and the
+    HumanEval slice per model, which is what a reader means by "the pass rate".
+    """
+    return [
+        s
+        for s in suites
+        if s.model not in SELF_CHECK_MODELS
+        and is_full_suite(s)
+        and s.meta.get("retrieval_mode", COMPARISON_RETRIEVAL) == COMPARISON_RETRIEVAL
+    ]
 
 
 def model_rows(suites: list[SuiteResult]) -> list[dict[str, Any]]:
@@ -281,13 +309,14 @@ def draw_pass_rate(suites: list[SuiteResult], out: Path) -> Path:
     """Grouped bars: pass@1 per category, one group of bars per suite. The pale segment stacked
     on top is the share of tasks that errored before grading (quota, crash), so the eye can
     separate "the agent failed" from "the agent never ran"."""
-    fig, ax = _figure(8, 4.2)
+    fig, ax = _figure(9.5, 4.4)
     cats = [c for c in CATEGORIES if any(c in category_rows(s) for s in suites)]
     width = 0.8 / max(len(suites), 1)
     for i, suite in enumerate(suites):
         rows = category_rows(suite)
         colour = SERIES[i % len(SERIES)]
-        for j, cat in enumerate(cats):
+        labelled = False  # the legend entry goes on the first bar this suite draws, whichever
+        for j, cat in enumerate(cats):  # category that is: a HumanEval run has no fix-bug bar
             row = rows.get(cat)
             if not row:
                 continue
@@ -295,8 +324,9 @@ def draw_pass_rate(suites: list[SuiteResult], out: Path) -> Path:
             passed, errs = row["pass_rate"], row["errors"] / row["tasks"]
             ax.bar(
                 x, passed, width * 0.9, color=colour, edgecolor=SURFACE, linewidth=1.5,
-                label=suite.label if j == 0 else None,
+                label=None if labelled else suite.label,
             )
+            labelled = True
             if errs:
                 ax.bar(
                     x, errs, width * 0.9, bottom=passed, color=NOT_GRADED, edgecolor=SURFACE,
@@ -306,11 +336,11 @@ def draw_pass_rate(suites: list[SuiteResult], out: Path) -> Path:
                 x, passed + errs + 0.02, f"{row['passed']}/{row['tasks']}", ha="center",
                 va="bottom", fontsize=8.5, color=INK_SOFT,
             )
-    ax.set_xticks(range(len(cats)), cats)
+    ax.set_xticks(range(len(cats)), cats, fontsize=9)
     _percent_axis(ax)
     ax.spines["left"].set_visible(False)
-    names = ", ".join(f"{s.label} ({s.model})" for s in suites)
-    _title(ax, "pass@1 by task category", f"Hidden-test pass rate · {names}")
+    models = ", ".join(sorted({s.model for s in suites}))
+    _title(ax, "pass@1 by task category", f"Hidden-test pass rate · {models}")
     ax.legend(loc="upper left", bbox_to_anchor=(0, -0.12), ncol=3)
     fig.tight_layout()
     fig.savefig(out)
@@ -417,6 +447,13 @@ def draw_ablation(suites: list[SuiteResult], out: Path) -> Path:
     )
 
 
+def short_model_name(model: str) -> str:
+    """`groq:openai/gpt-oss-120b` -> `gpt-oss-120b`; `k2think:MBZUAI-IFM/K2-Think-v2` ->
+    `K2-Think-v2`. The provider is in the subtitle and the organisation is not what a reader
+    calls the model; two full names side by side do not fit under a bar."""
+    return model.split(":", 1)[-1].rsplit("/", 1)[-1]
+
+
 def draw_model_comparison(suites: list[SuiteResult], out: Path) -> Path:
     """Three panels: pass@1, tokens and wall seconds per task, one colour per model.
 
@@ -428,7 +465,7 @@ def draw_model_comparison(suites: list[SuiteResult], out: Path) -> Path:
     providers = sorted({r["model"].split(":", 1)[0] for r in rows})
     return _bar_panels(
         rows,
-        labels=[r["model"].split(":", 1)[-1] for r in rows],
+        labels=[short_model_name(r["model"]) for r in rows],
         colours=[SERIES[i % len(SERIES)] for i in range(len(rows))],
         panels=[
             ("pass@1 by model", f"Same suite and retrieval · {', '.join(providers)}", "pass_rate"),
@@ -474,18 +511,29 @@ def draw_cost_profile(suite: SuiteResult, out: Path, ledger: Ledger | None = Non
     return out
 
 
+def profiled_suite(suites: list[SuiteResult]) -> SuiteResult:
+    """The one suite the cost profile describes: the newest in-house baseline run, or the
+    newest suite of all when no run qualifies as a baseline."""
+    baselines = comparison_suites(suites)
+    return baselines[-1] if baselines else suites[-1]
+
+
 def render_all(
     suites: list[SuiteResult], out_dir: Path = FIGURES_DIR, ledger: Ledger | None = None
 ) -> list[Path]:
     """The three standing figures, plus the retrieval ablation once at least two modes have
-    results and the model comparison once two models have run the baseline configuration. The
-    cost profile describes the newest suite only: stacking several configurations' node costs
-    into one chart would hide which one the budget belongs to."""
+    results and the model comparison once two models have run the baseline configuration.
+
+    The pass-rate and iteration figures draw the `headline_suites`; the ablation arms have
+    their own chart. The cost profile describes one suite only, the newest in-house baseline
+    run (or the newest suite of all when there is none): stacking several configurations' node
+    costs into one chart would hide which one the budget belongs to."""
     out_dir.mkdir(parents=True, exist_ok=True)
+    headline = headline_suites(suites) or suites
     paths = [
-        draw_pass_rate(suites, out_dir / "pass_rate.png"),
-        draw_iteration_curve(suites, out_dir / "iteration_curve.png"),
-        draw_cost_profile(suites[-1], out_dir / "cost_profile.png", ledger),
+        draw_pass_rate(headline, out_dir / "pass_rate.png"),
+        draw_iteration_curve(headline, out_dir / "iteration_curve.png"),
+        draw_cost_profile(profiled_suite(suites), out_dir / "cost_profile.png", ledger),
     ]
     if len(ablation_suites(suites)) >= 2:
         paths.append(draw_ablation(suites, out_dir / "retrieval_ablation.png"))

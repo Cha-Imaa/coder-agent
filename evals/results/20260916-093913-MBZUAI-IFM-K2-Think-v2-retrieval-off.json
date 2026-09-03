@@ -1,0 +1,485 @@
+{
+  "label": "MBZUAI-IFM-K2-Think-v2-retrieval-off",
+  "model": "k2think:MBZUAI-IFM/K2-Think-v2",
+  "started_at": 1789537153.0193658,
+  "meta": {
+    "commit": "ab4b597",
+    "python": "3.11.7",
+    "platform": "Windows-10-10.0.26200-SP0",
+    "max_iterations": 4,
+    "max_steps": 40,
+    "fallback_model": "google_genai:gemini-2.5-flash",
+    "retrieval_mode": "off",
+    "embedding_model": "snowflake/snowflake-arctic-embed-xs",
+    "parallel": 3,
+    "workers_retired": 2,
+    "suite": "inhouse",
+    "subset": "full"
+  },
+  "pass_rate": 1.0,
+  "errors": 0,
+  "by_category": [
+    {
+      "category": "fix-bug",
+      "tasks": 3,
+      "passed": 3,
+      "errors": 0,
+      "pass_rate": 1.0,
+      "avg_tokens": 25253.333333333332,
+      "avg_iterations": 1.0,
+      "avg_seconds": 35.08499574661255
+    },
+    {
+      "category": "add-feature",
+      "tasks": 3,
+      "passed": 3,
+      "errors": 0,
+      "pass_rate": 1.0,
+      "avg_tokens": 54041.333333333336,
+      "avg_iterations": 1.0,
+      "avg_seconds": 122.72497804959615
+    },
+    {
+      "category": "refactor",
+      "tasks": 2,
+      "passed": 2,
+      "errors": 0,
+      "pass_rate": 1.0,
+      "avg_tokens": 31757.0,
+      "avg_iterations": 1.0,
+      "avg_seconds": 33.92324876785278
+    },
+    {
+      "category": "add-test",
+      "tasks": 2,
+      "passed": 2,
+      "errors": 0,
+      "pass_rate": 1.0,
+      "avg_tokens": 95723.5,
+      "avg_iterations": 1.0,
+      "avg_seconds": 76.16196835041046
+    },
+    {
+      "category": "multi-file",
+      "tasks": 2,
+      "passed": 2,
+      "errors": 0,
+      "pass_rate": 1.0,
+      "avg_tokens": 116779.0,
+      "avg_iterations": 1.0,
+      "avg_seconds": 86.76794409751892
+    },
+    {
+      "category": "total",
+      "tasks": 12,
+      "passed": 12,
+      "errors": 0,
+      "pass_rate": 1.0,
+      "avg_tokens": 60533.583333333336,
+      "avg_iterations": 1.0,
+      "avg_seconds": 72.26135365168254
+    }
+  ],
+  "results": [
+    {
+      "task_id": "add-feature-inventory-remove",
+      "category": "add-feature",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 21,
+      "input_tokens": 93881,
+      "output_tokens": 9694,
+      "agent_seconds": 163.93355202674866,
+      "grade_exit_code": 0,
+      "grade_output": "..............                                                           [100%]\n14 passed in 0.04s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 207,
+          "output_tokens": 325,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 21,
+          "input_tokens": 93674,
+          "output_tokens": 9369,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 21
+          }
+        }
+      },
+      "provider_errors": {
+        "OpenAIRateLimitError": 1
+      }
+    },
+    {
+      "task_id": "add-feature-slugify",
+      "category": "add-feature",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 12,
+      "input_tokens": 28531,
+      "output_tokens": 4510,
+      "agent_seconds": 103.54976677894592,
+      "grade_exit_code": 0,
+      "grade_output": "...........                                                              [100%]\n11 passed in 0.02s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 199,
+          "output_tokens": 223,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 12,
+          "input_tokens": 28332,
+          "output_tokens": 4287,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 12
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "add-feature-stack-peek",
+      "category": "add-feature",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 10,
+      "input_tokens": 22397,
+      "output_tokens": 3111,
+      "agent_seconds": 100.69161534309387,
+      "grade_exit_code": 0,
+      "grade_output": ".....                                                                    [100%]\n5 passed in 0.03s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 189,
+          "output_tokens": 284,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 10,
+          "input_tokens": 22208,
+          "output_tokens": 2827,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 10
+          }
+        }
+      },
+      "provider_errors": {
+        "OpenAIRateLimitError": 1
+      }
+    },
+    {
+      "task_id": "add-test-bounded-queue",
+      "category": "add-test",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 11,
+      "input_tokens": 28581,
+      "output_tokens": 3104,
+      "agent_seconds": 69.86553621292114,
+      "grade_exit_code": 0,
+      "grade_output": "...........                                                              [100%]\n11 passed in 8.84s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 200,
+          "output_tokens": 278,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 11,
+          "input_tokens": 28381,
+          "output_tokens": 2826,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 11
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "add-test-mathx",
+      "category": "add-test",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 24,
+      "input_tokens": 140356,
+      "output_tokens": 19406,
+      "agent_seconds": 82.45840048789978,
+      "grade_exit_code": 0,
+      "grade_output": ".................... [100%]\n20 passed, 55 subtests passed in 7.98s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 199,
+          "output_tokens": 411,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 24,
+          "input_tokens": 140157,
+          "output_tokens": 18995,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 24
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "fix-bug-chunk-drops-tail",
+      "category": "fix-bug",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 7,
+      "input_tokens": 12674,
+      "output_tokens": 916,
+      "agent_seconds": 24.57038116455078,
+      "grade_exit_code": 0,
+      "grade_output": ".......                                                                  [100%]\n7 passed in 0.03s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 170,
+          "output_tokens": 210,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 7,
+          "input_tokens": 12504,
+          "output_tokens": 706,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 7
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "fix-bug-duration-units",
+      "category": "fix-bug",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 16,
+      "input_tokens": 39712,
+      "output_tokens": 7156,
+      "agent_seconds": 55.24732065200806,
+      "grade_exit_code": 0,
+      "grade_output": "..........                                                               [100%]\n10 passed in 0.03s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 173,
+          "output_tokens": 300,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 16,
+          "input_tokens": 39539,
+          "output_tokens": 6856,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 16
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "fix-bug-shared-default-list",
+      "category": "fix-bug",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 7,
+      "input_tokens": 13775,
+      "output_tokens": 1527,
+      "agent_seconds": 25.43728542327881,
+      "grade_exit_code": 0,
+      "grade_output": "......                                                                   [100%]\n6 passed in 0.03s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 177,
+          "output_tokens": 318,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 7,
+          "input_tokens": 13598,
+          "output_tokens": 1209,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 7
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "multi-file-cart-discount",
+      "category": "multi-file",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 31,
+      "input_tokens": 133298,
+      "output_tokens": 12856,
+      "agent_seconds": 106.30282306671143,
+      "grade_exit_code": 0,
+      "grade_output": "............                                                             [100%]\n12 passed in 0.04s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 259,
+          "output_tokens": 393,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 31,
+          "input_tokens": 133039,
+          "output_tokens": 12463,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 31
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "multi-file-notes-delete",
+      "category": "multi-file",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 22,
+      "input_tokens": 81329,
+      "output_tokens": 6075,
+      "agent_seconds": 67.23306512832642,
+      "grade_exit_code": 0,
+      "grade_output": "...........                                                              [100%]\n11 passed in 0.05s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 236,
+          "output_tokens": 413,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 22,
+          "input_tokens": 81093,
+          "output_tokens": 5662,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 22
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "refactor-config-dataclass",
+      "category": "refactor",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 13,
+      "input_tokens": 44914,
+      "output_tokens": 6351,
+      "agent_seconds": 46.50611662864685,
+      "grade_exit_code": 0,
+      "grade_output": "....                                                                     [100%]\n4 passed in 0.02s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 220,
+          "output_tokens": 502,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 13,
+          "input_tokens": 44694,
+          "output_tokens": 5849,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 13
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "refactor-extract-format-row",
+      "category": "refactor",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 5,
+      "input_tokens": 9703,
+      "output_tokens": 2546,
+      "agent_seconds": 21.340380907058716,
+      "grade_exit_code": 0,
+      "grade_output": ".....                                                                    [100%]\n5 passed in 0.02s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 196,
+          "output_tokens": 290,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 5,
+          "input_tokens": 9507,
+          "output_tokens": 2256,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 5
+          }
+        }
+      },
+      "provider_errors": {}
+    }
+  ]
+}

@@ -176,6 +176,9 @@ async def test_grade_output_is_capped(task: EvalTask, tmp_path: Path):
     result = await run_task(task, noop_agent, tmp_path)
     assert len(result.grade_output) <= 2000
     assert "failed" in result.grade_output or "error" in result.grade_output.lower()
+    # The file is committed: pytest prints absolute paths, and they must not name this machine.
+    assert str(Path.home()) not in result.grade_output
+    assert str(Path.home()).replace("\\", "/") not in result.grade_output
 
 
 def test_label_for_model_drops_the_provider_and_keeps_ollama_tags_whole():
