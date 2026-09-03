@@ -12,6 +12,11 @@ from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+def provider_of(model: str) -> str:
+    """The provider half of a "provider:model" string ("ollama:qwen2.5-coder:7b" -> "ollama")."""
+    return model.split(":", 1)[0] if ":" in model else ""
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="CODER_",
@@ -20,11 +25,20 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # "provider:model" string understood by langchain's init_chat_model. Three providers are
-    # wired: `groq:` and `google_genai:` (hosted, free tiers) and `ollama:` (a model served by a
-    # local daemon, e.g. `ollama:qwen2.5-coder:7b`; the model's own tag keeps its colon).
+    # "provider:model" string understood by langchain's init_chat_model. Four providers are
+    # wired: `groq:` and `google_genai:` (hosted, free tiers), `k2think:` (MBZUAI's hosted
+    # reasoning model behind an OpenAI-compatible endpoint, see llm.py) and `ollama:` (a model
+    # served by a local daemon, e.g. `ollama:qwen2.5-coder:7b`; the model's own tag keeps its colon).
     model: str = "groq:openai/gpt-oss-120b"
     fallback_model: str | None = "google_genai:gemini-2.5-flash"
+
+    # K2 Think (see llm.py). The endpoint speaks the OpenAI chat-completions dialect, so the
+    # `openai` integration is reused with a different base URL; the key is `K2_API_KEY` in the
+    # environment, read the way the other SDKs read theirs, not a `CODER_` setting.
+    # `reasoning_effort` is how much the model thinks before answering; its thinking counts as
+    # output tokens and sits inside the same 64k window as the prompt.
+    k2_base_url: str = "https://api.k2think.ai/v1"
+    k2_reasoning_effort: str = "medium"
 
     # Local models (see llm.py). Ollama allocates `ollama_num_ctx` tokens of context per request;
     # its own default is 2,048, which the tool schemas plus one file read exceed, and the daemon
@@ -57,8 +71,14 @@ class Settings(BaseSettings):
     sandbox_cpus: float = 1.0
 
     # Context management (see graph/context.py). Budget is well under gpt-oss-120b's 131k so
-    # the fallback model and the tool schemas always fit too.
+    # the fallback model and the tool schemas always fit too. Providers whose endpoint rejects
+    # a request over a hard window (prompt plus completion) are listed with that window; the
+    # budget is then capped at the window minus a reserve for what the approximate token count
+    # does not see: the tool schemas, the system prompt, and the reply, which for a reasoning
+    # model includes everything it thinks before it answers.
     context_budget_tokens: int = 60_000
+    context_windows: dict[str, int] = {"k2think": 65_536}
+    context_reserve_tokens: int = 24_000
     keep_recent_tool_outputs: int = 6
     tool_output_stub_chars: int = 400
 
@@ -108,6 +128,13 @@ class Settings(BaseSettings):
     # owner/name, and fetches into it on later runs. GitHub credentials are not settings: the
     # GitHub tool server reads the standard GITHUB_TOKEN from its environment.
     checkouts_dir: Path = Path.home() / ".coder-agent" / "checkouts"
+
+    def context_budget(self, model: str | None = None) -> int:
+        """Tokens of conversation the graph may send to `model` (the primary by default)."""
+        window = self.context_windows.get(provider_of(model or self.model))
+        if window is None:
+            return self.context_budget_tokens
+        return min(self.context_budget_tokens, window - self.context_reserve_tokens)
 
     def state_dir(self, repo: Path) -> Path:
         return repo / self.state_dir_name

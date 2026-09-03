@@ -14,7 +14,7 @@ through a sandbox jail.
 | Codebase retrieval | tree-sitter chunking, local embeddings and Chroma, BM25 + dense with reciprocal rank fusion, optional cross-encoder reranker |
 | Memory and control | SQLite checkpointer, `--resume`, human approval before writes and risky commands |
 | Sandbox | Path jail, command denylist, timeouts, or a throwaway Docker container |
-| LLM | Groq free tier, Gemini free tier as fallback, retry with backoff, swappable via one env var |
+| LLM | Four providers behind one env var: Groq and K2 Think (hosted, free), Gemini as fallback, Ollama locally; retry with backoff, fallback chain |
 | Observability | LangSmith tracing and a local SQLite ledger of tokens per node |
 | Interface | Typer + Rich CLI: `coder run`, `coder chat`, `coder fix-issue`, `coder index`, `coder stats` |
 

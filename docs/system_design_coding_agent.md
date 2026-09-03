@@ -204,9 +204,12 @@ Every change to prompts or the graph is judged against this number, not against 
 | Local 7B model on this laptop (CPU, no GPU) | Too slow and too weak at multi-step tool calling |
 | Groq free tier (Llama 3.3 70B class) | Fast, native tool calling, good quality. **Primary** |
 | Gemini 2.5 Flash free tier | Good quality, separate rate-limit pool. **Fallback** |
+| K2 Think (MBZUAI, OpenAI-compatible endpoint) | Reasoning model, 10M tokens a day against Groq's 200k: the quota that lets a full eval arm run in one sitting. Needs a thin transport for two endpoint quirks. **Eval primary** |
 
 LangChain's `init_chat_model("provider:model")` plus `with_fallbacks` lets us switch or chain
 providers with no code change. Rate limits are the main cost of "free", so the fallback matters.
+K2 Think was added later, once the Groq quota became the pace of the evaluation rather than
+the model: with it, an arm that took a day per quota window runs in an afternoon.
 
 ---
 

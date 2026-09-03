@@ -17,7 +17,9 @@ own machine.
 | A [Google AI Studio](https://aistudio.google.com/apikey) key | Free tier. Used only when Groq rate-limits |
 
 Optional: a `GITHUB_TOKEN` for the pull-request step, Docker Desktop for the container sandbox,
-and [Ollama](https://ollama.com) if you would rather run a model locally and use no quota at all.
+a [K2 Think](https://www.k2think.ai) key if you want the 10M-tokens-a-day quota for running the
+whole eval suite (`K2_API_KEY`, then `--model k2think:MBZUAI-IFM/K2-Think-v2`), and
+[Ollama](https://ollama.com) if you would rather run a model locally and use no quota at all.
 
 ## 1. Install
 

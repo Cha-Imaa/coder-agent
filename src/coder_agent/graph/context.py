@@ -80,7 +80,7 @@ def summarize_if_needed(
     Returns the (possibly rebuilt) list and whether a summary was made. The first message is
     always kept: it is the task.
     """
-    budget_tokens = settings.context_budget_tokens if budget_tokens is None else budget_tokens
+    budget_tokens = settings.context_budget() if budget_tokens is None else budget_tokens
     if count_tokens_approximately(messages) <= budget_tokens:
         return messages, False
 

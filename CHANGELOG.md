@@ -10,6 +10,15 @@ The first release, `0.1.0`, is tagged once the acceptance walkthrough in `docs/P
 (milestone 9) has been run on a fresh clone and every rough edge it finds is fixed.
 
 ### Added
+- **K2 Think as a fourth provider** (2026-09-16): `--model k2think:MBZUAI-IFM/K2-Think-v2`
+  (or `CODER_MODEL`) runs the graph against MBZUAI's hosted reasoning model through its
+  OpenAI-compatible endpoint, with `K2_API_KEY` and `CODER_K2_REASONING_EFFORT`. Its quota is
+  10M tokens a day, so a full eval arm no longer waits on Groq's 200k. The context budget is
+  capped per provider window (`CODER_CONTEXT_WINDOWS`, `CODER_CONTEXT_RESERVE_TOKENS`) so a
+  64k-window model is not sent a 60k conversation. A transport under the openai client
+  rewrites the two request shapes the endpoint refuses: a quoted interpreter call such as
+  `` `python -m pytest` `` anywhere in the body (its firewall answers 403) and tool results sent
+  as a list of text blocks (400).
 - **Ollama as a third provider** (2026-09-11 to 2026-09-14): `--model ollama:<tag>` runs the
   same graph against a model served locally, with the daemon's address and context size as
   settings (`uv sync --extra ollama`). Tool calls that a small local model writes as JSON in the

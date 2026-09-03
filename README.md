@@ -22,7 +22,7 @@ sandbox jail.
 | Codebase retrieval | tree-sitter chunking, local embeddings and Chroma, BM25 + dense with reciprocal rank fusion, optional cross-encoder reranker |
 | Memory and control | SQLite checkpointer, `--resume`, human approval before writes and risky commands |
 | Sandbox | Path jail, command denylist, timeouts, or a throwaway Docker container |
-| LLM | Groq free tier, Gemini free tier as fallback, retry with backoff, swappable via one env var |
+| LLM | Four providers behind one env var: Groq and K2 Think (hosted, free), Gemini as fallback, Ollama locally; retry with backoff, fallback chain |
 | Observability | LangSmith tracing and a local SQLite ledger of tokens per node |
 | Interface | Typer + Rich CLI: `coder run`, `coder chat`, `coder fix-issue`, `coder index`, `coder stats` |
 
@@ -55,7 +55,7 @@ Flags worth knowing on `coder run`:
 | `--yes` / `-y` | Skip the approval prompt before file edits and shell commands |
 | `--sandbox docker` | Run the agent's commands in a fresh container, no network, repo mounted at `/work` |
 | `--resume THREAD` | Continue a run that was interrupted by a crash, a rate limit or a declined approval |
-| `--model provider:model` | Override `CODER_MODEL` for one run: `google_genai:gemini-2.5-flash`, or a local `ollama:qwen2.5-coder:7b` |
+| `--model provider:model` | Override `CODER_MODEL` for one run: `k2think:MBZUAI-IFM/K2-Think-v2`, `google_genai:gemini-2.5-flash`, or a local `ollama:qwen2.5-coder:7b` |
 | `--max-iterations N` | Plan/act/test cycles before the agent gives up (default 4) |
 | `--test-command "..."` | The command that decides success; auto-detected (pytest, npm test, ...) if omitted |
 
@@ -195,9 +195,11 @@ query for a change in ordering, not in which chunks are present.
   for the same pass rate** (25.0k against 20.3k per task). That is the shape the ablation is
   expected to show, on eight tasks and two runs, which is not yet a result. The figure draws
   itself once two arms are complete.
-- HumanEval slice (thirty problems packaged as repository tasks) and a model comparison with a
-  local Ollama model. The provider is wired (`--model ollama:<tag>`, `uv sync --extra ollama`);
-  the figure draws itself once a second model has run the suite.
+- HumanEval slice (thirty problems packaged as repository tasks) and a model comparison across
+  K2 Think, a local Ollama model and the Groq baseline. Both providers are wired (`--model
+  k2think:MBZUAI-IFM/K2-Think-v2`; `--model ollama:<tag>` after `uv sync --extra ollama`); the
+  figure draws itself once a second model has run the suite. K2 Think's quota is 10M tokens a
+  day, which is what lets the remaining arms run in one sitting instead of one per day.
 
 ### Reproduce
 
@@ -222,6 +224,7 @@ src/coder_agent/
   sandbox/          local jail and Docker runner behind one interface
   rag/              loader, tree-sitter chunker, embeddings, Chroma index, hybrid retriever, reranker
   llm.py            provider factory, retry with backoff, fallback chain
+  k2think.py        the transport that keeps K2 Think's firewall from refusing the agent's own history
   telemetry/        SQLite ledger of tokens, latency, iterations, outcome per run
   evals/            task suites, isolated runner, retrieval eval, figures
 evals/              the 12-task suite, the HumanEval slice, results and entry-point scripts

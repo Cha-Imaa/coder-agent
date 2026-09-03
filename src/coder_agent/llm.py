@@ -3,7 +3,8 @@
 `init_chat_model` is LangChain's provider-agnostic constructor: the string
 "groq:openai/gpt-oss-120b" selects both the integration package and the model. Swapping providers
 is then a config change, not a code change: `ollama:qwen2.5-coder:7b` runs the same graph against
-a model served on this machine, with no key and no quota (see `model_kwargs` for the one place
+a model served on this machine, with no key and no quota, and `k2think:MBZUAI-IFM/K2-Think-v2`
+against a hosted reasoning model that speaks the OpenAI dialect (see `resolve` for the one place
 the providers differ).
 
 Three layers stand between a node's `llm.invoke(...)` and the network, innermost first:
@@ -35,9 +36,16 @@ from langchain.chat_models import init_chat_model
 from langchain_core.runnables import Runnable
 from langchain_core.runnables.retry import RunnableRetry
 
-from coder_agent.config import settings
+from coder_agent.config import provider_of, settings
+from coder_agent.k2think import http_clients
 
 load_dotenv()
+
+# Where the K2 Think key is read from. Not a `CODER_` setting: like GROQ_API_KEY and
+# GOOGLE_API_KEY it is a credential the provider client needs, not a knob the agent has.
+K2_KEY_ENV = "K2_API_KEY"
+
+__all__ = ["K2_KEY_ENV", "ChatModelRetry", "get_llm", "provider_of", "resolve"]
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +94,12 @@ def _provider_errors() -> tuple[type[BaseException], ...]:
     except ImportError:  # pragma: no cover
         pass
     try:
+        import openai
+
+        types.append(openai.APIError)  # K2 Think is reached through the openai client
+    except ImportError:  # pragma: no cover
+        pass
+    try:
         import ollama
 
         # The daemon answered with an error (model still loading, out of memory for the context
@@ -124,29 +138,45 @@ class ChatModelRetry(RunnableRetry):
         return proxied
 
 
-def provider_of(model: str) -> str:
-    """The provider half of a "provider:model" string ("ollama:qwen2.5-coder:7b" -> "ollama")."""
-    return model.split(":", 1)[0] if ":" in model else ""
+def resolve(model: str) -> tuple[str, dict[str, Any]]:
+    """The `init_chat_model` name and constructor arguments for a "provider:model" string.
 
-
-def model_kwargs(model: str) -> dict[str, Any]:
-    """Constructor arguments that differ per provider.
-
-    The hosted SDKs take `max_retries`; Ollama's client has no such knob (a local daemon does not
-    rate-limit) and instead needs the context size and the daemon's address, which are per-call
-    options in its API rather than model settings. `init_chat_model` forwards whatever it is
-    given, so the provider decides the shape here.
+    This is the one place the providers differ. Groq and Gemini are what `init_chat_model`
+    already knows, plus `max_retries` for the SDK's own retry loop. Ollama's client has no such
+    knob (a local daemon does not rate-limit) and instead needs the context size and the
+    daemon's address, which are per-call options in its API rather than model settings. K2 Think
+    has no LangChain integration of its own and needs none: its endpoint is OpenAI-compatible,
+    so the `openai` integration is pointed at a different base URL with the K2 key, and the
+    model name after the alias goes through untouched. `reasoning_effort` is an OpenAI-dialect
+    parameter the endpoint honours, so it rides along the same way. The one thing this endpoint
+    needs that the others do not is the transport in `k2think.py` under the client, which
+    rewrites the request body so the endpoint's edge firewall does not refuse it.
     """
-    if provider_of(model) == "ollama":
-        return {"base_url": settings.ollama_base_url, "num_ctx": settings.ollama_num_ctx}
-    return {"max_retries": settings.llm_sdk_retries}
+    provider = provider_of(model)
+    if provider == "ollama":
+        return model, {"base_url": settings.ollama_base_url, "num_ctx": settings.ollama_num_ctx}
+    if provider == "k2think":
+        key = os.environ.get(K2_KEY_ENV, "").strip()
+        if not key:
+            raise ValueError(f"{K2_KEY_ENV} is not set; {model} needs it (see .env.example).")
+        return f"openai:{model.split(':', 1)[1]}", {
+            "base_url": settings.k2_base_url,
+            "api_key": key,
+            "reasoning_effort": settings.k2_reasoning_effort,
+            "max_retries": settings.llm_sdk_retries,
+            **http_clients(),
+        }
+    return model, {"max_retries": settings.llm_sdk_retries}
+
+
+def _build(model: str, temperature: float) -> Runnable:
+    name, kwargs = resolve(model)
+    return init_chat_model(name, temperature=temperature, **kwargs)
 
 
 def get_llm(temperature: float = 0.0) -> Runnable:
     """The configured chat model, retried on transient errors, with the fallback behind it."""
-    primary: Runnable = init_chat_model(
-        settings.model, temperature=temperature, **model_kwargs(settings.model)
-    )
+    primary: Runnable = _build(settings.model, temperature)
     if TRANSIENT_ERRORS and settings.llm_attempts > 1:
         primary = ChatModelRetry(
             bound=primary,
@@ -160,13 +190,12 @@ def get_llm(temperature: float = 0.0) -> Runnable:
     if not settings.fallback_model:
         return primary
     try:
-        fallback = init_chat_model(
-            settings.fallback_model, temperature=temperature, **model_kwargs(settings.fallback_model)
-        )
+        fallback = _build(settings.fallback_model, temperature)
     except Exception as exc:
         # Caught broadly on purpose: "this provider is not configured here" has no common base
         # class (pydantic raises ValidationError, groq raises GroqError, a missing extra raises
-        # ImportError), and any of them mean the same thing here. Only the *name* is logged,
+        # ImportError, a missing K2 key raises ValueError), and any of them mean the same thing
+        # here. Only the *name* is logged,
         # because the provider's own message is a multi-line dump that would take over a
         # terminal UI laid out by hand; the full traceback goes to the debug record.
         logger.warning(
