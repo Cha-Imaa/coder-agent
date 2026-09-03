@@ -10,6 +10,13 @@ The first release, `0.1.0`, is tagged once the acceptance walkthrough in `docs/P
 (milestone 9) has been run on a fresh clone and every rough edge it finds is fixed.
 
 ### Added
+- **Parallel eval runner** (2026-09-16): `evals/run_evals.py --parallel N` runs N tasks at
+  once, each in its own repository copy, checkpoint file and tool-server process. A worker
+  whose task hit a rate limit retires, so a run that starts too wide narrows itself instead of
+  feeding 429s to the fallback; how many retired is recorded in the results file, and every
+  task result now carries the provider errors its run saw. Grading runs in a thread so one
+  task's pytest does not stall another's model call. The full suite is the default again and
+  `--quick` opts into the four-task subset (`--full` is still accepted).
 - **K2 Think as a fourth provider** (2026-09-16): `--model k2think:MBZUAI-IFM/K2-Think-v2`
   (or `CODER_MODEL`) runs the graph against MBZUAI's hosted reasoning model through its
   OpenAI-compatible endpoint, with `K2_API_KEY` and `CODER_K2_REASONING_EFFORT`. Its quota is
