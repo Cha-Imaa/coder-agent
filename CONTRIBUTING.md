@@ -45,15 +45,14 @@ Conventional style, imperative, lower case, no trailing period:
 ```
 feat: hybrid retriever fusing BM25 and dense ranks
 fix: local sandbox stops Python writing bytecode
-docs: learning log entry for the reranker step
+docs: results page covers the reranker ablation
 test: fake GitHub reads the request body before answering
 chore: pin setup-uv to an exact release
 ```
 
-One roadmap step per commit where possible. If your change finishes a step in `docs/PLAN.md`,
-tick it in the same commit and add an entry to `docs/TEACH.md` in the existing format: what was
-built, why this way, how production coding agents do the same thing, and a command that checks
-it. The log is written for someone learning the stack, not for someone who already knows it.
+One self-contained change per commit where possible: a commit should build, pass the tests and
+be readable on its own. If the change is worth explaining, put the reasoning in the commit body
+rather than in a comment.
 
 ## Filing an issue
 

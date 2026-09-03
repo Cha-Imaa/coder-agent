@@ -24,13 +24,9 @@ through a sandbox jail.
   with the quota limits and the platform gotchas called out where you would hit them.
 - **[Results](results.md)** is the numbers page: pass rate on the in-house suite, where the tokens
   go, retrieval quality with and without the reranker, and what is still being measured.
-- **[Learning log](TEACH.md)** has one entry per finished step: what was built, why that way, how
-  production coding agents do the same thing, and a command that checks it. Read it top to
-  bottom to be able to explain every file in `src/`.
 - **[System design](system_design_coding_agent.md)** is the concept-first walkthrough: what an
   agent is, why LangGraph rather than a `while` loop, tools as a protocol, sandboxing, retrieval,
   evaluation, and how the big coding agents are put together.
-- **[Roadmap](PLAN.md)** is the weighted build plan; checked boxes are finished steps.
 
 ## Quick start
 
