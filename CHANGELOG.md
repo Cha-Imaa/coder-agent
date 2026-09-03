@@ -6,8 +6,11 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
-The first release, `0.1.0`, is tagged once the acceptance walkthrough in `docs/PLAN.md`
-(milestone 9) has been run on a fresh clone and every rough edge it finds is fixed.
+## [0.1.0] - 2026-09-16
+
+The first release. Tagged after the acceptance walkthrough in `docs/try-it.md` (milestone 9 of
+`docs/PLAN.md`) was run end to end on a fresh clone, every step passed, and the two rough edges
+it turned up were fixed. What that run measured is written up in `docs/TEACH.md`, step 9.
 
 ### Added
 - **Retrieval ablation, model comparison and HumanEval results** (2026-09-16): four arms of the
@@ -90,6 +93,18 @@ The first release, `0.1.0`, is tagged once the acceptance walkthrough in `docs/P
   `--task`, `--category` and `--rerun-errors` are unaffected (2026-09-14).
 
 ### Fixed
+- `coder fix-issue --pr` on a branch that already holds the reviewed edits no longer runs the
+  agent again. A passed run without `--pr` ends with "review them, then rerun with --pr"; that
+  rerun used to plan, read and re-test a tree with nothing left to do (six minutes, 50k tokens
+  and a rate limit in the acceptance run) and then describe the pull request as "no code
+  changes were required". It now runs the repository's tests on the reviewed edits and, if
+  they pass, commits, pushes and opens the pull request with `git diff --stat` as the
+  description; no model call is made and no thread id is printed (2026-09-16).
+- Tool calls that spell an argument the way models predictably do (`line_start` and `line_end`
+  for `start_line` and `end_line`, `depth` for `max_depth`, `file_path` for `path`, `cmd` for
+  `command`) are renamed and run instead of being rejected. The rejection stays for every other
+  unknown name, and for a call that gives both spellings. The model's first `read_file` in every
+  acceptance run used `line_start` and paid a model call for the correction (2026-09-16).
 - Results files no longer carry this machine's home directory: pytest output from a failing
   hidden test prints absolute paths, and only tracebacks were being scrubbed. `grade_output`
   is scrubbed the same way now, and the three committed files that carried a path were
@@ -109,4 +124,5 @@ The first release, `0.1.0`, is tagged once the acceptance walkthrough in `docs/P
   `.pyc` (2026-09-11).
 - `setup-uv` pinned to an exact release; the action has no `v10` major tag (2026-09-11).
 
-[Unreleased]: https://github.com/Cha-Imaa/coder-agent/commits/main
+[Unreleased]: https://github.com/Cha-Imaa/coder-agent/compare/v0.1.0...main
+[0.1.0]: https://github.com/Cha-Imaa/coder-agent/releases/tag/v0.1.0

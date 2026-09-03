@@ -12,12 +12,21 @@ sandbox denylist blocks `git push` for the model; nothing blocks it for the user
 `fix-issue --pr` is the user asking for the push. Splitting the work this way keeps the
 outward-facing steps (a branch on someone's repository, a pull request under the user's name)
 predictable: they happen when asked, in a fixed order, or not at all.
+
+There is one shortcut through the chain. A passed run without `--pr` leaves its edits
+uncommitted on the fix branch and says "review them, then rerun with --pr". That rerun finds
+the branch checked out and dirty, and takes it at its word: it runs the tests on what is there
+and, if they pass, commits, pushes and opens the pull request without running the agent again.
+Re-running the agent on an already-fixed tree costs minutes and tens of thousands of tokens to
+learn that there is nothing to do, and its summary ("no changes were required") would become
+the pull request's description.
 """
 
 from __future__ import annotations
 
 import re
 import subprocess
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -172,6 +181,47 @@ def push_branch(repo: Path, branch: str) -> None:
     git(repo, "push", "--quiet", "--set-upstream", "origin", branch)
 
 
+def has_reviewed_changes(repo: Path, branch: str) -> bool:
+    """True when `repo` is already on the fix branch with uncommitted edits: the state a passed
+    run without `--pr` leaves behind, and the only state in which the agent is not run again."""
+    return current_branch(repo) == branch and is_dirty(repo)
+
+
+def verify_reviewed_changes(repo: Path, task: str) -> _agent.RunOutcome:
+    """Run the repository's tests on edits left by an earlier run, and report the verdict in the
+    shape `run_agent` uses so the rest of the pipeline and the CLI need no second code path.
+
+    The test command is detected the same deterministic way the graph detects it, and runs in
+    the same sandbox. The summary is `git diff --stat`, which is what the pull request body gets
+    instead of a model's account of the change.
+    """
+    from coder_agent.graph.testing import detect_test_command, run_tests
+
+    command = detect_test_command(repo)
+    if command is None:
+        raise FixIssueError(
+            f"{repo} is on the fix branch with uncommitted edits, but no test command was found "
+            "to verify them. Commit and push by hand, or run without --pr first."
+        )
+    started = time.monotonic()
+    result = run_tests(repo, command)
+    passed = result.exit_code == 0 and not result.timed_out
+    stat = git(repo, "diff", "--stat")
+    final: dict[str, object] = {
+        "repo": str(repo),
+        "task": task,
+        "status": "passed" if passed else "failed",
+        "tests_passed": passed,
+        "test_command": command,
+        "test_output": result.output,
+        "summary": f"Reviewed locally; `{command}` passes.\n\n```\n{stat}\n```",
+    }
+    record = _agent.RunRecord.from_state(
+        final, model="no model, reviewed edits", wall_seconds=time.monotonic() - started
+    )
+    return _agent.RunOutcome(final=final, record=record, thread_id="", ran=False)
+
+
 # ---------------------------------------------------------------------------
 # The whole pipeline
 # ---------------------------------------------------------------------------
@@ -217,13 +267,17 @@ async def fix_issue(
 
     say("checkout", str(repo_path or settings.checkouts_dir / ref.slug))
     repo = ensure_checkout(ref, repo_path)
-    branch = start_branch(repo, ref.branch)
-
-    say("agent", branch)
-    outcome = await _agent.run_agent(
-        repo, issue_task(issue), on_update=on_update, approve=approve, github=True,
-        tags={"source": "github", "issue": ref.url}, ledger_path=ledger_path,
-    )
+    if open_pr and has_reviewed_changes(repo, ref.branch):
+        branch = ref.branch
+        say("verify", branch)
+        outcome = verify_reviewed_changes(repo, issue_task(issue))
+    else:
+        branch = start_branch(repo, ref.branch)
+        say("agent", branch)
+        outcome = await _agent.run_agent(
+            repo, issue_task(issue), on_update=on_update, approve=approve, github=True,
+            tags={"source": "github", "issue": ref.url}, ledger_path=ledger_path,
+        )
     result = FixResult(ref=ref, issue=issue, repo=repo, branch=branch, outcome=outcome)
     if not result.passed or not open_pr:
         return result

@@ -218,6 +218,63 @@ async def test_fix_issue_with_pr_refuses_an_unchanged_tree(
     assert not fake.pull_requests
 
 
+def _add_visible_test(work: Path) -> None:
+    """A test the fake agent's edit satisfies, so the reviewed branch has something to verify."""
+    (work / "test_durations.py").write_text(
+        "from durations import parse\n\n\ndef test_minutes():\n    assert parse('5m') == 300\n",
+        encoding="utf-8",
+    )
+
+
+async def test_fix_issue_with_pr_on_a_reviewed_branch_runs_tests_not_the_agent(
+    fake: FakeGitHub, remote_and_clone: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    origin, work = remote_and_clone
+    _add_visible_test(work)
+    _git(work, "add", "--all")
+    _git(work, "commit", "--quiet", "-m", "add a test")
+    monkeypatch.setattr(agent_module, "run_agent", _fake_run_agent())
+    first = await fx.fix_issue("octo/widgets#7", repo_path=work, api=GitHubAPI.from_env())
+    assert first.passed and fx.is_dirty(work)  # left for review, as the CLI says
+
+    async def must_not_run(*args, **kwargs):
+        raise AssertionError("the agent ran again on an already reviewed branch")
+
+    monkeypatch.setattr(agent_module, "run_agent", must_not_run)
+    stages: list[str] = []
+    result = await fx.fix_issue(
+        "octo/widgets#7", repo_path=work, open_pr=True, api=GitHubAPI.from_env(),
+        on_stage=lambda name, _: stages.append(name),
+    )
+
+    assert stages == ["issue", "checkout", "verify", "commit", "push", "pull-request"]
+    assert result.passed and result.committed and result.pushed
+    assert not result.outcome.ran and result.outcome.record.total_tokens == 0
+    assert result.outcome.final["test_command"].startswith("python -m pytest")
+    assert "coder/issue-7" in fx.git(origin, "branch", "--list", "coder/issue-7")
+    body = fake.pull_requests[0]["body"]
+    assert body.startswith("Closes #7.") and "Reviewed locally" in body and "durations.py" in body
+
+
+async def test_fix_issue_with_pr_on_a_reviewed_branch_stops_when_its_tests_fail(
+    fake: FakeGitHub, remote_and_clone: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _, work = remote_and_clone
+    _add_visible_test(work)
+    _git(work, "add", "--all")
+    _git(work, "commit", "--quiet", "-m", "add a test")
+    monkeypatch.setattr(agent_module, "run_agent", _fake_run_agent())
+    await fx.fix_issue("octo/widgets#7", repo_path=work, api=GitHubAPI.from_env())
+    # The reviewer "improved" the edit and broke it; --pr must not ship that.
+    (work / "durations.py").write_text("def parse(s):\n    return 0\n", encoding="utf-8")
+
+    result = await fx.fix_issue("octo/widgets#7", repo_path=work, open_pr=True, api=GitHubAPI.from_env())
+
+    assert not result.passed and not result.committed and not fake.pull_requests
+    assert "assert" in result.outcome.final["test_output"]
+    assert fx.is_dirty(work)
+
+
 async def test_fix_issue_with_pr_needs_a_token(
     fake: FakeGitHub, remote_and_clone: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch
 ) -> None:

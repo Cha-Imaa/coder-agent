@@ -55,13 +55,29 @@ def server_config(repo: Path, github: bool = False) -> dict:
     return config
 
 
+# Names models reach for that no tool schema has, and the argument each one means. Every entry
+# is unambiguous, so the call is renamed and runs; a name not in this table is still an error.
+# `line_start`/`line_end` is the one that matters: gpt-oss-120b opened every acceptance run with
+# it and paid a model call to be told the right spelling.
+ARGUMENT_ALIASES: dict[str, str] = {
+    "line_start": "start_line",
+    "line_end": "end_line",
+    "depth": "max_depth",
+    "file_path": "path",
+    "filepath": "path",
+    "cmd": "command",
+}
+
+
 def strict_arguments(tool: BaseTool) -> BaseTool:
-    """Reject calls whose argument names are not in the tool's schema.
+    """Rename the argument names models predictably get wrong; reject the rest.
 
     Models invent plausible names (`line_start` for `start_line`, `depth` for `max_depth`).
     Both MCP and pydantic ignore unknown keys by default, so such a call silently runs with the
-    default values, and a request for lines 50-80 quietly returns the whole file. Returning an
-    error that names the valid arguments lets the model correct itself on the next step.
+    default values, and a request for lines 50-80 quietly returns the whole file. A name in
+    `ARGUMENT_ALIASES` whose meaning is not in doubt is rewritten and the call goes through;
+    anything else returns an error that names the valid arguments, so the model corrects itself
+    on the next step instead of acting on the wrong result.
     """
     schema = tool.args_schema
     if not isinstance(schema, dict) or not isinstance(tool, StructuredTool) or not tool.coroutine:
@@ -70,6 +86,9 @@ def strict_arguments(tool: BaseTool) -> BaseTool:
     inner = tool.coroutine
 
     async def checked(**kwargs: Any) -> Any:
+        for alias, name in ARGUMENT_ALIASES.items():
+            if alias in kwargs and name in allowed and name not in kwargs:
+                kwargs[name] = kwargs.pop(alias)
         unknown = sorted(set(kwargs) - allowed)
         if unknown:
             message = (

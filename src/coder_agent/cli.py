@@ -340,8 +340,10 @@ def fix_issue(
 
     The issue text becomes the task. Work happens on a `coder/issue-N` branch of the clone (a
     fresh one under ~/.coder-agent/checkouts unless --repo names yours). Without --pr the edits
-    are left uncommitted on that branch for review. Reads of public repositories need no token;
-    --pr needs GITHUB_TOKEN with permission to push and open pull requests.
+    are left uncommitted on that branch for review; rerunning with --pr on that branch runs the
+    tests on the reviewed edits and opens the pull request without running the agent again.
+    Reads of public repositories need no token; --pr needs GITHUB_TOKEN with permission to push
+    and open pull requests.
     """
     _configure_sandbox(sandbox)
     if model:
@@ -373,6 +375,7 @@ async def _fix_issue(
     def stage(name: str, detail: str) -> None:
         labels = {
             "issue": "Reading issue", "checkout": "Checkout", "agent": "Running the agent on branch",
+            "verify": "Running the tests on the reviewed edits of branch",
             "commit": "Committing", "push": "Pushing", "pull-request": "Opening pull request",
         }
         console.print(f"[bold cyan]{labels.get(name, name)}[/bold cyan] · {detail}")
@@ -392,7 +395,10 @@ async def _fix_issue(
         _print_failed_record(exc)
         return 1
 
-    console.print(f"[dim]{result.outcome.record.footer()} · thread {result.outcome.thread_id}[/dim]")
+    footer = result.outcome.record.footer()
+    if result.outcome.ran:
+        footer += f" · thread {result.outcome.thread_id}"
+    console.print(f"[dim]{footer}[/dim]")
     if not result.passed:
         console.print(
             f"[yellow]Tests did not pass[/yellow] (status {result.outcome.status}). "
@@ -405,7 +411,7 @@ async def _fix_issue(
     console.print(
         f"[green]Tests pass.[/green] Changes are uncommitted on branch {result.branch} in "
         f"{result.repo}. [dim]Review them, then rerun with --pr to commit, push and open the "
-        "pull request.[/dim]"
+        "pull request; that rerun runs the tests, not the agent.[/dim]"
     )
     return 0
 
