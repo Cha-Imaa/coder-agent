@@ -251,7 +251,7 @@ src/coder_agent/
   telemetry/        SQLite ledger of tokens, latency, iterations, outcome per run
   evals/            task suites, isolated runner, retrieval eval, figures
 evals/              the 12-task suite, the HumanEval slice, results and entry-point scripts
-scripts/            demo recorder and GIF renderer (demo.py, record_demo.ps1)
+scripts/            demo recorder and GIF renderer, and the README hero card template
 docs/               system design, results, the try-it walkthrough, figures
 tests/              pytest, no network and no API key needed
 ```
