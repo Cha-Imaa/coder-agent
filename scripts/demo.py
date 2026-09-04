@@ -12,7 +12,7 @@ recorder when it answers a prompt, because a pipe does not echo what was typed.
 Usage:
   python scripts/demo.py prepare TASK_ID DEST                # fresh copy of a suite task, prints its prompt
   python scripts/demo.py record OUT.cast [--title TEXT] -- coder run DEST "prompt"
-  python scripts/demo.py render IN.cast OUT.gif [--rows 28] [--max-gap 1.5]
+  python scripts/demo.py render IN.cast OUT.gif [--rows 24] [--max-gap 1.5]
 """
 
 from __future__ import annotations
@@ -31,10 +31,15 @@ import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from rich.ansi import AnsiDecoder
 from rich.style import Style
-from rich.terminal_theme import MONOKAI, TerminalTheme
+from rich.terminal_theme import TerminalTheme
+
+if TYPE_CHECKING:  # Pillow is imported lazily, so the drawing helpers only name its types
+    from PIL.Image import Image as PilImage
+    from PIL.ImageFont import FreeTypeFont
 
 # Everything the screen model treats as a command rather than as text: line breaks, backspace,
 # bell, CSI sequences (colours and cursor movement) and OSC sequences (window titles, links).
@@ -309,7 +314,7 @@ def frames_from_cast(
     max_gap: float = 1.5,
     min_frame: float = 0.06,
     hold: float = 3.0,
-    typing_delay: float = 0.04,
+    typing_delay: float = 0.06,
 ) -> list[Frame]:
     """Replay the cast through the screen model and emit one frame per visible change.
 
@@ -335,11 +340,14 @@ def frames_from_cast(
         else:
             frames.append(Frame(cells, duration))
 
-    # Prelude: the command typed at a prompt, since the pipe never showed it.
+    # Prelude: the command typed at a prompt, since the pipe never showed it. A word at a time,
+    # not a character at a time: the task sentence is two hundred characters, and typing it out
+    # letter by letter spent the first five seconds of the GIF on an otherwise empty screen.
     screen.feed("\x1b[1;32m$\x1b[0m ")
     emit(0.6)
-    for char in cast.header.get("title", cast.header.get("command", "")):
-        screen.feed(f"\x1b[1m{char}\x1b[0m")
+    typed = cast.header.get("title", cast.header.get("command", ""))
+    for word in re.findall(r"\S+\s*", typed):
+        screen.feed(f"\x1b[1m{word}\x1b[0m")
         emit(typing_delay)
     emit(0.5)
     screen.feed("\r\n")
@@ -355,7 +363,7 @@ def frames_from_cast(
             emit(gap)
             for char in text.rstrip("\n"):
                 screen.feed(f"\x1b[1m{char}\x1b[0m")
-                emit(typing_delay * 3)
+                emit(typing_delay * 2)
             emit(0.3)
             screen.feed("\r\n")
     emit(hold)
@@ -364,9 +372,26 @@ def frames_from_cast(
 
 # --------------------------------------------------------------------------- drawing
 
-BACKGROUND = (30, 30, 46)
-FOREGROUND = (205, 214, 244)
-PADDING = 18
+# A charcoal-navy window rather than pure black, and every ANSI colour desaturated a step: the
+# recording is read at a glance in a README, where a neon green on black reads as a screenshot of
+# a hacker movie. Success still looks like success, it just does not shout.
+BACKGROUND = (25, 26, 40)
+FOREGROUND = (205, 211, 224)
+TITLE_BAR = (36, 38, 56)
+BORDER = (54, 57, 80)
+MUTED = (124, 130, 156)
+DOT = (78, 82, 108)
+PADDING = 22
+CORNER_RADIUS = 13
+
+MUTED_THEME = TerminalTheme(
+    BACKGROUND,
+    FOREGROUND,
+    [(42, 44, 62), (214, 130, 130), (140, 186, 146), (212, 182, 130),
+     (138, 166, 214), (183, 152, 208), (134, 190, 197), (200, 205, 220)],
+    [(108, 113, 138), (226, 152, 152), (160, 203, 166), (228, 200, 150),
+     (158, 184, 226), (200, 172, 222), (154, 206, 212), (226, 230, 240)],
+)
 
 
 def find_font(bold: bool = False) -> Path:
@@ -393,6 +418,41 @@ def _rgb(style: Style, theme: TerminalTheme) -> tuple[tuple[int, int, int], tupl
     return fg, bg  # type: ignore[return-value]
 
 
+def _chrome(size: tuple[int, int], bar: int, font: FreeTypeFont, title: str,
+            shell: str) -> PilImage:
+    """The window the frames are drawn into: title bar, dots, rounded border.
+
+    Drawn once and copied per frame; at a hundred frames, redrawing the furniture each time is
+    most of the render.
+    """
+    from PIL import Image, ImageDraw
+
+    img = Image.new("RGB", size, BACKGROUND)
+    draw = ImageDraw.Draw(img)
+    width, height = size
+    draw.rectangle([0, 0, width, bar], fill=TITLE_BAR)
+    draw.line([(0, bar), (width, bar)], fill=BORDER)
+    for i in range(3):
+        cx, cy, r = 22 + i * 18, bar // 2, 5
+        draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=DOT)
+    draw.text((width // 2, bar // 2), title, font=font, fill=MUTED, anchor="mm")
+    if shell:
+        draw.text((width - 20, bar // 2), shell, font=font, fill=DOT, anchor="rm")
+    draw.rounded_rectangle([0, 0, width - 1, height - 1], radius=CORNER_RADIUS,
+                           outline=BORDER, width=1)
+    return img
+
+
+def _outside_corners(size: tuple[int, int]) -> PilImage:
+    """A mask of the pixels a rounded window does not cover, so the GIF can leave them clear."""
+    from PIL import Image, ImageDraw
+
+    mask = Image.new("L", size, 255)
+    ImageDraw.Draw(mask).rounded_rectangle([0, 0, size[0] - 1, size[1] - 1],
+                                           radius=CORNER_RADIUS, fill=0)
+    return mask.point(lambda v: 255 if v > 127 else 0)
+
+
 def render_gif(
     frames: list[Frame],
     out: Path,
@@ -400,28 +460,35 @@ def render_gif(
     cols: int,
     font_size: int = 15,
     font: Path | None = None,
-    theme: TerminalTheme = MONOKAI,
+    theme: TerminalTheme = MUTED_THEME,
+    title: str = "coder-agent",
+    shell: str = "powershell",
 ) -> Path:
     """Draw every frame with Pillow and write an animated GIF with per-frame durations."""
-    from PIL import Image, ImageDraw, ImageFont
+    from PIL import ImageDraw, ImageFont
 
     regular = ImageFont.truetype(str(font or find_font()), font_size)
     try:
         strong = ImageFont.truetype(str(font or find_font(bold=True)), font_size)
     except (FileNotFoundError, OSError):
         strong = regular
+    chrome_font = ImageFont.truetype(str(font or find_font()), max(9, font_size - 2))
     cw = max(1, round(regular.getlength("M")))
     ascent, descent = regular.getmetrics()
     lh = ascent + descent  # no leading, so box-drawing glyphs on adjacent rows join up
     rows = len(frames[0].cells)
-    size = (cols * cw + 2 * PADDING, rows * lh + 2 * PADDING)
+    bar = lh + 18
+    size = (cols * cw + 2 * PADDING, bar + rows * lh + 2 * PADDING)
+    window = _chrome(size, bar, chrome_font, title, shell)
+    # The corners are left transparent so the window sits on a light or a dark README alike.
+    corners = _outside_corners(size)
 
     images = []
     for frame in frames:
-        img = Image.new("RGB", size, BACKGROUND)
+        img = window.copy()
         draw = ImageDraw.Draw(img)
         for r, line in enumerate(frame.cells):
-            y = PADDING + r * lh
+            y = bar + PADDING + r * lh
             c = 0
             while c < len(line):
                 style = line[c][1]
@@ -435,11 +502,16 @@ def render_gif(
                     draw.rectangle([x, y, x + (end - c) * cw, y + lh], fill=bg)
                 draw.text((x, y), text, font=strong if style.bold else regular, fill=fg)
                 c = end
-        images.append(img.quantize(colors=128))
+        # One palette slot is reserved for "not painted": quantize to 255, then claim index 255.
+        paletted = img.quantize(colors=255)
+        paletted.putpalette(paletted.getpalette()[: 255 * 3] + list(BACKGROUND))
+        paletted.paste(255, mask=corners)
+        images.append(paletted)
 
     durations = [max(20, int(f.duration * 1000)) for f in frames]
     out.parent.mkdir(parents=True, exist_ok=True)
-    images[0].save(out, save_all=True, append_images=images[1:], duration=durations, loop=0)
+    images[0].save(out, save_all=True, append_images=images[1:], duration=durations, loop=0,
+                   transparency=255, disposal=1, optimize=True)
     return out
 
 
@@ -486,6 +558,8 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--hold", type=float, default=3.0, help="how long the last frame stays")
     g.add_argument("--font", type=Path)
     g.add_argument("--font-size", type=int, default=15)
+    g.add_argument("--title", default="coder-agent", help="what the window title bar says")
+    g.add_argument("--shell", default="powershell", help="right-hand label in the title bar")
 
     argv = sys.argv[1:] if argv is None else list(argv)
     # argparse's REMAINDER would also swallow the options before it, so split on `--` by hand.
@@ -509,7 +583,7 @@ def main(argv: list[str] | None = None) -> int:
     cast = Cast.load(args.cast)
     frames = frames_from_cast(cast, rows=args.rows, max_gap=args.max_gap, hold=args.hold)
     render_gif(frames, args.out, cols=int(cast.header.get("width", 100)),
-               font=args.font, font_size=args.font_size)
+               font=args.font, font_size=args.font_size, title=args.title, shell=args.shell)
     print(f"wrote {args.out}: {len(frames)} frames, {args.out.stat().st_size / 1e6:.1f} MB")
     return 0
 

@@ -9,7 +9,7 @@ Turn issues into working code. In your terminal.
 
 <p align="center">
   <img
-    src="docs/figures/demo.png"
+    src="docs/figures/demo.gif"
     alt="One coder run on a bug: the command, the retrieved context, the plan, an approved two-line edit, and pytest passing"
     width="850"
   />
@@ -18,13 +18,6 @@ Turn issues into working code. In your terminal.
 A terminal coding agent that takes a task in plain English, reads a target repository, plans a
 change, edits files, runs the tests, and iterates on failures until they pass. Point it at an
 issue URL and it opens the pull request.
-
-<details>
-<summary>The same run as the terminal actually printed it: 28 rows, scrolling, with the approval prompt</summary>
-
-![coder run fixing a bug: plan, file read, approved edit, tests passing](docs/figures/demo.gif)
-
-</details>
 
 Built to learn the agentic-AI stack end to end, on a zero-cost setup: every model call goes to a
 free tier, every embedding is computed locally, and every file or shell action goes through a

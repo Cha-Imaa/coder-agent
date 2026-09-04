@@ -4,11 +4,15 @@
 # the suite. The run costs about 12k Groq tokens for the default task; check the daily quota
 # before starting (see docs/results.md). Every approval prompt is answered "y" after a short pause.
 #
+# The child runs in a 28-row terminal but the GIF shows the last 24 of them: the window is
+# recorded once and framed afterwards, so the hero can be made shorter without a second run.
+#
 # Usage:  .\scripts\record_demo.ps1 [-Task fix-bug-duration-units] [-Out docs/figures/demo.gif]
 param(
     [string]$Task = "fix-bug-duration-units",
     [string]$Out = "docs/figures/demo.gif",
-    [int]$Rows = 28
+    [int]$Rows = 28,
+    [int]$ShowRows = 24
 )
 $ErrorActionPreference = "Stop"
 Set-Location (Join-Path $PSScriptRoot "..")
@@ -25,5 +29,5 @@ $shown = "coder run ./$Task `"$prompt`""
 # passing one.
 uv run python scripts/demo.py record $cast --title $shown --rows $Rows -- coder run $work $prompt
 if ($LASTEXITCODE -ne 0) { throw "coder run exited with $LASTEXITCODE; cast kept at $cast" }
-uv run python scripts/demo.py render $cast $Out --rows $Rows
+uv run python scripts/demo.py render $cast $Out --rows $ShowRows
 Write-Host "cast: $cast"
