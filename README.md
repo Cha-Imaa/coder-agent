@@ -66,6 +66,8 @@ Flags worth knowing on `coder run`:
 | `--model provider:model` | Override `CODER_MODEL` for one run: `k2think:MBZUAI-IFM/K2-Think-v2`, `google_genai:gemini-2.5-flash`, or a local `ollama:qwen2.5-coder:7b` |
 | `--max-iterations N` | Plan/act/test cycles before the agent gives up (default 4) |
 | `--test-command "..."` | The command that decides success; auto-detected (pytest, npm test, ...) if omitted |
+| `--verbose` / `-v` | Print every tool result and the full test output instead of the summarised form |
+| `--tokens` | Add the run's model calls, tokens, wall time and fallbacks under the verdict |
 
 `fix-issue` clones the repository (or works in `--repo` your clone), runs the agent on a
 `coder/issue-N` branch, and with `--pr` commits, pushes and opens the pull request once the tests

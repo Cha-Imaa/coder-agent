@@ -87,7 +87,7 @@ def test_chat_loop_dispatches_messages_and_quits(monkeypatch, tmp_path):
     monkeypatch.setattr(agent_mod, "resume_agent", fake_resume)
 
     result = CliRunner().invoke(
-        app, ["chat", str(tmp_path), "--thread", "abc", "--yes"],
+        app, ["chat", str(tmp_path), "--thread", "abc", "--yes", "--tokens"],
         input="add a greet function\n\n/resume\n/quit\n",
     )
 
