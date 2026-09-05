@@ -64,3 +64,43 @@ def test_workflow_builds_strict_from_the_lock() -> None:
     assert "mkdocs build --strict" in text
     assert "uv sync --extra docs --frozen" in text
     assert "permissions:\n  contents: read" in text, "the build job must run read-only"
+
+
+def _extra(key: str) -> list[str]:
+    """`extra_css` / `extra_javascript`: paths mkdocs resolves inside docs_dir."""
+    text = MKDOCS.read_text(encoding="utf-8")
+    block = text.split(f"\n{key}:\n", 1)[1].split("\n\n", 1)[0]
+    return [line.strip(" -") for line in block.splitlines() if line.strip()]
+
+
+def test_extra_assets_exist() -> None:
+    """mkdocs --strict does not check these: a missing one is a silent 404 on every page."""
+    assets = _extra("extra_css") + _extra("extra_javascript")
+    assert assets, "the player's stylesheet and script are not registered"
+    missing = [asset for asset in assets if not (DOCS / asset).is_file()]
+    assert not missing, f"extra_css/extra_javascript point at files that do not exist: {missing}"
+
+
+def test_the_player_and_its_frames_are_tracked() -> None:
+    """A published page is built from a checkout, not from this laptop.
+
+    `docs/assets/` sat inside a `.gitignore` entry meant for the diagram sources, so the player
+    worked locally and would have been a pair of 404s on the site.
+    """
+    tracked = subprocess.run(
+        ["git", "ls-files", "--", "docs"],
+        cwd=ROOT, capture_output=True, text=True, check=True,
+    ).stdout.split()
+    index = (DOCS / "index.md").read_text(encoding="utf-8")
+    needed = _extra("extra_css") + _extra("extra_javascript")
+    needed += re.findall(r'class="cast-player"\s+data-src="([^"]+)"', index)
+    missing = [asset for asset in needed if f"docs/{asset}" not in tracked]
+    assert not missing, f"the site needs these and git does not have them: {missing}"
+
+
+def test_the_landing_page_embeds_the_player_and_its_frames() -> None:
+    index = (DOCS / "index.md").read_text(encoding="utf-8")
+    match = re.search(r'class="cast-player"\s+data-src="([^"]+)"', index)
+    assert match, "the landing page no longer mounts the web player"
+    # Relative to the page URL, which for index.md is the site root.
+    assert (DOCS / match.group(1)).is_file(), f"the player's frames are missing: {match.group(1)}"

@@ -54,6 +54,14 @@ theme:
 plugins:
   - search
 
+# The web player on the landing page: its script and the window chrome it paints into, both
+# served from docs/assets/ rather than a CDN, so the site has no third-party dependency.
+extra_css:
+  - assets/cast-player.css
+
+extra_javascript:
+  - assets/cast-player.js
+
 markdown_extensions:
   - admonition
   - attr_list

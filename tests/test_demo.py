@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from itertools import pairwise
@@ -271,3 +272,101 @@ def test_cli_survives_a_stdout_that_cannot_encode_the_ui() -> None:
     assert proc.returncode == 0, proc.stderr.decode("utf-8", "replace")
     assert b"survived" in proc.stderr
     assert "\u21bb re-planning" in proc.stdout.decode("utf-8", "replace")
+
+
+def _frames_json(tmp_path: Path, events: list, **kwargs) -> dict:
+    cast = demo.Cast.load(_cast(tmp_path, events))
+    frames = demo.frames_from_cast(cast, rows=6, typing_delay=0.2, hold=1.0, **kwargs)
+    out = demo.render_frames(frames, tmp_path / "out" / "frames.json", cols=40)
+    return json.loads(out.read_text(encoding="utf-8"))
+
+
+def test_frames_json_carries_only_the_rows_that_changed(tmp_path: Path) -> None:
+    data = _frames_json(tmp_path, [
+        [0.0, "o", "first\r\n"], [1.0, "o", "second\r\n"], [2.0, "o", "third\r\n"],
+    ])
+    assert data["cols"] == 40 and data["rows"] == 6
+    assert sum(len(f["rows"]) for f in data["frames"]) < data["rows"] * len(data["frames"])
+    written = [set(f["rows"]) for f in data["frames"][-3:]]
+    assert all(len(rows) == 1 for rows in written), "an appended line rewrites one row"
+    assert all(f["d"] > 0 for f in data["frames"])
+
+
+def test_frames_json_runs_drop_what_the_player_would_default_anyway(tmp_path: Path) -> None:
+    data = _frames_json(tmp_path, [[0.0, "o", f"plain {BOLD}bold{RESET} \x1b[42m bg \x1b[0m   \r\n"]])
+    row = [runs for frame in data["frames"] for r, runs in frame["rows"].items() if r == "1"][-1]
+    texts = ["".join(run[0]) for run in row]
+    assert "".join(texts).rstrip() == "plain bold  bg"
+    assert row[0] == ["plain "], "default style is the bare text, no colour and no weight"
+    assert next(run for run in row if run[0] == "bold")[3] == 1
+    assert next(run for run in row if run[0].strip() == "bg")[2].startswith("#")
+    assert not texts[-1].isspace(), "trailing padding no glyph needs is dropped"
+
+
+def test_frames_json_theme_is_the_one_the_gif_is_drawn_with(tmp_path: Path) -> None:
+    """The stylesheet only has fallbacks; the window in the browser gets its colours from here."""
+    data = _frames_json(tmp_path, [[0.0, "o", "hi\r\n"]])
+    assert data["theme"]["background"] == demo._hex(demo.BACKGROUND)
+    assert data["theme"]["padding"] == f"{demo.PADDING}px", "the stylesheet takes it as a length"
+
+
+def test_render_command_writes_frames_json_for_either_spelling(tmp_path: Path) -> None:
+    cast = _cast(tmp_path, [[0.0, "o", "hi\r\n"]])
+    for name, extra in (("frames.json", []), ("frames.txt", ["--frames"])):
+        assert demo.main(["render", str(cast), str(tmp_path / name), "--rows", "3", *extra]) == 0
+        assert json.loads((tmp_path / name).read_text(encoding="utf-8"))["version"] == 1
+
+
+PLAYER = ROOT / "docs" / "assets" / "cast-player.js"
+
+# Node composes the frames the way the browser would and prints the screen it ends up with; the
+# test compares that against the screen the Python model ends on. It is the one way to know the
+# player and the renderer still agree about the shape of a frame without opening a browser.
+COMPOSE = """
+const player = require(process.argv[2]);
+const data = require(process.argv[3]);
+const rows = player.compose(data).map((runs) => player.rowHtml(runs));
+process.stdout.write(JSON.stringify(rows));
+"""
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
+def test_the_player_composes_the_screen_the_renderer_ended_on(tmp_path: Path) -> None:
+    cast = demo.Cast.load(ROOT / "docs" / "figures" / "demo.cast")
+    frames = demo.frames_from_cast(cast, rows=24)
+    out = demo.render_frames(frames, tmp_path / "frames.json", cols=88)
+    script = tmp_path / "compose.js"
+    script.write_text(COMPOSE, encoding="utf-8")
+    proc = subprocess.run(
+        ["node", str(script), str(PLAYER), str(out)],
+        capture_output=True, text=True, encoding="utf-8", check=True,
+    )
+    painted = [re.sub(r"<[^>]+>", "", row) for row in json.loads(proc.stdout)]
+    painted = [row.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">") for row in painted]
+    assert [row.rstrip() for row in painted] == _plain(frames[-1])
+    assert any("passed" in row for row in painted), "the run that ended green ends green here"
+
+
+ESCAPING = """
+const player = require(process.argv[2]);
+process.stdout.write(player.rowHtml([["<b>a & b</b>"], ["x", "#ff0000", "", 1]]));
+"""
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
+def test_the_player_escapes_the_markup_a_recorded_diff_can_contain(tmp_path: Path) -> None:
+    """A run that edits an HTML file puts tags on screen; they are text, not markup."""
+    script = tmp_path / "escaping.js"
+    script.write_text(ESCAPING, encoding="utf-8")
+    html = subprocess.run(
+        ["node", str(script), str(PLAYER)],
+        capture_output=True, text=True, encoding="utf-8", check=True,
+    ).stdout
+    assert "&lt;b&gt;a &amp; b&lt;/b&gt;" in html
+    assert "<b>" not in html
+    assert '<span style="color:#ff0000;font-weight:700;">x</span>' in html
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
+def test_the_player_is_valid_javascript() -> None:
+    subprocess.run(["node", "--check", str(PLAYER)], capture_output=True, text=True, check=True)
