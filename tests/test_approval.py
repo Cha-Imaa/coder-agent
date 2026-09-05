@@ -7,7 +7,6 @@ one). The scripted model asks for a fake `edit_file` tool; the tests answer the 
 
 from __future__ import annotations
 
-import re
 from types import SimpleNamespace
 
 import pytest
@@ -22,7 +21,7 @@ from coder_agent.cli import app
 from coder_agent.graph import build_graph
 from coder_agent.graph.approval import RISKY_TOOLS, pending_risky_calls, route_after_approve
 from coder_agent.ui.render import parse_decision, preview_call
-from tests.fakes import echo, scripted, tool_call
+from tests.fakes import echo, plain, scripted, tool_call
 
 CFG = {"configurable": {"thread_id": "t"}}
 INPUT = {"task": "change a.py", "repo": "/tmp/repo"}
@@ -211,7 +210,5 @@ async def test_interrupted_at_the_prompt_then_resumed_asks_again(wired, edit_fil
 
 def test_cli_has_a_yes_flag():
     result = CliRunner().invoke(app, ["run", "--help"])
-    # Typer forces coloured help when GITHUB_ACTIONS is set and splices escape codes into the
-    # option names, so compare the plain text.
-    plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
-    assert "--yes" in plain and "-y" in plain
+    help_text = plain(result.output)
+    assert "--yes" in help_text and "-y" in help_text

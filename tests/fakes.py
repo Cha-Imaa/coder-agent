@@ -1,4 +1,4 @@
-"""Test doubles shared across test modules.
+"""Test doubles and small helpers shared across test modules.
 
 `ScriptedLLM` replays a fixed list of AI messages, one per call, and records every prompt it was
 given. It accepts `bind_tools` (returning itself) so the graph can be built exactly as in
@@ -8,6 +8,7 @@ without an API key.
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from langchain_core.language_models.fake_chat_models import FakeMessagesListChatModel
@@ -52,3 +53,15 @@ def echo(text: str) -> str:
 def fail(text: str) -> str:
     """Always raise, to test error handling."""
     raise RuntimeError(f"boom:{text}")
+
+
+def plain(text: str) -> str:
+    r"""Strip SGR escapes, so an assertion about help text is about the text.
+
+    Typer decides at import time to force a terminal when `GITHUB_ACTIONS`, `FORCE_COLOR` or
+    `TTY_COMPATIBLE` is set, and its option highlighter then styles the leading dash of a long
+    option separately from the rest of it: `--tokens` reaches `result.output` as
+    `\x1b[1;36m-\x1b[0m\x1b[1;36m-tokens\x1b[0m`. A test that greps the raw output for `--tokens`
+    therefore passes on a developer's machine and fails only on CI.
+    """
+    return re.sub(r"\x1b\[[0-9;]*m", "", text)
