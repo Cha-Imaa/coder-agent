@@ -68,8 +68,14 @@ def _child_env(cols: int, rows: int) -> dict[str, str]:
     into `force_terminal` (see `coder_agent.cli._console`). COLORTERM unlocks 24-bit colour so the
     diff highlighting comes through unchanged; PYTHONIOENCODING keeps box-drawing characters
     intact on a Windows pipe, which would otherwise be cp1252.
+
+    NO_COLOR has to go, not just be overridden. Rich gives it precedence over FORCE_COLOR, and it
+    keeps bold and dim while dropping every colour - so a shell that exports it (this one does)
+    yields a recording that looks plausible and is grey from end to end. The stage icons, the
+    Tests tick and the diff all come out the colour of the body text, and nothing in the cast
+    says why.
     """
-    return {
+    env = {
         **os.environ,
         "FORCE_COLOR": "1",
         "COLORTERM": "truecolor",
@@ -79,6 +85,8 @@ def _child_env(cols: int, rows: int) -> dict[str, str]:
         "PYTHONIOENCODING": "utf-8",
         "PYTHONUNBUFFERED": "1",
     }
+    env.pop("NO_COLOR", None)
+    return env
 
 
 def _resolve(command: list[str]) -> list[str]:
