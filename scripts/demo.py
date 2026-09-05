@@ -135,9 +135,13 @@ def record(
 
     threading.Thread(target=reader, daemon=True).start()
     decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
+    # The cast is committed, so the header goes into a public repository: record the title the
+    # caller chose to show rather than the real argv, whose destination is an absolute path under
+    # the home directory of whoever recorded the take.
+    shown = title or " ".join(command)
     header = {
         "version": 2, "width": cols, "height": rows, "timestamp": int(time.time()),
-        "command": " ".join(command), "title": title or " ".join(command),
+        "command": shown, "title": shown,
         "env": {"TERM": "xterm-256color", "SHELL": "powershell"},
     }
     tail = ""  # output since the last answered prompt, colour codes removed, for matching
