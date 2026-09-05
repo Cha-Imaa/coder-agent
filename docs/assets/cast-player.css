@@ -12,6 +12,9 @@
   --cast-border: #36394f;
   --cast-muted: #7c829c;
   --cast-dot: #4e526c;
+  --cast-dotclose: #d68282;
+  --cast-dotmin: #d4b682;
+  --cast-dotmax: #8cba92;
   --cast-radius: 13px;
   --cast-padding: 22px;
   --cast-font: 15px;
@@ -39,12 +42,18 @@
   gap: 8px;
 }
 
+/* Close, minimise, zoom - the same three colours the GIF and the SVG paint, so the window reads
+   as one window in all three renderings. */
 .cast-dots i {
   width: 10px;
   height: 10px;
   border-radius: 50%;
   background: var(--cast-dot);
 }
+
+.cast-dots i:nth-child(1) { background: var(--cast-dotclose); }
+.cast-dots i:nth-child(2) { background: var(--cast-dotmin); }
+.cast-dots i:nth-child(3) { background: var(--cast-dotmax); }
 
 /* The title is centred in the bar, as it is in the GIF, so the dots on the left and the shell
    label on the right take equal shares of what is left over. */
