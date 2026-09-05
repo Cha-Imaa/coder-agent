@@ -9,7 +9,7 @@ Turn issues into working code. In your terminal.
 
 <p align="center">
   <img
-    src="docs/figures/demo.gif"
+    src="docs/figures/demo.svg"
     alt="One coder run on a bug: the command, the retrieved context, the plan, an approved two-line edit, and pytest passing"
     width="850"
   />
