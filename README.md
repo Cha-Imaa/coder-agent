@@ -95,16 +95,33 @@ slice. Every number comes from a script in the repository and a results file und
 
 ![pass@1 by task category](docs/figures/pass_rate.png)
 
-The suite is small and the tasks are single-purpose, so 100% says the loop works, not that the
-agent is done — a `--agent noop` run that touches nothing fails all twelve, so there are no free
-passes. About 97% of the tokens go to the `act` node, and a four-arm ablation found **no
-measurable difference between retrieval modes** on repositories this small.
+Every task was solved in the first plan/act/test cycle. The suite is small, so 100% says the loop
+works, not that the agent is done — a `--agent noop` run that touches nothing fails all twelve.
+
+<p align="center">
+  <img src="docs/figures/iteration_curve.png" alt="Share of tasks solved after each iteration" width="49%" />
+  <img src="docs/figures/retrieval_ablation.png" alt="pass@1 and tokens per task by retrieval mode" width="49%" />
+</p>
+
+Four retrieval arms on the same suite land within three tasks and 15% of tokens of each other,
+while the same task varies far more between arms than the arms do between themselves: **on
+repositories with three to five files, retrieval mode makes no measurable difference.**
+
+![pass@1, tokens and seconds per task by model](docs/figures/model_comparison.png)
+
+K2 Think is faster per task and spends more than twice the tokens getting there: more tool-calling
+steps, and each step resends the conversation.
+
+![Tokens per run by graph node](docs/figures/cost_profile.png)
+
+About 97% of the tokens go to `act` reading files and running tools — 29k against under 1k for
+`plan`. That is the number codebase retrieval is meant to move.
 
 The [results page](https://cha-imaa.github.io/coder-agent/results/) has the per-category tables,
-the model comparison, the retrieval ablation and the failure analysis.
+the recall@k numbers and the failure analysis.
 
 ```bash
-uv run python evals/run_evals.py     # all 12 tasks, ~356k tokens
+uv run python evals/run_evals.py      # all 12 tasks, ~356k tokens
 uv run python evals/retrieval_eval.py # recall@k per retrieval mode
 uv run pytest                         # the test suite, no API key needed
 ```
