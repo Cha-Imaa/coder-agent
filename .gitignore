@@ -10,3 +10,7 @@ build/
 .chroma/
 *.sqlite
 .DS_Store
+
+# local assistant notes
+CLAUDE.md
+.claude/
