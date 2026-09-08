@@ -46,9 +46,10 @@ Each milestone ends in a working, pushed state.
 - [ ] Smoke test streams a reply; first trace visible in LangSmith
 
 ### 1. MCP tool server
-- [ ] FastMCP server: `read_file`, `write_file`, `list_dir`, `search_code`, `run_command`
-- [ ] Path jail and command denylist with unit tests
-- [ ] Client loads the tools via `langchain-mcp-adapters`; verify with MCP Inspector
+- [x] FastMCP server: `read_file`, `edit_file`, `write_file`, `list_dir`, `search_code`, `run_command`
+- [x] Path jail and command denylist with unit tests
+- [x] Client loads the tools via `langchain-mcp-adapters`; end-to-end tests over stdio
+- [ ] Inspect the server with MCP Inspector
 
 ### 2. Minimal agent loop
 - [ ] Graph state, `plan` and `act` nodes, `ToolNode`, `finish`

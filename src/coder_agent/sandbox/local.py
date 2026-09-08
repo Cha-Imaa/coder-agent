@@ -140,6 +140,7 @@ def run_command(
             cwd=repo_root,
             shell=True,
             check=False,
+            stdin=subprocess.DEVNULL,
             capture_output=True,
             text=True,
             encoding="utf-8",
