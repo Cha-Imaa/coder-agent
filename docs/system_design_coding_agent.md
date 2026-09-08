@@ -238,6 +238,130 @@ Each step leaves a working, pushed state. Each step adds one concept.
 
 ---
 
+## 11. How production coding agents are built, and what we mirror
+
+The goal of this project is to understand tools like Claude Code, Codex CLI, Aider and Cursor's agent
+mode from the inside. Publicly documented behaviour of those tools shows a shared anatomy. Here is
+that anatomy, and where each piece lives in our build.
+
+### 11.1 The core is a small loop, not a big framework
+
+Every production coding agent is, at its centre, the loop from section 1: send messages plus tool
+schemas to the model, execute the tool calls it returns, append results, repeat until the model
+answers with no tool calls. Claude Code's loop is exactly this, running against the Messages API
+with a fixed tool set. The sophistication is in everything around the loop, not the loop itself.
+
+Ours: LangGraph's `act <-> tools` cycle. We make the loop explicit as graph edges so you can see
+and instrument it.
+
+### 11.2 A small, general tool set beats many specific tools
+
+Claude Code ships roughly a dozen tools: read file, edit file (search and replace), write file,
+run shell command, search file contents (grep), find files (glob), list directory, plus web fetch,
+task delegation and a to-do list. There is no "refactor" tool or "fix bug" tool. General primitives
+let the model compose any workflow; the intelligence stays in the model.
+
+Two details worth copying:
+
+- **Edit is search-and-replace, not whole-file rewrite.** The model supplies `old_string` and
+  `new_string`; the tool fails if `old_string` is not unique. This is cheaper in tokens and far
+  less likely to clobber code the model did not look at.
+- **Tool descriptions are long and prescriptive.** Much of a coding agent's "prompt engineering"
+  lives in tool descriptions: when to use grep versus reading a file, why to read before editing.
+
+Ours: `mcp_server/server.py` exposes `read_file`, `edit_file` (search and replace), `write_file`,
+`list_dir`, `search_code`, `run_command`. We will write descriptions the way the real tools do.
+
+### 11.3 The system prompt carries the operating manual
+
+The system prompt tells the model how to behave as an engineer: read before editing, prefer
+minimal diffs, run tests, do not commit unless asked, how to format output for a terminal. It also
+injects **environment context**: working directory, OS, git status, date, and the contents of a
+project instructions file.
+
+Ours: `graph/prompts.py`. We will version it and watch how each change moves the eval pass rate.
+
+### 11.4 Project memory: the instructions file
+
+Claude Code reads `CLAUDE.md`; Cursor reads `.cursorrules`; Codex reads `AGENTS.md`. The pattern is
+identical: a Markdown file in the repo, appended to the system prompt, where humans write the rules
+the agent should follow for this codebase (build commands, conventions, forbidden directories).
+Cheap, transparent, version-controlled memory.
+
+Ours: the agent will look for `AGENTS.md` in the target repo and include it in the system prompt.
+
+### 11.5 Permissions: the model proposes, the harness decides
+
+Every serious coding agent separates *deciding* (model) from *executing* (harness) and inserts a
+policy layer between them. Claude Code classifies tools as read-only or mutating, asks the user
+before mutating actions, supports allow and deny lists, and has modes (plan-only, auto-accept
+edits, bypass). Sandboxing of shell commands and path restrictions sit underneath.
+
+Ours: `sandbox/` implements the jail and command policy; the CLI implements the confirmation gate
+and `--yes`. Plan mode maps to running only `retrieve_context` and `plan` and stopping.
+
+### 11.6 Context management: the window is the scarce resource
+
+Long sessions overflow the context window. Production agents handle this with:
+
+- **Truncation of tool output**: a 10,000-line test log is cut with a note saying how much was cut.
+- **Compaction**: when the conversation nears the limit, the model summarises it and the summary
+  replaces the history.
+- **Retrieval instead of dumping**: search tools return matching lines, not whole files.
+- **Prompt caching**: the static prefix (system prompt, tool schemas) is cached server-side so each
+  turn only pays for the new tokens.
+
+Ours: output caps in `sandbox/`, RAG in `rag/`, and a `compact` step once the message list grows
+past a threshold. Free-tier token budgets make this pressure very real for us.
+
+### 11.7 Planning and to-do tracking
+
+Claude Code has a plan mode (explore, propose, wait for approval) and a to-do list tool the model
+uses to keep itself on track over long tasks. Both are external structure that compensates for the
+model losing the thread.
+
+Ours: the `plan` node with structured output is the to-do list; `reflect` revises it.
+
+### 11.8 Sub-agents
+
+For broad searches or independent sub-tasks, Claude Code spawns a child agent with its own context
+window and a narrower tool set, then keeps only its final report. This protects the parent's
+context from thousands of lines of search results.
+
+Ours: stretch goal. LangGraph supports this as a subgraph invoked from a node.
+
+### 11.9 Extensibility: MCP and hooks
+
+MCP lets users plug arbitrary tool servers into the agent without changing its code. Hooks run
+user-defined shell commands before or after tool calls (lint on every edit, block certain
+commands). Both are ways to customise behaviour outside the model.
+
+Ours: we are MCP-native from the start, on both sides of the protocol.
+
+### 11.10 Observability and evals
+
+Vendors run these agents against benchmarks such as SWE-bench (real GitHub issues with hidden
+tests) and trace every run. Prompt or tool changes ship only if the number moves.
+
+Ours: LangSmith traces plus `evals/` as a miniature SWE-bench.
+
+### Map at a glance
+
+| Production concern | Where it lives in coder-agent |
+|---|---|
+| Agentic loop | `graph/build.py` (`act <-> tools`) |
+| General tool primitives | `mcp_server/server.py` |
+| System prompt and environment context | `graph/prompts.py` |
+| Project instructions file | `AGENTS.md` lookup in `plan` node |
+| Permissions and sandbox | `sandbox/`, CLI confirmation gate |
+| Output truncation and compaction | `sandbox/local.py`, `compact` node |
+| Plan mode and to-do list | `plan` and `reflect` nodes |
+| Sub-agents | stretch: LangGraph subgraph |
+| Extensibility | MCP client in `tools/client.py` |
+| Evals and tracing | `evals/`, LangSmith |
+
+---
+
 ## Glossary
 
 - **Agent**: LLM in a loop with tools and a stop condition.
