@@ -38,38 +38,40 @@ START -> retrieve_context -> plan -> act <-> tools -> run_tests -> reflect
 
 ## Milestones
 
-Each milestone ends in a working, pushed state.
+Each milestone ends in a working, pushed state. Every step carries a weight in points `(Npt)`,
+a rough estimate of effort relative to the other steps. Progress is checked points over total
+points, not a step count, so finishing a big step moves the bar more than a small one.
 
 ### 0. Scaffold
-- [x] Project layout, `pyproject.toml`, `uv` environment, `.env.example`
-- [x] Typed settings and LLM factory with fallback
-- [ ] Smoke test streams a reply; first trace visible in LangSmith
+- [x] Project layout, `pyproject.toml`, `uv` environment, `.env.example` (2pt)
+- [x] Typed settings and LLM factory with fallback (3pt)
+- [ ] Smoke test streams a reply; first trace visible in LangSmith (1pt)
 
 ### 1. MCP tool server
-- [x] FastMCP server: `read_file`, `edit_file`, `write_file`, `list_dir`, `search_code`, `run_command`
-- [x] Path jail and command denylist with unit tests
-- [x] Client loads the tools via `langchain-mcp-adapters`; end-to-end tests over stdio
-- [ ] Inspect the server with MCP Inspector
+- [x] FastMCP server: `read_file`, `edit_file`, `write_file`, `list_dir`, `search_code`, `run_command` (4pt)
+- [x] Path jail and command denylist with unit tests (3pt)
+- [x] Client loads the tools via `langchain-mcp-adapters`; end-to-end tests over stdio (3pt)
+- [ ] Inspect the server with MCP Inspector (1pt)
 
 ### 2. Minimal agent loop
-- [ ] Graph state, `plan` and `act` nodes, `ToolNode`, `finish`
-- [ ] `coder run` streams node transitions and tool calls
-- [ ] Agent adds a function to a toy repo end to end
+- [ ] Graph state, `plan` and `act` nodes, `ToolNode`, `finish` (5pt)
+- [ ] `coder run` streams node transitions and tool calls (3pt)
+- [ ] Agent adds a function to a toy repo end to end (3pt)
 
 ### 3. Test-and-fix loop
-- [ ] `run_tests` node with test-command detection
-- [ ] `reflect` node and conditional edge with `max_iterations`
-- [ ] Three eval tasks and `run_evals.py` reporting pass rate
+- [ ] `run_tests` node with test-command detection (3pt)
+- [ ] `reflect` node and conditional edge with `max_iterations` (3pt)
+- [ ] Three eval tasks and `run_evals.py` reporting pass rate (4pt)
 
 ### 4. Retrieval over the codebase
-- [ ] Repo loader honouring `.gitignore`, language-aware chunking
-- [ ] Incremental Chroma index keyed by file hash; `coder index`
-- [ ] `retrieve_context` node; measure pass rate and tokens with and without retrieval
+- [ ] Repo loader honouring `.gitignore`, language-aware chunking (4pt)
+- [ ] Incremental Chroma index keyed by file hash; `coder index` (4pt)
+- [ ] `retrieve_context` node; measure pass rate and tokens with and without retrieval (3pt)
 
 ### 5. Hardening and polish
-- [ ] Provider fallback verified under real rate limits; Docker sandbox mode
-- [ ] `coder chat` with SQLite checkpointer and thread resume
-- [ ] README: architecture, demo, eval table, lessons learned
+- [ ] Provider fallback verified under real rate limits; Docker sandbox mode (4pt)
+- [ ] `coder chat` with SQLite checkpointer and thread resume (3pt)
+- [ ] README: architecture, demo, eval table, lessons learned (2pt)
 
 ### Stretch
 - Human-in-the-loop `interrupt()` before writes
