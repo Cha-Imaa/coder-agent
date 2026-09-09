@@ -211,3 +211,68 @@ their tools; Cursor shows the same in its settings panel. Both are `tools/list` 
 uv run python scripts/list_tools.py .
 ```
 Six tools; `edit_file` has three required arguments, `list_dir` none.
+
+---
+
+## Step 2.1 — Graph state, `plan` and `act` nodes, `ToolNode`, `finish`
+
+**What we built.** The agent loop itself, in `src/coder_agent/graph/`:
+
+```
+START -> plan -> act -> (tools -> act)* -> finish -> END
+```
+
+- `state.py`: the `AgentState` TypedDict. Inputs (`task`, `repo`), the model conversation
+  (`messages`), the current `plan`, counters (`iteration`, `steps`) and outputs (`status`,
+  `summary`).
+- `prompts.py`: the system prompts for planning, acting and (later) reflecting, in one file.
+- `nodes.py`: `make_plan_node`, `make_act_node`, `finish`, and the router `route_after_act`.
+- `build.py`: `build_graph(llm, tools)` wires nodes and edges and compiles the graph.
+- `tests/fakes.py`: a `ScriptedLLM` that replays canned answers, so the graph is tested with no
+  API key. `tests/test_graph.py`: ten tests, one of which drives the real MCP server.
+
+**Key concepts.**
+- *State is a dict with reducers.* A LangGraph node receives the full state and returns only the
+  keys it changed. For most keys the new value replaces the old. `messages` is annotated with
+  `add_messages`, so returning `{"messages": [msg]}` appends instead of replacing. That one
+  annotation is what makes a multi-turn conversation accumulate across nodes.
+- *Nodes are closures over dependencies.* `make_act_node(llm, tools)` returns the node function.
+  The graph never imports a concrete model, so tests inject a fake and production injects Groq.
+  This is plain dependency injection; it is the reason the whole loop is testable offline.
+- *ReAct in two nodes.* `act` asks the model; if the answer carries `tool_calls`, the conditional
+  edge sends it to `tools`, whose `ToolMessage`s flow back to `act`. If the answer is prose, the
+  loop is over. The router is a pure function of state, which makes it trivially unit-testable.
+- *`ToolNode`.* LangGraph's prebuilt node reads the tool calls on the last AI message, runs each
+  one (sync or async), and appends one `ToolMessage` per call, matched by `tool_call_id`. With
+  `handle_tool_errors=True` a raising tool becomes an error message the model can react to,
+  instead of a crashed run.
+- *Plan is state, not history.* The plan lives in `state.plan` and is formatted into the system
+  prompt on every `act` call. Storing it as a message would freeze it into the conversation;
+  keeping it in state lets `reflect` (milestone 3) replace it without rewriting history.
+- *Two safety counters.* `iteration` counts plan-act-test cycles and will be bounded by
+  `max_iterations`. `steps` counts model calls inside `act` and is bounded by `max_steps`, so a
+  model that keeps calling tools without converging is cut off and the run ends as `gave_up`.
+- *MCP results are content blocks.* A `ToolMessage` from an MCP tool has `content` as a list of
+  `{"type": "text", ...}` blocks, not a string, because MCP tools may return images or resources
+  too. Use `message.text` to get the joined text.
+
+**Why this way.**
+- *Separate plan call.* A plan is cheap (no tools bound, short output), gives the user something
+  to read before any file changes, and gives the model a chance to think about verification
+  before it starts reading files.
+- *Fake LLM in tests, real tools in one test.* Routing bugs are logic bugs; they should fail fast
+  and deterministically. One end-to-end test with the real MCP server proves the async tools,
+  the content-block format and the file writes all work together.
+
+**How the real tools do it.** Every production coding agent is this loop. Claude Code's core is
+"call model, execute tool calls, append results, repeat until the model stops calling tools",
+with a step budget. Aider separates a planning conversation ("architect" mode) from an editing
+one, like our `plan` and `act`. OpenHands models the loop as an event stream where each action
+produces an observation, which is what our `messages` list is.
+
+**Check it.**
+```bash
+uv run pytest tests/test_graph.py -v
+```
+Ten tests: three for the router, six for the whole graph with a scripted model (tool results fed
+back, errors turned into messages, step cap ends the run), one driving the real MCP server.

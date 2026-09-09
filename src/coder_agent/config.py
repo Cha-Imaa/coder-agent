@@ -26,6 +26,7 @@ class Settings(BaseSettings):
 
     # Agent loop
     max_iterations: int = 4
+    max_steps: int = 40  # model calls inside `act` per run; guards against tool-call loops
     command_timeout: int = 120  # seconds, for any shell command the agent runs
 
     # Where local state (vector index, checkpoints) is stored, relative to the target repo.

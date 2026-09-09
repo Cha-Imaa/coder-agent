@@ -83,7 +83,7 @@ points, not a step count, so finishing a big step moves the bar more than a smal
 - [x] `scripts/list_tools.py` prints the tool schemas; MCP Inspector walkthrough in TEACH (1pt)
 
 ### 2. Minimal agent loop
-- [ ] Graph state, `plan` and `act` nodes, `ToolNode`, `finish`; routing unit tests with a fake LLM (5pt)
+- [x] Graph state, `plan` and `act` nodes, `ToolNode`, `finish`; routing unit tests with a fake LLM (5pt)
 - [ ] System prompt and plan format; plan is stored in state and shown to the user (2pt)
 - [ ] `coder run` streams node transitions, tool calls and diffs with Rich (3pt)
 - [ ] Agent adds a function to a toy repo end to end, trace in LangSmith (3pt)
