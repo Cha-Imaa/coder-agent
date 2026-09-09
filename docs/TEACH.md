@@ -44,7 +44,7 @@ has a type and a default and is read from an environment variable prefixed `CODE
 **Why this way.**
 - *Typed settings instead of `os.getenv`.* A typo in a variable name or a non-integer timeout is
   caught at startup with a clear error, not deep inside the agent loop.
-- *`init_chat_model("groq:llama-3.3-70b-versatile")`.* LangChain's provider-agnostic constructor.
+- *`init_chat_model("groq:openai/gpt-oss-120b")`.* LangChain's provider-agnostic constructor.
   The `provider:model` string picks the integration package and the model at once, so switching
   from Groq to Gemini is a config change, not a code change.
 - *`with_fallbacks([...])`.* Free tiers rate-limit aggressively. When the primary raises, usually
@@ -323,3 +323,41 @@ With `.env` filled in, a real run:
 ```bash
 uv run coder run path/to/small/repo "add a function is_even(n) to utils.py with a test"
 ```
+
+---
+
+## Step 0.3 — Smoke test and the first trace (and a model that vanished)
+
+**What happened.** The first real call failed: Groq had retired `llama-3.3-70b-versatile`, the
+default model chosen when the project started. The call still returned an answer, because
+`with_fallbacks` sent it to Gemini. Only the LangSmith trace revealed which provider actually
+replied: the root run `RunnableWithFallbacks` contained a `ChatGroq` child marked *error* and a
+`ChatGoogleGenerativeAI` child marked *success*.
+
+**What we changed.**
+- Default model is now `groq:openai/gpt-oss-120b` (131k context, tool calling verified). The list
+  of models an account can use comes from the API, not from documentation:
+  `Groq(api_key=...).models.list()`.
+- `scripts/smoke_llm.py` forces UTF-8 on stdout. Windows terminals default to cp1252 and crash on
+  characters such as the non-breaking hyphen this model likes to emit.
+
+**Key concepts.**
+- *Fallbacks hide failures by design.* That is what you want in production and what you do not
+  want while developing: a silent fallback to a slower or weaker model changes results without
+  telling you. Observability is how you keep the benefit without the blindness.
+- *Traces are trees.* A LangSmith run is nested: the graph, then each node, then each model call,
+  then each tool call, each with inputs, outputs, latency and token counts. The `is_root=True`
+  filter in the client lists top-level runs; opening one shows the children.
+- *Free-tier limits are per model and per minute.* Groq's `qwen/qwen3.6-27b` rejected a small
+  request because its output-tokens-per-minute cap (1000) was below the default `max_tokens`.
+  Rate limits are part of model selection, not an afterthought.
+
+**How the real tools do it.** Claude Code and Cursor both log every model call with provider,
+model, tokens and latency, and surface fallbacks in their status output. LangSmith gives us that
+for free with two environment variables; production teams use the same product or OpenTelemetry.
+
+**Check it.**
+```bash
+uv run python scripts/smoke_llm.py
+```
+Then open the `coder-agent` project at https://smith.langchain.com and expand the newest run.

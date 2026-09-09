@@ -4,7 +4,12 @@ Run:  uv run python scripts/smoke_llm.py
 Then open LangSmith to see the trace.
 """
 
+import sys
+
 from coder_agent.llm import get_llm
+
+# Windows consoles default to cp1252, which cannot print every character a model emits.
+sys.stdout.reconfigure(encoding="utf-8")
 
 
 def main() -> None:
