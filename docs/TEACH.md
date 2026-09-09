@@ -515,3 +515,53 @@ uv run pytest tests/test_context.py -v
 Nine tests: stubbing keeps recent outputs and ids, idempotence, no summary under budget, the
 summary replaces the middle and sees only the middle, the cut never orphans a tool result, and
 the `act` node writes the compacted history back so the next model call sees it.
+
+---
+
+## Step 3.4 — Telemetry ledger: what every run cost
+
+**What we built.** `telemetry/ledger.py` and a `usage` field in the graph state.
+
+- `usage_from_message(node, ai_message)` reads `usage_metadata` (input and output tokens) and
+  `response_metadata["model_name"]` from a model reply. `plan` and `act` return it in their patch.
+- `merge_usage` is the reducer on `state.usage`: it sums calls and tokens per node and counts
+  how many calls each model answered. No node reads the total; the reducer builds it.
+- `Ledger` writes one row per run to `~/.coder-agent/ledger.sqlite` (`runs`) plus one row per node
+  (`node_usage`): status, iterations, steps, wall time, test verdict, tokens, models, tags.
+- `coder run` ends with a footer such as
+  `9 model calls · 13,856 in / 1,202 out tokens · 57s · 1 iteration(s) · gemini-2.5-flash, openai/gpt-oss-120b`
+  and `coder stats` prints pass rate, averages, tokens by node and the last runs.
+
+**Key concepts.**
+- *Reducers do the accounting.* Any state key can carry a merge function, not only `messages`.
+  Each model call adds its own small dict; LangGraph folds them. A node that later runs in
+  parallel branches would still be counted correctly, which a global counter would get wrong.
+- *Two observability layers.* LangSmith holds full traces for debugging one run. The ledger holds
+  numbers for aggregating many runs. Traces answer "why did this run fail"; the ledger answers
+  "what is the pass rate and what does a run cost". The eval harness and the figures read the
+  ledger.
+- *Record which model actually answered.* The first ledgered run shows both `openai/gpt-oss-120b`
+  and `gemini-2.5-flash`: Groq rate-limited mid-run and the fallback took over. Without the
+  per-model count that would be invisible, and a later model comparison would be comparing
+  mixtures.
+- *Where the tokens go.* In that run the `act` node used 13,598 input tokens across eight calls
+  and `plan` used 258. Input dominates because the whole conversation is re-sent on every call.
+  That is the number context management (step 3.3) is there to bound, and the "cost profile"
+  figure in the plan will show it per node.
+- *SQLite, not a JSON file.* Appending safely from an interrupted run, querying with `GROUP BY`,
+  and being a single copyable file are worth more than human readability here.
+
+**How the real tools do it.** Claude Code tracks tokens per session and prints a cost summary on
+exit (`/cost`). Aider prints tokens and dollar cost after every message. Both keep the count in
+the client, from the provider's usage fields, exactly as `usage_from_message` does. Benchmark
+harnesses (SWE-bench, Aider's polyglot) store per-task JSON records that are the equivalent of
+our `runs` rows.
+
+**Check it.**
+```bash
+uv run pytest tests/test_telemetry.py -v
+uv run coder stats
+```
+Seven tests: extraction, merging, accumulation through the graph with a scripted model whose
+replies carry usage metadata, ledger write and summary, idempotence by run id, and the `stats`
+command against a temporary ledger.

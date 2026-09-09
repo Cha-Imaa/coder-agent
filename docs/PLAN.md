@@ -92,7 +92,7 @@ points, not a step count, so finishing a big step moves the bar more than a smal
 - [x] `run_tests` node with test-command detection (pytest, npm test, go test, cargo test) (3pt)
 - [x] `reflect` node: failure summary fed back to `plan`; conditional edge with `max_iterations` (3pt)
 - [x] Context management: tool-output trimming and message summarisation when the window fills (3pt)
-- [ ] Telemetry ledger: tokens, latency, iterations, outcome per run written to SQLite (3pt)
+- [x] Telemetry ledger: tokens, latency, iterations, outcome per run written to SQLite (3pt)
 
 ### 4. Evaluation harness (first numbers)
 - [ ] In-house suite: 12 tasks across fix-bug, add-feature, refactor, add-test, multi-file (5pt)

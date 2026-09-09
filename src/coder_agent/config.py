@@ -38,6 +38,10 @@ class Settings(BaseSettings):
     # Where local state (vector index, checkpoints) is stored, relative to the target repo.
     state_dir_name: str = ".coder-agent"
 
+    # Run ledger (tokens, time, outcome per run). Lives in the user's home, not in the target repo,
+    # because evals run across many repos and the numbers belong together.
+    ledger_path: Path = Path.home() / ".coder-agent" / "ledger.sqlite"
+
     def state_dir(self, repo: Path) -> Path:
         return repo / self.state_dir_name
 
