@@ -97,7 +97,7 @@ points, not a step count, so finishing a big step moves the bar more than a smal
 ### 4. Evaluation harness (first numbers)
 - [x] In-house suite: 12 tasks across fix-bug, add-feature, refactor, add-test, multi-file (5pt)
 - [x] `run_evals.py`: isolated copy per task, hidden tests, JSON results, pass-rate table (4pt)
-- [ ] HumanEval slice: 30 problems packaged as repo tasks with hidden tests (3pt)
+- [x] HumanEval slice: 30 problems packaged as repo tasks with hidden tests (3pt)
 - [ ] `figures.py`: pass-rate bar chart, iteration curve, cost profile saved to `docs/figures/` (3pt)
 
 ### 5. Retrieval over the codebase

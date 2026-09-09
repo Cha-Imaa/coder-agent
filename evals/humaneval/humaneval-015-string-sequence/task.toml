@@ -1,0 +1,9 @@
+id = "humaneval-015-string-sequence"
+category = "humaneval"
+source = "HumanEval/15"
+prompt = """
+Implement the function `string_sequence` in `string_sequence.py`. Its docstring describes the behaviour and gives examples; the examples are run as doctests by tests/test_string_sequence.py, which currently fails. Do not change the tests.
+"""
+notes = """
+HumanEval/15 packaged as a repository task. Visible test is the docstring examples via doctest; hidden test is the original check(candidate).
+"""

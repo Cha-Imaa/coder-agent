@@ -1,0 +1,9 @@
+id = "humaneval-013-greatest-common-divisor"
+category = "humaneval"
+source = "HumanEval/13"
+prompt = """
+Implement the function `greatest_common_divisor` in `greatest_common_divisor.py`. Its docstring describes the behaviour and gives examples; the examples are run as doctests by tests/test_greatest_common_divisor.py, which currently fails. Do not change the tests.
+"""
+notes = """
+HumanEval/13 packaged as a repository task. Visible test is the docstring examples via doctest; hidden test is the original check(candidate).
+"""

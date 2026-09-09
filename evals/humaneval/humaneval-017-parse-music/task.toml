@@ -1,0 +1,9 @@
+id = "humaneval-017-parse-music"
+category = "humaneval"
+source = "HumanEval/17"
+prompt = """
+Implement the function `parse_music` in `parse_music.py`. Its docstring describes the behaviour and gives examples; the examples are run as doctests by tests/test_parse_music.py, which currently fails. Do not change the tests.
+"""
+notes = """
+HumanEval/17 packaged as a repository task. Visible test is the docstring examples via doctest; hidden test is the original check(candidate).
+"""

@@ -716,3 +716,67 @@ Twelve runner tests, no model needed: both self-checks, the hidden-tests-invisib
 cheating-agent cases, crash capture, per-task isolation, workdir cleanup, token accounting, and
 the results file round trip, and merging a rerun. The two self-check commands take about a minute each; they run
 pytest in twelve temporary repos.
+
+## Step 4.3 — HumanEval as repository tasks
+
+**What we built.** A second suite under `evals/humaneval/`: the first thirty HumanEval problems,
+each turned into the same `repo/ hidden_tests/ solution/` layout the in-house tasks use, so the
+runner, the grader and the suite tests did not change at all.
+
+- `src/coder_agent/evals/humaneval.py` — `load_problems` reads the dataset's gzipped JSONL;
+  `render_task` writes one problem as a task directory; `is_well_posed` checks it the same way
+  `test_eval_suite.py` checks every task (stub fails, canonical passes, visible and hidden);
+  `build_slice` walks the dataset in order and keeps the first `count` problems that survive.
+- `evals/build_humaneval.py` — downloads the dataset and calls `build_slice`. Its output is
+  committed, so nobody needs the network to run evals, and the tasks cannot drift.
+- `tasks.py` grows a `SUITES` registry and `load_suites`; `run_evals.py` grows `--suite
+  inhouse|humaneval|all`. Results files for the slice are prefixed `humaneval-` and the table
+  gets one more category row, so the two kinds of number never mix in one average.
+
+**Key concepts.**
+- *Same harness, different corpus.* HumanEval is scored by published leaderboards as one-shot
+  completion: signature and docstring in, function body out, `check(candidate)` decides. Our
+  agent does not complete prompts; it edits files in a repository and runs tests. Packaging each
+  problem as a repo closes that gap: the stub module holds the prompt with a
+  `raise NotImplementedError` body, and the agent is told which function and file to fill in.
+  The hidden test is HumanEval's own `check`, verbatim, wrapped in one pytest function, so a pass
+  here means what a pass means on the leaderboard.
+- *The docstring examples are the visible test.* HumanEval gives no tests to the model, but our
+  agent's loop needs a failing test to read. Every eligible problem has `>>>` examples in its
+  docstring, and `doctest.testmod` over the module turns them into one visible pytest. The stub
+  fails it with `NotImplementedError`; the agent iterates until the examples hold; the hidden
+  `check` then decides whether it overfitted to the examples. Seventy-six of the 164 problems
+  carry examples, and the first thirty of them all doctest cleanly.
+- *The generator validates what it emits.* A benchmark task with a wrong docstring example is
+  unsolvable, and one whose stub already passes has no signal. `build_slice` renders a candidate,
+  runs the before/after check in a temporary copy, and deletes it if either side fails. Nothing
+  reaches disk that the suite tests would reject, and the same check runs again in CI on the
+  committed files.
+- *Deterministic selection.* Dataset order, first thirty eligible. No seed, no sampling. Anyone
+  rerunning the script gets the identical slice, and "HumanEval/0 to /29" is a description others
+  can reproduce with their own harness.
+- *Licences travel with data.* The problems are MIT licensed; `evals/humaneval/README.md` carries
+  the notice, because copying a dataset into a repository is redistribution.
+
+**How the real tools do it.** The `human-eval` package itself does exactly one thing: it
+concatenates prompt and completion, runs `check` in a subprocess with a timeout, and counts.
+Everything above that (turning a completion benchmark into an agent benchmark) is what SWE-bench
+did for real repositories, and what Aider's benchmark did for Exercism: put the problem in a
+directory with the tests it ships, let the agent run them, then grade with tests it did not see.
+OpenAI's later agentic evals and the `evalplus` project both keep the original `check` as ground
+truth while adding more inputs, for the same reason we keep it hidden: the visible examples are
+too few to trust on their own.
+
+**Check it.**
+```bash
+uv run pytest tests/test_humaneval.py tests/test_eval_suite.py -q
+uv run python evals/run_evals.py --suite humaneval --agent solution   # 30/30
+uv run python evals/run_evals.py --suite humaneval --agent noop       # 0/30
+uv run python evals/build_humaneval.py                                # rebuild; identical output
+uv run python evals/run_evals.py --suite humaneval --pause 5          # the real thing, quota permitting
+```
+Four packager tests run on a hand-written problem with no dataset or network: layout, stub fails
+and canonical passes, a wrong docstring example is skipped, gzipped JSONL parsing. The suite
+test now validates 42 tasks before and after the reference solution. A real run costs roughly
+five to ten thousand tokens per problem on `gpt-oss-120b`, so the thirty fit inside one day's
+Groq quota only if the in-house suite is not run the same day.

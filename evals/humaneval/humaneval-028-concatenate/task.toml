@@ -1,0 +1,9 @@
+id = "humaneval-028-concatenate"
+category = "humaneval"
+source = "HumanEval/28"
+prompt = """
+Implement the function `concatenate` in `concatenate.py`. Its docstring describes the behaviour and gives examples; the examples are run as doctests by tests/test_concatenate.py, which currently fails. Do not change the tests.
+"""
+notes = """
+HumanEval/28 packaged as a repository task. Visible test is the docstring examples via doctest; hidden test is the original check(candidate).
+"""
