@@ -109,3 +109,17 @@ async def test_sandbox_errors_are_returned_not_raised(tools: dict) -> None:
     assert out.startswith("ERROR")
     out = text(await tools["run_command"].ainvoke({"command": "git push"}))
     assert out.startswith("ERROR")
+
+
+async def test_unknown_argument_names_are_rejected_with_hint(tools: dict) -> None:
+    out = text(await tools["read_file"].ainvoke({"path": "pkg/math_utils.py", "line_start": 5}))
+    assert out.startswith("ERROR: unknown argument(s) ['line_start']")
+    assert "start_line" in out
+
+
+async def test_edit_file_returns_unified_diff(tools: dict) -> None:
+    out = text(await tools["edit_file"].ainvoke(
+        {"path": "pkg/math_utils.py", "old_string": "return a - b  # bug", "new_string": "return a + b"}
+    ))
+    assert "-    return a - b  # bug" in out
+    assert "+    return a + b" in out

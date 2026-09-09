@@ -93,10 +93,11 @@ class Renderer:
                 self.console.print(Text(indent(preview), style=style))
 
     def _on_finish(self, patch: dict[str, Any]) -> None:
+        # The summary was already printed by `_on_act` as the model's last message; here we only
+        # add the verdict so the run ends on one unambiguous line.
         status = patch.get("status", "?")
         color = {"passed": "green", "failed": "red", "gave_up": "yellow"}.get(status, "white")
-        self.console.print(Panel(patch.get("summary", ""), title=f"[{color}]{status}[/{color}]",
-                                 border_style=color))
+        self.console.rule(f"[bold {color}]{status}[/bold {color}]", style=color)
 
 
 def indent(text: str, prefix: str = "  ") -> str:
