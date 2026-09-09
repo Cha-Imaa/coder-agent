@@ -408,3 +408,63 @@ uv run coder run <toy repo> "add a function is_even(n) to utils.py with a test, 
 ```
 Open the run in LangSmith: the root run is the graph, children are `plan`, `act`, `tools`, and
 each `act` contains one `RunnableWithFallbacks` with the provider that actually answered.
+
+---
+
+## Steps 3.1 and 3.2 — `run_tests`, `reflect`, and the iteration loop
+
+**What we built.** The graph now verifies its own work and retries:
+
+```
+START -> prepare -> plan -> act -> (tools -> act)* -> run_tests -> finish -> END
+                      ^                                   |
+                      +---------- reflect <-- failed & iteration < max_iterations
+```
+
+- `graph/testing.py`: `detect_test_command(repo)` looks for `pytest.ini`, `conftest.py`,
+  `pyproject.toml`, `package.json` scripts, `go.mod`, `Cargo.toml`, or a `tests/` folder and
+  returns the shell command. `--test-cmd` on the CLI overrides it.
+- `prepare` node: detects the command once, before planning, unless the caller supplied one.
+- `run_tests` node: runs that command through the sandbox and sets `tests_passed`,
+  `test_output` and `status`. No model call.
+- `reflect` node: appends the failing output to the conversation as a human turn. No model call.
+- `route_after_act` now sends a prose answer to `run_tests` instead of `finish`.
+  `route_after_tests` goes to `finish` on green or when `max_iterations` is reached, otherwise to
+  `reflect`, which leads back to `plan` with the failure attached.
+
+**Key concepts.**
+- *The verdict is not the model's.* The model may say "all tests pass"; only `run_tests` decides.
+  It is deterministic, costs no tokens, and cannot be skipped by a model that forgets to run the
+  failing test. This separation is what makes the pass rate in the evals trustworthy.
+- *Two loops, two budgets.* The inner loop (`act` ⇄ `tools`) is bounded by `max_steps`; the
+  outer loop (`plan` → ... → `run_tests` → `reflect`) by `max_iterations`. A run can end as
+  `passed`, `failed` (iterations exhausted, tests still red) or `gave_up` (step cap, model never
+  stopped calling tools).
+- *Reflection is data, not a model call.* Some agents ask the model to "reflect" in a separate
+  prompt. We simply show it the failure and re-plan; the plan prompt includes the failure too.
+  The history stays intact, so the model can see the edit that did not work and avoid repeating
+  it. Cheaper, and easier to inspect in a trace.
+- *"Not verified" is a distinct outcome.* With no detectable test command the run is accepted but
+  the summary says so. Silently reporting success would corrupt the eval numbers later.
+- *Detection is a rule list, first match wins.* Python first because it is the primary target;
+  `package.json` only counts when its `test` script is real (npm's default is a placeholder that
+  exits 1).
+
+**How the real tools do it.** SWE-agent and OpenHands run the repository's tests as a separate
+harness step and use that, not the model's claim, as the success signal. Aider runs the test
+command after every edit and feeds failures back automatically (`--auto-test`). Claude Code
+leaves running tests to the model but its Bash tool returns the exit code prominently, as ours
+does. Our `run_tests` is the harness-style verdict; the model can still run tests itself during
+`act`, which it does.
+
+**Check it.**
+```bash
+uv run pytest tests/test_testing_loop.py -v
+```
+Fourteen tests: detection for six ecosystems, the node on a real failing and passing pytest
+repo, routing, a full two-iteration loop where the second iteration fixes the bug, giving up at
+`max_iterations`, and a caller-supplied command. Then a real run on a repo with a broken function:
+```bash
+uv run coder run <repo> "The test suite has a failing test. Fix the bug without changing the tests."
+```
+The last lines are `tests: passed` and a green `passed` rule.
