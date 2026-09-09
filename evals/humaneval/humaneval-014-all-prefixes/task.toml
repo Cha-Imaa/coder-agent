@@ -1,0 +1,9 @@
+id = "humaneval-014-all-prefixes"
+category = "humaneval"
+source = "HumanEval/14"
+prompt = """
+Implement the function `all_prefixes` in `all_prefixes.py`. Its docstring describes the behaviour and gives examples; the examples are run as doctests by tests/test_all_prefixes.py, which currently fails. Do not change the tests.
+"""
+notes = """
+HumanEval/14 packaged as a repository task. Visible test is the docstring examples via doctest; hidden test is the original check(candidate).
+"""

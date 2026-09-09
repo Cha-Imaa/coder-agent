@@ -1,0 +1,9 @@
+id = "humaneval-027-flip-case"
+category = "humaneval"
+source = "HumanEval/27"
+prompt = """
+Implement the function `flip_case` in `flip_case.py`. Its docstring describes the behaviour and gives examples; the examples are run as doctests by tests/test_flip_case.py, which currently fails. Do not change the tests.
+"""
+notes = """
+HumanEval/27 packaged as a repository task. Visible test is the docstring examples via doctest; hidden test is the original check(candidate).
+"""

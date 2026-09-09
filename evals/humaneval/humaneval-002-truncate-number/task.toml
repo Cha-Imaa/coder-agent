@@ -1,0 +1,9 @@
+id = "humaneval-002-truncate-number"
+category = "humaneval"
+source = "HumanEval/2"
+prompt = """
+Implement the function `truncate_number` in `truncate_number.py`. Its docstring describes the behaviour and gives examples; the examples are run as doctests by tests/test_truncate_number.py, which currently fails. Do not change the tests.
+"""
+notes = """
+HumanEval/2 packaged as a repository task. Visible test is the docstring examples via doctest; hidden test is the original check(candidate).
+"""

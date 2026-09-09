@@ -1,0 +1,9 @@
+id = "humaneval-022-filter-integers"
+category = "humaneval"
+source = "HumanEval/22"
+prompt = """
+Implement the function `filter_integers` in `filter_integers.py`. Its docstring describes the behaviour and gives examples; the examples are run as doctests by tests/test_filter_integers.py, which currently fails. Do not change the tests.
+"""
+notes = """
+HumanEval/22 packaged as a repository task. Visible test is the docstring examples via doctest; hidden test is the original check(candidate).
+"""

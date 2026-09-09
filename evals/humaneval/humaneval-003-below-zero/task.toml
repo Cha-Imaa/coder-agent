@@ -1,0 +1,9 @@
+id = "humaneval-003-below-zero"
+category = "humaneval"
+source = "HumanEval/3"
+prompt = """
+Implement the function `below_zero` in `below_zero.py`. Its docstring describes the behaviour and gives examples; the examples are run as doctests by tests/test_below_zero.py, which currently fails. Do not change the tests.
+"""
+notes = """
+HumanEval/3 packaged as a repository task. Visible test is the docstring examples via doctest; hidden test is the original check(candidate).
+"""

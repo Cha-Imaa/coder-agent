@@ -1,0 +1,9 @@
+id = "humaneval-008-sum-product"
+category = "humaneval"
+source = "HumanEval/8"
+prompt = """
+Implement the function `sum_product` in `sum_product.py`. Its docstring describes the behaviour and gives examples; the examples are run as doctests by tests/test_sum_product.py, which currently fails. Do not change the tests.
+"""
+notes = """
+HumanEval/8 packaged as a repository task. Visible test is the docstring examples via doctest; hidden test is the original check(candidate).
+"""

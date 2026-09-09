@@ -35,6 +35,11 @@ exhaustion (Groq 200k tokens/day, Gemini fallback 20 requests/day), not agent fa
 
 Reproduce with `uv run python evals/run_evals.py`; raw results are in `evals/results/`.
 
+A second suite packages the first 30 [HumanEval](https://github.com/openai/human-eval) problems
+as repository tasks (stub module, docstring examples as the visible doctest, the original
+`check` as the hidden test): `uv run python evals/run_evals.py --suite humaneval`. Numbers for it
+follow once the daily quota allows a full run.
+
 ## Setup
 
 ```bash

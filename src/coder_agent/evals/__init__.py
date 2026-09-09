@@ -11,11 +11,21 @@ from coder_agent.evals.runner import (
     run_task,
     solution_agent,
 )
-from coder_agent.evals.tasks import CATEGORIES, SUITE_DIR, EvalTask, grade, load_suite, load_task
+from coder_agent.evals.tasks import (
+    CATEGORIES,
+    SUITE_DIR,
+    SUITES,
+    EvalTask,
+    grade,
+    load_suite,
+    load_suites,
+    load_task,
+)
 
 __all__ = [
     "CATEGORIES",
     "RESULTS_DIR",
+    "SUITES",
     "SUITE_DIR",
     "EvalTask",
     "SuiteResult",
@@ -24,6 +34,7 @@ __all__ = [
     "graph_agent",
     "load_result",
     "load_suite",
+    "load_suites",
     "load_task",
     "noop_agent",
     "run_suite",
