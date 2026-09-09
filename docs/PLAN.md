@@ -80,7 +80,7 @@ points, not a step count, so finishing a big step moves the bar more than a smal
 - [x] FastMCP server: `read_file`, `edit_file`, `write_file`, `list_dir`, `search_code`, `run_command` (4pt)
 - [x] Path jail and command denylist with unit tests (3pt)
 - [x] Client loads the tools via `langchain-mcp-adapters`; end-to-end tests over stdio (3pt)
-- [ ] `scripts/list_tools.py` prints the tool schemas; MCP Inspector walkthrough in TEACH (1pt)
+- [x] `scripts/list_tools.py` prints the tool schemas; MCP Inspector walkthrough in TEACH (1pt)
 
 ### 2. Minimal agent loop
 - [ ] Graph state, `plan` and `act` nodes, `ToolNode`, `finish`; routing unit tests with a fake LLM (5pt)

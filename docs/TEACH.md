@@ -177,3 +177,37 @@ uv run pytest tests/test_mcp_tools.py -v
 ```
 Eleven tests: the tool list, line-numbered reads, unique and ambiguous edits, file creation,
 directory trees, code search, command exit codes, and sandbox errors coming back as text.
+
+---
+
+## Step 1.4 — Listing the tool schemas; MCP Inspector
+
+**What we built.** `scripts/list_tools.py` connects to our server the same way the agent will
+and prints what comes back from `tools/list`: the name, the description and the JSON schema of
+every tool, with required arguments starred.
+
+**Key concepts.**
+- *The schema is generated from the Python signature.* FastMCP turns `path: str`,
+  `start_line: int = 1`, `end_line: int | None = None` into a JSON schema with `path` required and
+  the others optional. Type hints are therefore part of the prompt: a wrong hint teaches the model
+  the wrong argument.
+- *What you see is what the model sees.* Nothing in between rewrites the descriptions, so this
+  listing is the place to review tool text for clarity and length.
+
+**MCP Inspector.** Anthropic ships a browser UI that does the same and lets you call tools by
+hand. It needs Node.js:
+```bash
+npx @modelcontextprotocol/inspector uv run python -m coder_agent.mcp_server.server .
+```
+It opens a page listing the six tools; pick `read_file`, enter `README.md`, and the numbered
+lines come back. This is the debugging loop you use when a tool misbehaves: call it directly
+with the exact arguments the model sent, outside the agent.
+
+**How the real tools do it.** Claude Code has a `/mcp` command that lists connected servers and
+their tools; Cursor shows the same in its settings panel. Both are `tools/list` rendered nicely.
+
+**Check it.**
+```bash
+uv run python scripts/list_tools.py .
+```
+Six tools; `edit_file` has three required arguments, `list_dir` none.
