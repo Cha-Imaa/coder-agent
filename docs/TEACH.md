@@ -276,3 +276,50 @@ uv run pytest tests/test_graph.py -v
 ```
 Ten tests: three for the router, six for the whole graph with a scripted model (tool results fed
 back, errors turned into messages, step cap ends the run), one driving the real MCP server.
+
+---
+
+## Steps 2.2 and 2.3 — Prompts as code; `coder run` streams the graph
+
+**What we built.**
+- `graph/prompts.py` holds the three system prompts (plan, act, reflect). The act prompt is a
+  template with `{task}` and `{plan}` slots, filled on every call.
+- `cli.py` is the `coder` command. `coder run <repo> "<task>"` loads the tools, builds the graph
+  with the configured model, and streams updates. `--model`, `--max-iterations` and `-v` override
+  settings for one run. Exit code is 0 on `passed`, 1 otherwise, so scripts and evals can use it.
+- `ui/render.py` renders each node's update: the plan in a panel, each tool call on one line
+  with trimmed arguments, tool results as a short preview (full text with `-v`), edits as a
+  coloured unified diff, and the final status and summary in a panel.
+- `edit_file` now returns a unified diff after `OK: edited`. The model uses it to confirm the
+  edit landed where intended; the UI uses it to show the change without re-reading the file.
+
+**Key concepts.**
+- *`stream_mode="updates"`.* `graph.astream(...)` yields one dict per node execution, keyed by
+  node name, containing just the patch that node returned. That is exactly the granularity a UI
+  wants: "plan finished, here is the plan", "act finished, here are its tool calls". Other modes
+  exist: `values` gives the whole state after each step, `messages` gives token-by-token chunks.
+- *The UI reads state, not the model.* Nothing in the renderer knows about prompts or providers.
+  If a node's patch shape changes, one method in `Renderer` changes. This is the payoff of putting
+  behaviour in the graph: the CLI, the eval runner and a future chat mode all consume the same
+  stream.
+- *Two audiences for tool output.* The model sees the full result (it needs it). The human sees
+  the first dozen lines (they need to follow along, not read everything). Trimming happens in
+  the renderer only, never in state.
+- *Prompt rules mirror tool contracts.* "Copy old_string exactly, without the line-number
+  prefix" exists because `read_file` numbers lines and `edit_file` needs exact text. Every rule
+  in the act prompt is there because a tool would otherwise fail in a specific way.
+
+**How the real tools do it.** Claude Code prints each tool call as a one-liner and collapses
+the result unless you expand it; edits are shown as diffs. Aider shows diffs and the test output
+after each edit. Our renderer follows the same compact-by-default convention.
+
+**Check it.**
+```bash
+uv run pytest tests/test_cli.py -v
+uv run coder --version
+uv run coder run --help
+```
+With `.env` filled in, a real run:
+```bash
+uv run coder run path/to/small/repo "add a function is_even(n) to utils.py with a test"
+```
