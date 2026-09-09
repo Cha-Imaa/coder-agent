@@ -1,0 +1,8 @@
+id = "add-test-mathx"
+category = "add-test"
+prompt = """
+mathx.py has no tests. Write tests/test_mathx.py covering is_prime, gcd and fibonacci: normal cases, boundaries (0, 1, negatives) and the documented errors. The tests must pass, and they should be strict enough to catch a wrong implementation.
+"""
+notes = """
+Graded by mutation: the agent's tests must pass on the real module and fail on three one-line mutants (is_prime(1), gcd sign, fibonacci(0)). Measures test quality, not just presence.
+"""

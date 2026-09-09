@@ -565,3 +565,63 @@ uv run coder stats
 Seven tests: extraction, merging, accumulation through the graph with a scripted model whose
 replies carry usage metadata, ledger write and summary, idempotence by run id, and the `stats`
 command against a temporary ledger.
+
+---
+
+## Step 4.1 — The in-house eval suite: twelve tasks with hidden tests
+
+**What we built.** `evals/suite/` holds twelve small repositories, each a benchmark task, and
+`evals/tasks.py` (in `src/coder_agent/evals/`) loads and grades them.
+
+A task is a directory with four parts:
+
+| Part | Who sees it | Purpose |
+|---|---|---|
+| `task.toml` | runner | `id`, `category`, the `prompt` given to the agent, `notes` on why the task is in the suite |
+| `repo/` | agent | the starting repository, copied fresh for every run |
+| `hidden_tests/` | grader | copied into `repo/tests/` after the run; exit code 0 is a pass |
+| `solution/` | suite tests | a reference fix, used only to prove the task is solvable |
+
+Categories and counts: fix-bug (3), add-feature (3), refactor (2), add-test (2), multi-file (2).
+`load_suite()` returns `EvalTask` objects; `materialise`, `install_hidden_tests` and
+`apply_solution` do the file copying; `grade()` runs pytest through the sandbox.
+
+**Key concepts.**
+- *Hidden tests are the grade.* The agent sees the repo and the prompt, never `hidden_tests/`.
+  So it cannot pass by editing an assertion, and a fix that special-cases the one visible input
+  fails the hidden cases. Where the prompt asks the agent to edit an existing test file
+  (`refactor-config-dataclass`), the hidden file has the same name and replaces it.
+- *Every task is validated in both directions.* `tests/test_eval_suite.py` materialises each task
+  twice: hidden tests must fail on the untouched repo (doing nothing scores zero) and pass after
+  `solution/` is overlaid (the task is solvable and the grader works). Writing this test caught a
+  real mistake: one planted bug was equivalent to the original code, so no test could ever
+  detect it.
+- *Add-test tasks are graded by mutation.* "Write tests for `mathx.py`" cannot be graded by
+  running the agent's tests, since an empty test file passes. The hidden grader copies the repo,
+  plants one bug at a time (`is_prime(1)` returns True, `gcd` loses its sign, `fibonacci(0)` is
+  off by one) and requires the agent's tests to fail on each mutant while passing on the real
+  module. That measures whether the tests check anything, not whether they exist.
+- *Each category exercises a different skill.* fix-bug needs reading a failure; add-feature needs
+  following a spec with exception types; refactor needs preserving golden output while changing
+  structure; multi-file needs editing three files with different error contracts; add-test needs
+  thinking about boundaries. A pass rate per category tells us where the agent is weak.
+- *Fixtures are excluded from lint.* `ruff` would "fix" the mutable-default bug the agent is
+  supposed to find. `pyproject.toml` excludes `evals/suite` for that reason.
+
+**How the real tools do it.** SWE-bench is the same shape at scale: a repository at a given commit,
+a natural-language issue, and `FAIL_TO_PASS` tests hidden from the agent that must fail before and
+pass after the patch, plus `PASS_TO_PASS` tests that must keep passing. Its validation step, running
+the gold patch to confirm the tests flip, is our `test_hidden_tests_fail_before_and_pass_after`.
+Aider's polyglot benchmark packages Exercism exercises with hidden tests. Mutation testing as a
+grade for tests is how `mutmut` and `cosmic-ray` measure test-suite quality.
+
+**Check it.**
+```bash
+uv run pytest tests/test_eval_suite.py -v
+```
+Seventeen tests: shape of the suite, malformed spec rejection, copy independence, hidden file
+replacement, and the fail-before/pass-after check for each of the twelve tasks (about 45 seconds,
+since it runs pytest in 24 temporary repos). To read a task:
+```bash
+cat evals/suite/multi-file-cart-discount/task.toml
+```
