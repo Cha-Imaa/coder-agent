@@ -1,6 +1,6 @@
 """LLM factory.
 
-`init_chat_model` is LangChain's provider-agnostic constructor: the string "groq:llama-3.3-70b-versatile"
+`init_chat_model` is LangChain's provider-agnostic constructor: the string "groq:openai/gpt-oss-120b"
 selects both the integration package and the model. Swapping providers is then a config change,
 not a code change.
 
