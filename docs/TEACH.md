@@ -625,3 +625,94 @@ since it runs pytest in 24 temporary repos). To read a task:
 ```bash
 cat evals/suite/multi-file-cart-discount/task.toml
 ```
+
+---
+
+## Step 4.2 — `run_evals.py`: the runner that turns the suite into a number
+
+**What we built.** Two modules and a script.
+
+- `src/coder_agent/agent.py` — `run_agent(repo, task, ...)`: the one function that loads the
+  MCP tools, builds the graph, streams it, and writes a `RunRecord` to the ledger. `coder run`
+  now calls it with the Rich renderer as its `on_update` hook; the eval runner calls it with no
+  hook. Before this step that logic lived inside the CLI.
+- `src/coder_agent/evals/runner.py` — `run_task` materialises one task into a temporary
+  directory, hands the copy and the prompt to an *agent callable*, then installs the hidden
+  tests and grades. `run_suite` does that for a list of tasks, sequentially, and collects a
+  `SuiteResult` with per-category rows, a Markdown table, and a JSON file under
+  `evals/results/` stamped with the commit, platform and loop settings.
+- `evals/run_evals.py` — the CLI: `--category`, `--task` (repeatable), `--model`,
+  `--max-iterations`, `--pause` between tasks, `--keep-workdirs`, and `--agent graph|solution|noop`.
+
+**Key concepts.**
+- *The agent is a parameter.* `Agent = Callable[[Path, str], Awaitable[dict]]`. The real one,
+  `graph_agent`, wraps `run_agent`. Two others exist only to test the harness: `solution_agent`
+  overlays the reference fix and must score 100%; `noop_agent` does nothing and must score 0%.
+  If either check fails, the grader is broken and no pass rate means anything. Later ablations
+  (no retrieval / BM25 / dense / hybrid) are just more agent callables; the grading never changes.
+- *Grade after, never during.* Hidden tests are copied in only after the agent returns, and a
+  test proves the agent cannot see them. A second test has the agent delete every visible test
+  file and claim success: the runner records the claim (`agent_status="passed"`) and the truth
+  (`passed=False`) side by side. That gap is itself a useful metric: how often the agent
+  believes it is done when it is not.
+- *A crash is a data point, not an abort.* `run_task` catches everything the agent raises,
+  stores the traceback in `error`, and still grades the repo. One rate-limit blow-up on task 7
+  must not throw away tasks 1 to 6.
+- *Sequential, with a pause.* Free-tier limits are per minute. A parallel runner would spend
+  its quota on 429 responses and make the numbers depend on the scheduler. `--pause` is the
+  simplest control that keeps runs comparable.
+- *Provenance in the file.* Each results JSON records the model, the git commit, the Python
+  version and the iteration and step caps. A number without those cannot be reproduced, and a
+  README table built from it cannot be trusted six commits later.
+
+**First numbers, and what they taught.** The first full run
+(`evals/results/20260909-185603-openai-gpt-oss-120b.json`):
+
+| Category | Tasks | Passed | Errors | pass@1 | Avg tokens |
+|---|---|---|---|---|---|
+| fix-bug | 3 | 1 | 2 | 33% | 3,289 |
+| add-feature | 3 | 3 | 0 | 100% | 28,984 |
+| refactor | 2 | 0 | 2 | 0% | 0 |
+| add-test | 2 | 2 | 0 | 100% | 19,222 |
+| multi-file | 2 | 0 | 2 | 0% | 0 |
+| total | 12 | 6 | 6 | 50% | 11,272 |
+
+Every task the agent actually ran, it solved in one iteration: six for six, about 135k tokens
+in total, the largest single task 53k. The other six never got a model reply. Groq's free tier
+allows 200,000 tokens per day for `gpt-oss-120b`, and six tasks used it. The fallback to Gemini
+fired, and Gemini's free tier allows 20 requests per day for `gemini-2.5-flash`, which the
+earlier fallbacks had already spent. Both 429s are in the `error` field of each result.
+
+Three lessons went straight into the design:
+- *Errors are not failures.* The table has an `Errors` column and the JSON an `errors` count.
+  A pass rate of 50% with six quota crashes says nothing about the agent; "6/6 graded, 6 not
+  run" does. The pass rate still counts errors as fails, so nobody can hide crashes.
+- *Rerun what crashed, keep what ran.* `--rerun-errors <results.json>` runs only the errored
+  tasks and merges them into the earlier file, so one configuration's number can be completed
+  across quota windows without paying for the tasks that already have a verdict.
+- *Budget is a first-class constraint.* 200k tokens a day means roughly eight to ten tasks a day
+  on Groq alone, so the eval loop must be frugal: context management (step 3.3) is not a nicety,
+  and milestone 6's retry-with-backoff and a third provider (Ollama, milestone 7) are what make
+  a full twelve-task run in one sitting possible.
+
+**How the real tools do it.** SWE-bench's harness does the same three moves: build a container
+from the task's repo image, apply the agent's patch, run `FAIL_TO_PASS` and `PASS_TO_PASS`, and
+write a per-instance JSON report that the leaderboard aggregates. Aider's benchmark runner
+(`benchmark/benchmark.py`) creates one directory per exercise, runs the model, then runs the
+hidden unit tests and writes a `.aider.results.json` next to each. Both isolate per task, both
+grade after the fact with tests the model never saw, and both keep the raw per-task records so
+tables can be regenerated. Ours is the same design with a temporary directory instead of a
+container; the Docker sandbox in milestone 6 closes that gap.
+
+**Check it.**
+```bash
+uv run pytest tests/test_eval_runner.py -v
+uv run python evals/run_evals.py --agent solution   # must print 100%
+uv run python evals/run_evals.py --agent noop       # must print 0%
+uv run python evals/run_evals.py --category fix-bug # three real runs
+uv run python evals/run_evals.py --rerun-errors evals/results/<file>.json
+```
+Twelve runner tests, no model needed: both self-checks, the hidden-tests-invisible and
+cheating-agent cases, crash capture, per-task isolation, workdir cleanup, token accounting, and
+the results file round trip, and merging a rerun. The two self-check commands take about a minute each; they run
+pytest in twelve temporary repos.
