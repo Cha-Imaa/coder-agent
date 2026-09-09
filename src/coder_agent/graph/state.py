@@ -13,6 +13,8 @@ from typing import Annotated, Literal, TypedDict
 from langchain_core.messages import AnyMessage
 from langgraph.graph.message import add_messages
 
+from coder_agent.telemetry.ledger import merge_usage
+
 Status = Literal["running", "passed", "failed", "gave_up"]
 
 
@@ -41,3 +43,7 @@ class AgentState(TypedDict, total=False):
     # Filled by run_tests and finish.
     status: Status
     summary: str
+
+    # Cost accounting: {node: {calls, input_tokens, output_tokens, models}}, summed by the reducer
+    # so every model call in `plan` and `act` adds to the run total without any node reading it.
+    usage: Annotated[dict, merge_usage]

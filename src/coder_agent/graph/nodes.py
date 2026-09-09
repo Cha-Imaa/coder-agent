@@ -21,6 +21,7 @@ from coder_agent.graph import testing
 from coder_agent.graph.context import manage_context
 from coder_agent.graph.prompts import ACT_SYSTEM, PLAN_SYSTEM, REFLECT_SYSTEM
 from coder_agent.graph.state import AgentState
+from coder_agent.telemetry.ledger import usage_from_message
 
 Node = Callable[[AgentState], dict[str, Any]]
 
@@ -42,9 +43,10 @@ def make_plan_node(llm: BaseChatModel) -> Node:
             )
         response = llm.invoke([SystemMessage(PLAN_SYSTEM), HumanMessage(user)])
         patch: dict[str, Any] = {
-            "plan": str(response.content).strip(),
+            "plan": str(response.text).strip(),
             "iteration": state.get("iteration", 0) + 1,
             "status": "running",
+            "usage": usage_from_message("plan", response),
         }
         # On the first pass the conversation is empty: seed it with the task so `act` has a
         # human turn to respond to. On later passes the history already exists.
@@ -70,7 +72,11 @@ def make_act_node(llm: BaseChatModel, tools: list[BaseTool]) -> Node:
         # If context management changed the history, replace the stored conversation with the
         # compacted one: `add_messages` cannot edit in place, so remove all and re-add in order.
         patch = [RemoveMessage(id=REMOVE_ALL_MESSAGES), *history] if rewritten else []
-        return {"messages": [*patch, response], "steps": state.get("steps", 0) + 1}
+        return {
+            "messages": [*patch, response],
+            "steps": state.get("steps", 0) + 1,
+            "usage": usage_from_message("act", response),
+        }
 
     return act
 
