@@ -468,3 +468,50 @@ repo, routing, a full two-iteration loop where the second iteration fixes the bu
 uv run coder run <repo> "The test suite has a failing test. Fix the bug without changing the tests."
 ```
 The last lines are `tests: passed` and a green `passed` rule.
+
+---
+
+## Step 3.3 — Context management: compaction and summarisation
+
+**What we built.** `graph/context.py`, called by the `act` node before every model call.
+
+1. `compact_tool_outputs`: every tool result except the most recent six is cut to its first
+   400 characters plus a stub saying how many characters were dropped and that the tool can be
+   called again. The message keeps its id and position.
+2. `summarize_if_needed`: if the conversation is still over `context_budget_tokens` (60k), the
+   middle is replaced by one model-written summary. The first message (the task) and the last
+   eight messages are kept verbatim.
+3. `manage_context` runs the two in that order: the free one first, the one that costs a model
+   call only if needed. When anything changed, `act` writes the rebuilt history back to state.
+
+**Key concepts.**
+- *Tool outputs are the context hog.* A coding session is mostly file reads and test logs. The
+  model needs them when it acts on them; afterwards, knowing "I read `utils.py`" is enough, and
+  it can re-read if it must. Stubbing rather than deleting keeps the record of what happened.
+- *Never orphan a tool result.* Provider APIs reject a `ToolMessage` whose `tool_call_id` does not
+  match a preceding AI message. Compaction edits in place, so pairing is untouched.
+  Summarisation moves its cut forward past any `ToolMessage` so the tail always begins with an
+  AI or human turn. The tests check this invariant explicitly.
+- *`add_messages` cannot edit history in place.* It appends, or replaces by id. To rewrite the
+  conversation the node returns `RemoveMessage(id=REMOVE_ALL_MESSAGES)` followed by the new
+  list, in one patch. LangGraph applies the removal then the appends, so the order is preserved.
+- *Approximate token counting is enough.* `count_tokens_approximately` estimates from character
+  counts without a tokenizer. The budget sits far below the window (60k of 131k), so a 20% error
+  does not matter. Exact counting would need a tokenizer per provider.
+- *Summaries are written for the agent, not for humans.* The summary prompt asks for file paths,
+  exact error text and exit codes, in a fixed order. A prose summary ("the agent explored the
+  code") would lose exactly what the model needs to continue.
+
+**How the real tools do it.** Claude Code "auto-compacts" when the context nears its limit: it
+summarises the conversation with the model and continues from the summary, which is our step 2.
+It also truncates long tool results at read time. Aider keeps a "repo map" instead of raw file
+contents and drops old chat turns. OpenHands has a condenser component with the same two
+strategies: drop-or-stub old observations, then LLM-summarise.
+
+**Check it.**
+```bash
+uv run pytest tests/test_context.py -v
+```
+Nine tests: stubbing keeps recent outputs and ids, idempotence, no summary under budget, the
+summary replaces the middle and sees only the middle, the cut never orphans a tool result, and
+the `act` node writes the compacted history back so the next model call sees it.
