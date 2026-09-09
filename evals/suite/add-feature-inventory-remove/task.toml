@@ -1,0 +1,8 @@
+id = "add-feature-inventory-remove"
+category = "add-feature"
+prompt = """
+Add a remove(name, qty) method to Inventory in inventory.py. Rules: qty must be a positive integer, otherwise raise ValueError; if the item is not stocked raise KeyError; if qty exceeds the stock raise ValueError; when the stock reaches zero the item disappears from names(). Cover the rules with tests.
+"""
+notes = """
+A spec with four rules and two exception types. Hidden tests check each rule separately, so a partial implementation scores zero.
+"""

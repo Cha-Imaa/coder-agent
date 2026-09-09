@@ -1,0 +1,8 @@
+id = "fix-bug-shared-default-list"
+category = "fix-bug"
+prompt = """
+tests/test_registry.py has a failing test: items added to the Registry share their tags. Find and fix the bug in registry.py. Do not modify the tests.
+"""
+notes = """
+Mutable default argument. The visible failure is indirect (two unrelated items share state), so the agent has to reason about aliasing rather than pattern-match an assertion.
+"""

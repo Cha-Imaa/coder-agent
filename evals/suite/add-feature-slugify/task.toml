@@ -1,0 +1,8 @@
+id = "add-feature-slugify"
+category = "add-feature"
+prompt = """
+Add a slugify(text) function to textutils.py: lower-case the text, replace every run of characters that are not ASCII letters or digits with a single hyphen, and strip hyphens from both ends. 'Hello, World!' becomes 'hello-world'. Add tests.
+"""
+notes = """
+Pure function from a prose spec. Hidden tests probe the edges the spec implies but does not list (empty string, all punctuation, underscores).
+"""
