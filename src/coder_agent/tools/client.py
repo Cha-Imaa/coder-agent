@@ -13,8 +13,9 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import Any
 
-from langchain_core.tools import BaseTool
+from langchain_core.tools import BaseTool, StructuredTool
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
 
@@ -29,7 +30,36 @@ def server_config(repo: Path) -> dict:
     }
 
 
+def strict_arguments(tool: BaseTool) -> BaseTool:
+    """Reject calls whose argument names are not in the tool's schema.
+
+    Models invent plausible names (`line_start` for `start_line`, `depth` for `max_depth`).
+    Both MCP and pydantic ignore unknown keys by default, so such a call silently runs with the
+    default values, and a request for lines 50-80 quietly returns the whole file. Returning an
+    error that names the valid arguments lets the model correct itself on the next step.
+    """
+    schema = tool.args_schema
+    if not isinstance(schema, dict) or not isinstance(tool, StructuredTool) or not tool.coroutine:
+        return tool
+    allowed = set(schema.get("properties", {}))
+    inner = tool.coroutine
+
+    async def checked(**kwargs: Any) -> Any:
+        unknown = sorted(set(kwargs) - allowed)
+        if unknown:
+            message = (
+                f"ERROR: unknown argument(s) {unknown} for {tool.name}. "
+                f"Valid arguments: {sorted(allowed)}."
+            )
+            # Adapter tools use response_format="content_and_artifact": (content blocks, raw).
+            return [{"type": "text", "text": message}], None
+        return await inner(**kwargs)
+
+    tool.coroutine = checked
+    return tool
+
+
 async def load_tools(repo: Path) -> list[BaseTool]:
     """Discover and return the tools for `repo`."""
     client = MultiServerMCPClient(server_config(repo))
-    return await client.get_tools()
+    return [strict_arguments(t) for t in await client.get_tools()]

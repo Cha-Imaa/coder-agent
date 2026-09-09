@@ -361,3 +361,50 @@ for free with two environment variables; production teams use the same product o
 uv run python scripts/smoke_llm.py
 ```
 Then open the `coder-agent` project at https://smith.langchain.com and expand the newest run.
+
+---
+
+## Step 2.4 — First real end-to-end run
+
+**What we did.** Pointed `coder run` at a toy repository (one module, one pytest test) with the
+task "add `is_even(n)` and a test, run the tests". The agent listed the directory, read both
+files, edited both with `edit_file`, hit one ambiguous-edit error and recovered by re-reading,
+ran pytest (2 passed) and stopped with a summary. Exit code 0. A second task (`clamp`) passed the
+same way. Full traces are in LangSmith.
+
+**What the run taught us, and what we changed.**
+- *Invented argument names are silently accepted.* The model called
+  `read_file(line_start=1, line_end=400)` and `list_dir(depth=2)`. Neither name exists, MCP and
+  pydantic both ignore unknown keys, so the tools ran with defaults and the model never knew.
+  For a small file that is harmless; for "read lines 400-450 of a 2000-line file" it returns the
+  whole file and burns the context window. `tools/client.py` now wraps every tool in
+  `strict_arguments`, which returns `ERROR: unknown argument(s) [...]. Valid arguments: [...]`
+  so the model corrects itself on the next step.
+- *Error-as-message works.* `edit_file` refused an `old_string` of `"\n"` (six matches). The
+  error text went back as a `ToolMessage`, the model re-read the file and chose a unique anchor.
+  No code of ours handled that; the loop design did.
+- *Fallbacks fire mid-run.* Halfway through the first run Groq rate-limited and the next call
+  went to Gemini, which warned eight times that it was dropping Groq's reasoning blocks. Correct
+  behaviour, ugly output: the CLI now sets that logger to ERROR. The run continued and passed,
+  which is the point of the fallback.
+- *Two processes, one terminal.* FastMCP logs every request at INFO to stderr, interleaving with
+  the Rich UI. The server now starts with `log_level="WARNING"`.
+- *Prompts leak habits.* The plan ended with "commit and push and open a pull request". The
+  planner prompt now says the user commits; the act prompt forbids `git commit`, `git push` and
+  installs, in addition to the sandbox denylist that would have blocked them anyway.
+- *Do not print the summary twice.* The final model message is already shown; `finish` now
+  prints a one-line coloured rule with the status.
+
+**How the real tools do it.** Every one of these is a known production issue. Claude Code
+validates tool inputs against the schema and returns the validation error to the model. Aider
+and OpenHands both feed edit failures back as text. Silent fallbacks with observability, and
+prompt rules that duplicate hard guardrails, are standard practice: the prompt makes the model
+behave, the guardrail makes sure it cannot misbehave.
+
+**Check it.**
+```bash
+uv run pytest tests/test_mcp_tools.py -k "unknown or diff" -v
+uv run coder run <toy repo> "add a function is_even(n) to utils.py with a test, run the tests"
+```
+Open the run in LangSmith: the root run is the graph, children are `plan`, `act`, `tools`, and
+each `act` contains one `RunnableWithFallbacks` with the provider that actually answered.

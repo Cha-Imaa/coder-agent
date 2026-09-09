@@ -86,7 +86,7 @@ points, not a step count, so finishing a big step moves the bar more than a smal
 - [x] Graph state, `plan` and `act` nodes, `ToolNode`, `finish`; routing unit tests with a fake LLM (5pt)
 - [x] System prompt and plan format; plan is stored in state and shown to the user (2pt)
 - [x] `coder run` streams node transitions, tool calls and diffs with Rich (3pt)
-- [ ] Agent adds a function to a toy repo end to end, trace in LangSmith (3pt)
+- [x] Agent adds a function to a toy repo end to end, trace in LangSmith (3pt)
 
 ### 3. Test-and-fix loop
 - [ ] `run_tests` node with test-command detection (pytest, npm test, go test, cargo test) (3pt)

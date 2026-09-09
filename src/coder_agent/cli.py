@@ -8,6 +8,7 @@ used by the eval runner and, later, by `coder chat`.
 from __future__ import annotations
 
 import asyncio
+import logging
 from pathlib import Path
 from typing import Annotated
 
@@ -16,6 +17,10 @@ from rich.console import Console
 
 from coder_agent import __version__
 from coder_agent.config import settings
+
+# langchain-google-genai warns once per message when it drops another provider's reasoning
+# blocks during a fallback; correct behaviour, but noise in a terminal UI.
+logging.getLogger("langchain_google_genai").setLevel(logging.ERROR)
 
 app = typer.Typer(no_args_is_help=True, add_completion=False, rich_markup_mode="rich")
 console = Console()

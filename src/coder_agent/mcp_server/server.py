@@ -34,6 +34,8 @@ REPO = Path(sys.argv[1] if len(sys.argv) > 1 else os.environ.get("CODER_REPO", "
 
 mcp = FastMCP(
     "coder-tools",
+    # INFO logs go to stderr and would interleave with the agent UI in the parent terminal.
+    log_level="WARNING",
     instructions=(
         "File and shell tools scoped to a single repository. Paths are relative to the repo root. "
         "Read a file before editing it. Prefer edit_file over write_file for existing files."
