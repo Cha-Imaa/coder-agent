@@ -92,6 +92,21 @@ class Renderer:
                 preview = body if self.verbose else format_tool_result(msg)
                 self.console.print(Text(indent(preview), style=style))
 
+    def _on_run_tests(self, patch: dict[str, Any]) -> None:
+        passed = patch.get("tests_passed")
+        if passed is None:
+            self.console.print(Text("tests: no test command detected, skipping", style="yellow"))
+            return
+        verdict = Text("tests: passed", style="bold green") if passed else Text("tests: failed", style="bold red")
+        self.console.print(verdict)
+        if not passed or self.verbose:
+            lines = patch.get("test_output", "").splitlines()
+            shown = lines if self.verbose else lines[-RESULT_PREVIEW_LINES:]
+            self.console.print(Text(indent("\n".join(shown)), style="dim"))
+
+    def _on_reflect(self, patch: dict[str, Any]) -> None:
+        self.console.print(Text("↻ feeding the failures back and re-planning", style="magenta"))
+
     def _on_finish(self, patch: dict[str, Any]) -> None:
         # The summary was already printed by `_on_act` as the model's last message; here we only
         # add the verdict so the run ends on one unambiguous line.

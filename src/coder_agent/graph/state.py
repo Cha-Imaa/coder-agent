@@ -32,7 +32,12 @@ class AgentState(TypedDict, total=False):
     iteration: int
     steps: int
 
-    # Filled by run_tests / reflect (milestone 3) and finish.
+    # Verification. `test_command` is detected from the repo (or given by the user) before the
+    # run starts; `run_tests` fills the rest after each act phase.
+    test_command: str | None
     test_output: str
+    tests_passed: bool | None
+
+    # Filled by run_tests and finish.
     status: Status
     summary: str

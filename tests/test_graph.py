@@ -28,9 +28,9 @@ def test_route_to_tools_when_ai_requests_a_call():
     assert route_after_act(state) == "tools"
 
 
-def test_route_to_finish_on_plain_text():
+def test_route_to_run_tests_on_plain_text():
     state = {"messages": [AIMessage("all done")], "steps": 1}
-    assert route_after_act(state) == "finish"
+    assert route_after_act(state) == "run_tests"
 
 
 def test_route_to_finish_when_step_cap_reached():
@@ -49,7 +49,8 @@ def test_plan_then_answer_without_tools():
     assert out["iteration"] == 1
     assert out["steps"] == 1
     assert out["status"] == "passed"
-    assert out["summary"] == "Done, added greet()."
+    assert out["summary"].startswith("Done, added greet().")
+    assert "No test command detected" in out["summary"]  # /tmp/repo has no tests
     # messages: task, final answer
     assert [type(m) for m in out["messages"]] == [HumanMessage, AIMessage]
 

@@ -47,6 +47,9 @@ def run(
     task: Annotated[str, typer.Argument(help="What to do, in plain English.")],
     model: Annotated[str | None, typer.Option(help="provider:model, overrides CODER_MODEL.")] = None,
     max_iterations: Annotated[int | None, typer.Option(help="Plan/act/test cycles.")] = None,
+    test_cmd: Annotated[
+        str | None, typer.Option(help="Command that runs the tests; auto-detected if omitted.")
+    ] = None,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Show full tool output.")] = False,
 ) -> None:
     """Plan a change, edit files with tools, run the tests, iterate."""
@@ -59,11 +62,11 @@ def run(
     if max_iterations is not None:
         settings.max_iterations = max_iterations
 
-    status = asyncio.run(_run(repo, task, verbose))
+    status = asyncio.run(_run(repo, task, verbose, test_cmd))
     raise typer.Exit(code=0 if status == "passed" else 1)
 
 
-async def _run(repo: Path, task: str, verbose: bool) -> str:
+async def _run(repo: Path, task: str, verbose: bool, test_cmd: str | None) -> str:
     # Imports here so `coder --version` stays fast and does not need provider packages.
     from coder_agent.graph import build_graph
     from coder_agent.llm import get_llm
@@ -77,7 +80,10 @@ async def _run(repo: Path, task: str, verbose: bool) -> str:
     graph = build_graph(get_llm(), tools)
 
     final_status = "failed"
-    async for update in graph.astream({"task": task, "repo": str(repo)}, stream_mode="updates"):
+    state: dict = {"task": task, "repo": str(repo)}
+    if test_cmd:
+        state["test_command"] = test_cmd
+    async for update in graph.astream(state, stream_mode="updates"):
         for node, patch in update.items():
             renderer.update(node, patch)
             if node == "finish":
