@@ -923,3 +923,75 @@ split), the window arithmetic, empty files, and that every chunk's text equals t
 `start..end`. On this repository the loader finds 321 files and the chunker produces about a
 thousand chunks, none over the 1,500-character budget; `graph/nodes.py` comes out as one module
 chunk and seven named functions.
+
+## Step 5.2 — Incremental Chroma index and `coder index`
+
+**What we built.** The second half of retrieval: chunks become vectors, vectors are persisted, and
+re-running the indexer after an edit costs seconds instead of minutes. Two new modules under
+`src/coder_agent/rag/` and one CLI command.
+
+- `embeddings.py` defines an `Embedder` protocol (`embed_documents`, `embed_query`) and two
+  implementations. `FastEmbedder` wraps fastembed, an ONNX Runtime port of the sentence-transformer
+  models that needs no torch install; the default model is `BAAI/bge-small-en-v1.5` (67 MB, 384
+  dimensions), downloaded once into `~/.coder-agent/models`. `HashEmbedder` is a bag-of-words
+  hashed into 64 buckets: no model, deterministic, and enough for tests to check that the right
+  chunks come back.
+- `index.py` holds `RepoIndex`, one Chroma collection per repository stored under
+  `.coder-agent/chroma` inside that repository. `update()` loads the repo, diffs it against the
+  index, deletes the chunks of changed and removed files, chunks and embeds the added and changed
+  ones in batches of 256, and returns an `IndexStats` with the counts. `search(query, k)` runs a
+  cosine nearest-neighbour query and returns `Hit`s carrying the original `Chunk` and a score in
+  `[0, 1]`. A `progress(phase, done, total)` callback is called for the `chunk`, `embed` and
+  `write` phases so the CLI can draw bars without the index knowing about Rich.
+- `coder index <repo> [--rebuild] [--query TEXT]` in `cli.py` drives it with three Rich progress
+  bars and prints the stats line; `--query` shows the top hits as a table so retrieval can be
+  eyeballed before it is wired into the graph.
+- `pyproject.toml` gains `chromadb` and `fastembed`. Three settings: `embedding_model`,
+  `embed_batch_size`, `index_collection`, plus `models_dir` for the model cache.
+
+**Key concepts.**
+- *The index is its own manifest.* Every chunk is stored with the SHA-256 of the file it came
+  from. The set of `(path, sha256)` pairs in the collection is therefore exactly the list of what
+  has been indexed, and an update is three set differences against the files on disk: added,
+  changed, removed. A separate manifest file would be a second source of truth that can drift
+  from the vectors after a crash mid-write; reading the metadata back costs one `get()`.
+- *Files, not chunks, are the unit of change.* When a file changes, all of its chunks are deleted
+  and re-embedded. Diffing at chunk level would save embedding work in theory, but a chunk's `id`
+  includes its line range, so one inserted line near the top invalidates every chunk below it
+  anyway. Simpler bookkeeping wins; the cost is bounded by the size of one file.
+- *Embed a header, store the body.* The text sent to the model is `path symbol\ncode`, so a query
+  like "where are run tokens written to sqlite" can match `telemetry/ledger.py` through its path
+  even when the body never says "ledger". The document stored in Chroma stays the raw code, so
+  what the agent later reads is exactly what is in the file.
+- *Cosine space.* The collection is created with `hnsw:space=cosine`. bge vectors are normalised,
+  so cosine similarity is the intended metric, and `1 - distance` lands in `[0, 1]` which reads
+  well in a table and fuses cleanly with a BM25 rank in the next step.
+- *Lazy everything.* The Chroma client, the collection and the embedding model are created on
+  first use. Importing the package, or constructing a `RepoIndex` to ask `exists()`, never pays the
+  model load time, and the tests inject `HashEmbedder` so the suite does not download anything.
+- *Windows detail.* `clear()` deletes the collection through the client rather than removing the
+  directory: Chroma keeps its segment files memory-mapped while the process lives, and Windows
+  refuses to unlink an open file.
+
+**How the real tools do it.** Cursor computes a Merkle tree of file hashes for the workspace and
+sends only the changed subtrees to its indexing service, which is the same "hash per file, diff
+against what is stored" idea with a tree on top so a large repo can find its changed files in
+logarithmic time. Sourcegraph Cody's local context engine and Continue.dev both keep a per-file
+hash table next to their embeddings (Continue in SQLite, with the vectors in LanceDB) and
+re-embed only the files whose hash moved. Aider skips vectors entirely and rebuilds its
+tree-sitter repo map from a cache keyed by file mtime. On the model side, code-specialised
+embedders (Voyage `voyage-code-3`, OpenAI `text-embedding-3`) beat bge-small by a clear margin,
+but they are paid APIs; bge-small on the CPU is the best free option that runs on a laptop
+without a GPU, and Step 7 measures a reranker on top of it.
+
+**Check it.**
+```bash
+uv run pytest tests/test_index.py -q           # 12 tests, HashEmbedder, about 10 seconds
+uv run coder index . --rebuild                  # first build: downloads the model, embeds everything
+uv run coder index . -q "where are run tokens written to sqlite"   # second run: all files unchanged
+```
+The tests build a three-file repo in a temp dir and assert that the first update embeds every
+file, the second embeds nothing, editing one file re-embeds only that file, deleting a file drops
+its chunks, a new file is added without touching the rest, the index survives a new `RepoIndex`
+instance, `clear()` forces a full rebuild, search returns the chunk with its `path:lines (symbol)`
+location, and the progress callback sees all three phases.

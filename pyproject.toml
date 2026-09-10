@@ -21,6 +21,8 @@ dependencies = [
     "pathspec>=1.1.1",
     "tree-sitter>=0.26.0",
     "tree-sitter-language-pack>=1.17.0",
+    "chromadb>=1.0",
+    "fastembed>=0.5",
 ]
 
 [project.optional-dependencies]
