@@ -49,6 +49,11 @@ class Settings(BaseSettings):
     embed_batch_size: int = 64
     index_collection: str = "chunks"
 
+    # Retrieval (see rag/retriever.py). `retrieval_mode` is what the ablation flips; `candidates`
+    # is how many hits each side contributes before rank fusion picks the final k.
+    retrieval_mode: str = "hybrid"
+    retrieval_candidates: int = 20
+
     # Where local state (vector index, checkpoints) is stored, relative to the target repo.
     state_dir_name: str = ".coder-agent"
 
