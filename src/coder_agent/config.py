@@ -35,6 +35,14 @@ class Settings(BaseSettings):
     keep_recent_tool_outputs: int = 6
     tool_output_stub_chars: int = 400
 
+    # Retrieval index (see rag/). Files above the size cap are skipped: they are generated data,
+    # not code anyone reads. Chunks are sized for bge-small's 512-token window with room for the
+    # path header the retriever prepends.
+    index_max_file_kb: int = 512
+    chunk_max_chars: int = 1_500
+    chunk_window_lines: int = 60
+    chunk_overlap_lines: int = 10
+
     # Where local state (vector index, checkpoints) is stored, relative to the target repo.
     state_dir_name: str = ".coder-agent"
 

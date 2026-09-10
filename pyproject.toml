@@ -18,6 +18,9 @@ dependencies = [
     "rich>=13",
     "mcp>=1.10",
     "langchain-mcp-adapters>=0.1",
+    "pathspec>=1.1.1",
+    "tree-sitter>=0.26.0",
+    "tree-sitter-language-pack>=1.17.0",
 ]
 
 [project.optional-dependencies]
