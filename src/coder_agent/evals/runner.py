@@ -291,4 +291,6 @@ def _meta() -> dict[str, Any]:
         "max_iterations": settings.max_iterations,
         "max_steps": settings.max_steps,
         "fallback_model": settings.fallback_model,
+        "retrieval_mode": settings.retrieval_mode,
+        "embedding_model": settings.embedding_model,
     }

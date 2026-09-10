@@ -21,6 +21,10 @@ FIGURES_DIR = Path(__file__).resolve().parents[3] / "docs" / "figures"
 # Results written by the harness self-checks describe the grader, not the agent.
 SELF_CHECK_MODELS = {"reference-solution", "noop"}
 
+# The retrieval ablation compares the same agent under four retrieval settings. Fixed order and a
+# fixed colour per mode, so the bars read the same in every regeneration of the figure.
+ABLATION_MODES: tuple[str, ...] = ("off", "bm25", "dense", "hybrid")
+
 # One light palette, applied by role. Categorical hues are used in this fixed order; the lighter
 # blue is a step of the same ramp and marks the share of a bar that was never graded.
 SURFACE = "#fcfcfb"
@@ -52,6 +56,42 @@ def latest_results(results_dir: Path = RESULTS_DIR) -> list[SuiteResult]:
         if suite.label not in newest or suite.started_at >= newest[suite.label].started_at:
             newest[suite.label] = suite
     return sorted(newest.values(), key=lambda s: s.started_at)
+
+
+def ablation_suites(suites: list[SuiteResult]) -> list[SuiteResult]:
+    """The newest suite per retrieval mode, in `ABLATION_MODES` order; empty if none recorded one.
+
+    A suite belongs to the ablation when its `meta` carries `retrieval_mode`, which `run_evals.py
+    --retrieval <mode>` writes. Suites from before that flag existed have no mode and are not
+    guessed at.
+    """
+    newest: dict[str, SuiteResult] = {}
+    for suite in suites:
+        mode = suite.meta.get("retrieval_mode")
+        if mode not in ABLATION_MODES:
+            continue
+        if mode not in newest or suite.started_at >= newest[mode].started_at:
+            newest[mode] = suite
+    return [newest[m] for m in ABLATION_MODES if m in newest]
+
+
+def ablation_rows(suites: list[SuiteResult]) -> list[dict[str, Any]]:
+    """Per mode: pass rate, passed/total, and mean tokens per graded task."""
+    rows = []
+    for suite in ablation_suites(suites):
+        graded = [r for r in suite.results if not r.error]
+        tokens = sum(r.total_tokens for r in graded) / len(graded) if graded else 0.0
+        rows.append(
+            {
+                "mode": suite.meta["retrieval_mode"],
+                "label": suite.label,
+                "tasks": len(suite.results),
+                "passed": sum(r.passed for r in suite.results),
+                "pass_rate": suite.pass_rate,
+                "avg_tokens": tokens,
+            }
+        )
+    return rows
 
 
 def max_iterations(suite: SuiteResult) -> int:
@@ -228,6 +268,58 @@ def draw_iteration_curve(suites: list[SuiteResult], out: Path) -> Path:
     return out
 
 
+def _kilo(value: float) -> str:
+    """1234 -> "1.2k", 23456 -> "23k": one decimal only while it carries information."""
+    return f"{value / 1000:.1f}k" if value < 10_000 else f"{value / 1000:.0f}k"
+
+
+def draw_ablation(suites: list[SuiteResult], out: Path) -> Path:
+    """Two panels, one axis each: pass@1 per retrieval mode, and mean tokens per task.
+
+    Tokens sit in their own panel rather than on a second y-axis: two scales on one plot invite
+    reading a crossing as meaningful. Bars keep one colour per mode across both panels so the eye
+    can match them without a legend.
+    """
+    rows = ablation_rows(suites)
+    fig, ax = _figure(8.5, 4)
+    import matplotlib.pyplot as plt
+
+    fig.clf()
+    ax, ax2 = fig.subplots(1, 2, gridspec_kw={"width_ratios": [1.15, 1], "wspace": 0.35})
+    colours = {mode: SERIES[i] for i, mode in enumerate(ABLATION_MODES)}
+    xs = list(range(len(rows)))
+    labels = [r["mode"] for r in rows]
+
+    for panel in (ax, ax2):
+        for side in ("top", "right", "left"):
+            panel.spines[side].set_visible(False)
+        panel.tick_params(length=0)
+        panel.set_xticks(xs, labels)
+
+    for x, row in zip(xs, rows, strict=True):
+        colour = colours[row["mode"]]
+        ax.bar(x, row["pass_rate"], 0.62, color=colour, edgecolor=SURFACE, linewidth=1.5)
+        ax.text(
+            x, row["pass_rate"] + 0.02, f"{row['passed']}/{row['tasks']}", ha="center",
+            va="bottom", fontsize=9, color=INK_SOFT,
+        )
+        ax2.bar(x, row["avg_tokens"], 0.62, color=colour, edgecolor=SURFACE, linewidth=1.5)
+        ax2.text(
+            x, row["avg_tokens"], _kilo(row["avg_tokens"]), ha="center", va="bottom",
+            fontsize=9, color=INK_SOFT,
+        )
+    _percent_axis(ax)
+    ax2.yaxis.grid(True, color=GRID, linewidth=0.8)
+    ax2.set_axisbelow(True)
+    ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: _kilo(v)))
+    ax2.set_ylim(0, max((r["avg_tokens"] for r in rows), default=1) * 1.2 or 1)
+    models = sorted({s.model for s in ablation_suites(suites)})
+    _title(ax, "pass@1 by retrieval mode", f"Same agent and tasks · {', '.join(models)}")
+    _title(ax2, "tokens per task", "Mean over graded tasks, all model calls")
+    fig.savefig(out, bbox_inches="tight")
+    return out
+
+
 def draw_cost_profile(suite: SuiteResult, out: Path, ledger: Ledger | None = None) -> Path:
     """Where the context budget goes: average input and output tokens per node per run."""
     rows = node_costs(suite, ledger)
@@ -266,11 +358,15 @@ def draw_cost_profile(suite: SuiteResult, out: Path, ledger: Ledger | None = Non
 def render_all(
     suites: list[SuiteResult], out_dir: Path = FIGURES_DIR, ledger: Ledger | None = None
 ) -> list[Path]:
-    """All three figures. The cost profile describes the newest suite only: stacking several
-    configurations' node costs into one chart would hide which one the budget belongs to."""
+    """The three standing figures, plus the retrieval ablation once at least two modes have
+    results. The cost profile describes the newest suite only: stacking several configurations'
+    node costs into one chart would hide which one the budget belongs to."""
     out_dir.mkdir(parents=True, exist_ok=True)
-    return [
+    paths = [
         draw_pass_rate(suites, out_dir / "pass_rate.png"),
         draw_iteration_curve(suites, out_dir / "iteration_curve.png"),
         draw_cost_profile(suites[-1], out_dir / "cost_profile.png", ledger),
     ]
+    if len(ablation_suites(suites)) >= 2:
+        paths.append(draw_ablation(suites, out_dir / "retrieval_ablation.png"))
+    return paths
