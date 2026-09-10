@@ -101,7 +101,7 @@ points, not a step count, so finishing a big step moves the bar more than a smal
 - [x] `figures.py`: pass-rate bar chart, iteration curve, cost profile saved to `docs/figures/` (3pt)
 
 ### 5. Retrieval over the codebase
-- [ ] Repo loader honouring `.gitignore`, language-aware chunking with tree-sitter (4pt)
+- [x] Repo loader honouring `.gitignore`, language-aware chunking with tree-sitter (4pt)
 - [ ] Incremental Chroma index keyed by file hash; `coder index` with progress (4pt)
 - [ ] Hybrid retriever: BM25 + dense with reciprocal rank fusion (3pt)
 - [ ] `retrieve_context` node; retrieval eval (recall@k of gold files) (3pt)

@@ -842,3 +842,84 @@ were checked by eye on the real results, first with six quota errors (drawn as a
 as failures) and then after `--rerun-errors` completed the run at 12/12. The cost profile puts
 about 97% of the budget in `act` (about 29k tokens per run against under 1k for `plan`), which
 is the number retrieval (milestone 5) is supposed to move.
+
+---
+
+## Step 5.1 — Repo loader and language-aware chunking
+
+**What we built.** The first half of retrieval: turning a repository into a list of chunks that
+are worth embedding. Two modules under `src/coder_agent/rag/`.
+
+- `loader.py` walks the repo the way `git ls-files` would see it. It reads every `.gitignore`
+  (root, nested, and `.git/info/exclude`), prunes ignored directories before listing them, always
+  skips `.git`, `node_modules`, virtualenvs and our own `.coder-agent/` state, drops binaries
+  (NUL byte in the first 8 kB, git's own test) and anything over `CODER_INDEX_MAX_FILE_KB`.
+  Each file comes back as a `RepoFile`: POSIX-relative path, text with line endings normalised,
+  a SHA-256 of the raw bytes, and a language guessed from the extension.
+- `chunker.py` splits a file into `Chunk`s. For the eleven languages with a grammar table
+  (Python, JavaScript, TypeScript/TSX, Go, Rust, Java, Ruby, C, C++, C#) it parses with
+  tree-sitter and emits one chunk per top-level definition, with imports and constants between
+  them grouped as `module` chunks. A class that is too big becomes a header chunk plus one chunk
+  per method named `Class.method`; a single function that is too big is cut into overlapping line
+  windows that keep its name. Everything else (Markdown, YAML, unknown extensions) is windowed by
+  lines with both a line cap and a character cap. Every chunk carries `path`, 1-based
+  `start_line`/`end_line`, `kind`, `symbol` and a content hash `id`, so a hit can be shown as
+  `src/app.py:42-67 (Foo.method)`.
+- `pyproject.toml` gains `pathspec` (gitignore matching) and `tree-sitter` with
+  `tree-sitter-language-pack` (prebuilt grammars, wheels for Windows, no compiler needed).
+- Four settings: `index_max_file_kb`, `chunk_max_chars`, `chunk_window_lines`,
+  `chunk_overlap_lines`.
+
+**Key concepts.**
+- *Reuse git's judgement.* Deciding what is "source" is a hard, repo-specific question, and
+  every repo has already answered it in `.gitignore`. Nested files matter: a pattern in
+  `src/.gitignore` applies to `src/` only, `/build` at the root does not touch `src/build`, and a
+  deeper `!keep.log` can re-include what the root ignored. The loader evaluates the chain of
+  `.gitignore` files from the root down to the file's directory and lets the last one with an
+  opinion win, which is exactly git's rule.
+- *Prune, do not filter.* `os.walk(topdown=True)` lets you edit the directory list in place. An
+  ignored `node_modules` is never entered, so a JavaScript repo with forty thousand dependency
+  files indexes as fast as an empty one. Filtering after the walk would visit every one of them.
+- *Chunk at syntax boundaries.* An embedding is one vector for one piece of text. A window that
+  straddles the end of one function and the start of another encodes two topics at once and
+  matches neither query well. Tree-sitter gives a concrete syntax tree in a few milliseconds for
+  any file size, so the natural unit (a function, a class, the imports block) is cheap to find.
+  Named chunks also give the retriever something to print: `graph/nodes.py:29-57 (make_plan_node)`
+  is a citation the agent can open with `read_file` at exactly the right lines.
+- *Two caps on a window.* Sixty lines of Python is roughly one chunk; sixty lines of Markdown is
+  four. Windows stop at whichever limit comes first, and a single over-long line still gets its
+  own window so nothing is silently skipped. The first version only capped lines and produced
+  6 kB chunks from the README; the test that caught it is
+  `test_windows_respect_the_character_budget_for_prose`.
+- *Hash on the way in.* Step 5.2 builds an incremental index. Its unit of work is "this file's
+  hash changed", so the loader computes SHA-256 once and stores it in `RepoFile`; the chunk `id`
+  is a hash of path, line range and text, stable across runs for unchanged code.
+- *Graceful degradation.* No grammar for the language, a grammar that recognises nothing, an
+  undecodable byte: each falls back to a coarser strategy rather than dropping the file. A
+  retriever that cannot see a file is worse than one that sees it in slightly awkward pieces.
+
+**How the real tools do it.** Cursor, Sourcegraph Cody and Aider all chunk by syntax rather than
+by fixed windows: Cursor's indexer and Cody's context engine parse with tree-sitter and embed
+functions and classes, and Aider's repo map is built from tree-sitter tags (the same
+`tags.scm` queries the grammars ship with) to list the definitions in each file. All of them read
+`.gitignore` and add their own ignore file on top (`.cursorignore`, `.aiderignore`); our
+`ALWAYS_IGNORED_DIRS` plays that role in miniature. Continue.dev and the LangChain
+`RecursiveCharacterTextSplitter.from_language` take a cheaper route, splitting on language-specific
+separator strings like `\ndef ` and `\nclass `; that works for well-formatted files and breaks
+on nested definitions, which is why we pay for a real parser.
+
+**Check it.**
+```bash
+uv run pytest tests/test_rag_loader.py tests/test_chunker.py -q     # 37 tests
+uv run python -c "from pathlib import Path; from coder_agent.rag import load_repo, chunk_repo; f = load_repo(Path('.')); c = chunk_repo(f); print(len(f), 'files', len(c), 'chunks', max(len(x.text) for x in c), 'max chars')"
+uv run python -c "from pathlib import Path; from coder_agent.rag import load_file, chunk_file; [print(c.kind.ljust(9), c.location) for c in chunk_file(load_file(Path('.'), Path('src/coder_agent/graph/nodes.py')))]"
+```
+The loader tests build a small repo in a temp dir with root and nested `.gitignore` files,
+negations, an anchored pattern, `.git/info/exclude`, a PNG and an oversized file, and assert on
+exactly which paths come out. The chunker tests cover Python (decorators travel with their
+function, oversized classes split into `Foo.method` chunks), JavaScript (`export` kept, arrow
+functions named, plain constants left as filler), Go, Rust (attributes attached, `impl` methods
+split), the window arithmetic, empty files, and that every chunk's text equals the file's lines
+`start..end`. On this repository the loader finds 321 files and the chunker produces about a
+thousand chunks, none over the 1,500-character budget; `graph/nodes.py` comes out as one module
+chunk and seven named functions.
