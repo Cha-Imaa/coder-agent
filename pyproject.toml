@@ -21,7 +21,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "pytest-asyncio>=0.24", "ruff>=0.6"]
+dev = ["pytest>=8", "pytest-asyncio>=0.24", "ruff>=0.6", "matplotlib>=3.8"]
+# Only `evals/figures.py` draws; the agent itself never imports matplotlib.
+figures = ["matplotlib>=3.8"]
 
 [project.scripts]
 coder = "coder_agent.cli:app"

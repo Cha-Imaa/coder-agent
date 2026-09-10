@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import json
 import platform
+import re
 import shutil
 import subprocess
 import tempfile
@@ -47,6 +48,9 @@ class TaskResult:
     grade_exit_code: int | None
     grade_output: str
     error: str | None = None
+    # Per-node token counters in the ledger's shape, so the cost profile can be drawn from the
+    # committed results file alone. Files written before this field existed load with `{}`.
+    usage: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     @property
     def total_tokens(self) -> int:
@@ -221,8 +225,18 @@ async def run_task(
         agent_seconds=agent_seconds,
         grade_exit_code=verdict.exit_code,
         grade_output=verdict.output[-2000:],
-        error=error,
+        error=_scrub(error),
+        usage=usage,
     )
+
+
+def _scrub(text: str | None) -> str | None:
+    """Results files are committed; tracebacks must not leak the machine's home directory."""
+    if not text:
+        return text
+    home = str(Path.home())
+    text = text.replace(home, "~").replace(home.replace("\\", "/"), "~")
+    return re.sub(r"~[^\s\"']*?site-packages", "<site-packages>", text)
 
 
 async def run_suite(
