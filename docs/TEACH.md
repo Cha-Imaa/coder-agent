@@ -932,8 +932,9 @@ re-running the indexer after an edit costs seconds instead of minutes. Two new m
 
 - `embeddings.py` defines an `Embedder` protocol (`embed_documents`, `embed_query`) and two
   implementations. `FastEmbedder` wraps fastembed, an ONNX Runtime port of the sentence-transformer
-  models that needs no torch install; the default model is `BAAI/bge-small-en-v1.5` (67 MB, 384
-  dimensions), downloaded once into `~/.coder-agent/models`. `HashEmbedder` is a bag-of-words
+  models that needs no torch install; the default model is `snowflake/snowflake-arctic-embed-xs`
+  (22M parameters, 384 dimensions, 512-token window), downloaded once into
+  `~/.coder-agent/models`. `HashEmbedder` is a bag-of-words
   hashed into 64 buckets: no model, deterministic, and enough for tests to check that the right
   chunks come back.
 - `index.py` holds `RepoIndex`, one Chroma collection per repository stored under
@@ -969,6 +970,20 @@ re-running the indexer after an edit costs seconds instead of minutes. Two new m
 - *Lazy everything.* The Chroma client, the collection and the embedding model are created on
   first use. Importing the package, or constructing a `RepoIndex` to ask `exists()`, never pays the
   model load time, and the tests inject `HashEmbedder` so the suite does not download anything.
+- *Asymmetric models want a query instruction.* arctic-embed and bge were trained with the
+  sentence "Represent this sentence for searching relevant passages: " in front of every query
+  and nothing in front of documents. fastembed does not add it. Without it, "where are run
+  tokens written to sqlite" ranked five Markdown windows above `telemetry/ledger.py`; with it the
+  ledger module is first. `embedding_query_prefix` carries the string, and `FastEmbedder` adds it
+  in `embed_query` only.
+- *Measure the embedder before trusting it.* The first default was `BAAI/bge-small-en-v1.5`, the
+  usual recommendation for small English retrieval. fastembed serves it as an int8-quantised ONNX
+  graph, and on this laptop's CPU (no AVX-512 VNNI, so the int8 kernels fall back to a slow path)
+  it embedded 0.7 chunks per second: 28 minutes for this repository. The float32
+  `snowflake/snowflake-arctic-embed-xs`, a model of the same size and retrieval quality, does 10
+  chunks per second on the same chunks, and `all-MiniLM-L6-v2` does 39 but truncates at 256
+  tokens, too short for our 1,500-character chunks. Quantisation is a speed-up only on hardware
+  that has the instructions for it; a benchmark on 48 real chunks settled it in two minutes.
 - *Windows detail.* `clear()` deletes the collection through the client rather than removing the
   directory: Chroma keeps its segment files memory-mapped while the process lives, and Windows
   refuses to unlink an open file.
@@ -1076,3 +1091,92 @@ one in a single list; a single list keeps its order), and the retriever over a r
 with the hash embedder: each mode returns the expected chunk, the hybrid score is the RRF sum,
 the mode can be overridden per call, an invalid mode is rejected, and `invalidate()` is what
 makes a newly indexed file searchable.
+
+## Step 5.4 — `retrieve_context` node and the retrieval eval
+
+**What we built.** Retrieval joins the graph, and gets its own benchmark that runs without a
+single model call.
+
+- `graph/retrieval.py` adds a `retrieve_context` node between `prepare` and `plan`. It brings the
+  repository index up to date (`RepoIndex.update()`, incremental, so a repo the agent already
+  worked on costs a hash comparison), searches it with the task text in the configured mode, and
+  writes two things to state: `context`, the top `retrieval_k` (6) chunks rendered as fenced
+  blocks headed `path:lines (symbol)` within a `retrieval_context_chars` (6,000) budget, and
+  `retrieved`, the list of locations for the UI and the ledger. `retrieval_mode=off` makes the
+  node a no-op, which is the ablation's baseline.
+- `build_graph(..., retriever=...)` takes the retriever as a parameter. The default in
+  `agent.run_agent` is the real one; tests pass a fake or nothing. The plan prompt gains the
+  context as part of the human turn; the act system prompt gains it as a section that tells the
+  model it is a hint and to read before editing.
+- `evals/retrieval.py` and `evals/retrieval_eval.py` measure retrieval on the benchmark tasks.
+  The gold files of a task are the files the reference solution changes that already exist in
+  the starting repo. For every task the repo is indexed (in a temp dir, one shared embedder), the
+  task prompt is the query, and the distinct files in hit order are scored: recall@k over the
+  gold files and MRR (1 / rank of the first gold file), per mode. Results go to
+  `evals/results/<stamp>-retrieval.json` with a Markdown table.
+- The default embedding model changes to `snowflake/snowflake-arctic-embed-xs`; see the note
+  added to Step 5.2.
+
+**Key concepts.**
+- *Retrieval is a node, not a tool.* The model could be given a `search_index` tool and left to
+  call it. Making retrieval a node that runs before planning means the planner never starts
+  blind, the cost is one query per run instead of one per whim, and the effect can be switched
+  off from a setting for a controlled comparison. Production agents do both: a retrieval pass up
+  front and a search tool for follow-ups; the tool half is `search_code`, which we already have.
+- *Run it once.* After failing tests the graph goes `reflect -> plan`, not through
+  `retrieve_context` again. The task has not changed, so the query has not changed; what is new
+  is the agent's own edits, and those are already in the conversation as tool calls. Re-running
+  would re-embed the changed files for nothing. `test_retrieval_runs_once_even_when_the_loop_iterates`
+  pins this.
+- *Injection through the factory.* `build_graph` takes `retriever: Callable[[Path, str],
+  list[Hit]] | None`. Nothing in the graph imports Chroma or the embedding model; that lives in
+  `repo_retriever`, imported lazily. The whole graph test-suite keeps running with a scripted LLM
+  and no vector store, and the node is tested with a two-line fake.
+- *A budget in characters, not chunks.* Six chunks of a generated file can be 20 kB. The formatter
+  adds hits in rank order until the budget is spent and truncates a single oversized first hit
+  rather than returning nothing, so the planner always sees the best match.
+- *Measure retrieval on its own.* The agent benchmark costs a day of API quota and is noisy. The
+  retrieval eval runs in about a minute on the CPU and is deterministic, so a change to the
+  tokenizer or the fusion constant can be checked before it is trusted. The gold set comes for
+  free from `solution/`: the files a fix touches are by definition the ones retrieval should
+  surface.
+- *What the numbers say.* On all 42 tasks (40 with a gold file; the two add-test tasks only
+  create new files, which cannot be retrieved):
+
+  | mode | tasks | recall@1 | recall@3 | recall@5 | MRR |
+  |---|---|---|---|---|---|
+  | hybrid | 40 | 0.08 | 0.99 | 1.00 | 0.56 |
+  | dense | 40 | 0.08 | 0.99 | 1.00 | 0.56 |
+  | bm25 | 40 | 0.08 | 0.99 | 1.00 | 0.55 |
+
+  Two lessons. First, in 34 of 40 tasks the file ranked first is the visible test file, not the
+  source: the prompt names the function, and the test file repeats that name more often than the
+  module that defines it. The source is almost always second, which is why recall@3 is perfect
+  and recall@1 is not. With `retrieval_k=6` chunks the planner sees both, so this costs nothing
+  today, but on a large repository it argues for down-weighting `tests/` at query time. Second,
+  the benchmark repos have three to five files, so file-level recall saturates at k=3 and the
+  three modes cannot be told apart here. The eval is the right instrument, the corpus is too
+  small. Step 5.5 asks the question that matters,
+  pass rate with and without retrieval, and a larger-repo retrieval set is a natural follow-up.
+
+**How the real tools do it.** Cursor and Copilot both run a retrieval pass before the first
+model call and inject the results into the prompt, then let the model search further with tools;
+Copilot's "workspace" agent calls this the context-gathering phase. Aider injects its repo map
+(the tree-sitter definitions ranked by PageRank over the import graph) into every prompt, a
+retrieval step that is structural rather than by similarity. On measurement, SWE-bench papers
+report exactly our metric: Agentless and AutoCodeRover evaluate "file localisation" as recall of
+the files touched by the gold patch at k = 1, 3, 5 before they measure whether the patch passes,
+because a wrong file ends the attempt. Our eval is that step on our own tasks.
+
+**Check it.**
+```bash
+uv run pytest tests/test_retrieval_node.py tests/test_retrieval_eval.py -q   # 14 tests
+uv run python evals/retrieval_eval.py --suite all --k 1 --k 3 --k 5          # table above, about a minute
+uv run coder run evals/suite/fix-bug-duration-units/repo "fix the duration parsing" -v
+```
+The run prints a dim `Context · 6 chunks: ...` line before the plan panel, listing what the
+planner was shown. The node tests check the formatting and its budget, that the planner and the
+actor both receive the context, that a graph built without a retriever adds no section, and that
+retrieval runs once across two iterations. The eval tests build a task directory with one
+changed, one unchanged and one new solution file, and check the gold set, the metrics, the
+Markdown table, the JSON round trip, and an end-to-end run over a real index in all three modes.

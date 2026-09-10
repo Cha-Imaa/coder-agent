@@ -104,7 +104,7 @@ points, not a step count, so finishing a big step moves the bar more than a smal
 - [x] Repo loader honouring `.gitignore`, language-aware chunking with tree-sitter (4pt)
 - [x] Incremental Chroma index keyed by file hash; `coder index` with progress (4pt)
 - [x] Hybrid retriever: BM25 + dense with reciprocal rank fusion (3pt)
-- [ ] `retrieve_context` node; retrieval eval (recall@k of gold files) (3pt)
+- [x] `retrieve_context` node; retrieval eval (recall@k of gold files) (3pt)
 - [ ] Ablation: no retrieval / BM25 / dense / hybrid on the suite, figure regenerated (3pt)
 
 ### 6. Memory, control and safety
