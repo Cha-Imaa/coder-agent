@@ -995,3 +995,84 @@ file, the second embeds nothing, editing one file re-embeds only that file, dele
 its chunks, a new file is added without touching the rest, the index survives a new `RepoIndex`
 instance, `clear()` forces a full rebuild, search returns the chunk with its `path:lines (symbol)`
 location, and the progress callback sees all three phases.
+
+## Step 5.3 — Hybrid retriever: BM25 + dense with reciprocal rank fusion
+
+**What we built.** `src/coder_agent/rag/retriever.py`: a lexical index, a fusion function and a
+retriever that can run either side alone or both together. `coder index -q "..." --mode
+hybrid|dense|bm25` shows what each mode returns on a real repository.
+
+- `tokenize()` turns text into search terms the way code is actually written: it emits every
+  identifier whole (`write_ledger`) and also its snake_case and camelCase parts (`write`,
+  `ledger`; `HTTPServer` gives `http`, `server`), lower-cased, minus a short stopword list of
+  English glue and Python keywords.
+- `BM25` is a forty-line Okapi BM25 over an in-memory corpus of `(chunk_id, text)`: term
+  frequencies per document, document frequencies, average length, and the standard scoring
+  formula with `k1=1.5`, `b=0.75`. It indexes the same `path symbol\ncode` text the embedder saw,
+  so file names and function names are searchable lexically too.
+- `reciprocal_rank_fusion()` merges any number of rankings: each document scores the sum of
+  `1 / (60 + rank)` over the lists it appears in.
+- `HybridRetriever(index, mode)` wraps a `RepoIndex`. In `dense` mode it is `index.search`; in
+  `bm25` mode it builds the lexical index from `index.all_chunks()` on first use and caches it; in
+  `hybrid` mode it asks both sides for `retrieval_candidates` (20) hits, fuses, and returns the
+  top `k`. `invalidate()` drops the cache after an index update.
+- Two settings: `retrieval_mode` (the knob the Step 5.5 ablation turns) and
+  `retrieval_candidates`.
+
+**Key concepts.**
+- *Two retrievers because there are two kinds of query.* "Where is `write_ledger` called" names
+  a token that appears verbatim in the code; a lexical index finds every occurrence in one pass,
+  while an embedding model sees an odd rare word and often ranks a semantically similar function
+  above the exact match. "Where do we record how many tokens a run used" contains no identifier
+  from the code at all; only the embedding knows that `tokens_in` and `ledger` are about it.
+  Published numbers on code search (CodeSearchNet, CoIR) show hybrid beating either alone by a
+  few points of recall, and the failure cases of each side are visible in `--mode bm25` versus
+  `--mode dense` on this repo.
+- *Fuse ranks, not scores.* A BM25 score of 12.3 and a cosine similarity of 0.81 are on
+  unrelated scales, and any weighting between them would need re-tuning per corpus. RRF
+  (Cormack, Clarke and Büttcher, 2009) only asks "at what position did each list put this
+  document", which is scale-free. The constant 60 flattens the curve so that first place is
+  worth only slightly more than fifth; the effect is that a document both retrievers agree on
+  outranks one that a single retriever is very confident about. The test
+  `test_rrf_prefers_documents_present_in_both_rankings` pins that property.
+- *Ask for more than you return.* Each side contributes 20 candidates when the caller wants 8.
+  A chunk ranked sixth by both lists should beat one ranked first by one list and absent from
+  the other; that can only happen if the sixth-ranked entries are in the pool.
+- *Own the small algorithm.* `rank-bm25` on PyPI would have done the scoring, but its tokenizer
+  is `str.split()`. The whole point here is that `read_file`, `readFile`, `read` and `file`
+  should all find the same chunk, and the split is where that decision lives. Forty lines of
+  code and a formula every retrieval textbook prints is cheaper than a dependency whose one
+  tunable part we would have to bypass.
+- *The index is the corpus.* BM25 is rebuilt from the Chroma collection rather than persisted
+  next to it. One repository is a few thousand chunks, the build takes tens of milliseconds, and
+  a second on-disk structure would need its own change tracking to stay in step with the vectors.
+  This trades a little start-up time for zero consistency bugs.
+- *The BM25 idf variant.* `log(1 + (N - df + 0.5) / (df + 0.5))` rather than the original
+  `log((N - df + 0.5) / (df + 0.5))`: the `1 +` keeps idf positive when a term appears in more
+  than half the documents, which `self` or `return` would otherwise do in a Python repo and score
+  negative. Lucene made the same change in 2016.
+
+**How the real tools do it.** Every production code assistant runs a hybrid. GitHub Copilot's
+workspace retrieval combines a local lexical index (a trigram or full-text engine on the client)
+with embeddings computed server-side and merges them before reranking. Sourcegraph Cody
+queries Zoekt, the trigram search engine behind sourcegraph.com, alongside its embeddings and
+fuses by rank. Cursor's `@codebase` is dense-first with a reranker, but the plain `@` symbol
+lookup is a lexical index. Continue.dev's codebase retrieval is exactly this design: SQLite FTS5
+for the lexical side, LanceDB for vectors, RRF to merge, an optional reranker after. Elastic and
+OpenSearch both ship RRF as a built-in query type for the same reason we picked it: it is the
+fusion that needs no tuning when the two scores are not comparable.
+
+**Check it.**
+```bash
+uv run pytest tests/test_retriever.py -q                                    # 14 tests
+uv run coder index . -q "write_ledger" --mode bm25                           # exact identifier
+uv run coder index . -q "where are run tokens recorded" --mode dense         # no identifier in query
+uv run coder index . -q "where are run tokens recorded" --mode hybrid        # fused
+```
+The tests cover the tokenizer (whole identifier and its parts, stopwords, case), BM25 (the
+defining chunk ranks first for its identifier, unknown terms return nothing, scores are positive
+and sorted, idf stays positive for a term in every document), RRF (a document in both lists beats
+one in a single list; a single list keeps its order), and the retriever over a real Chroma index
+with the hash embedder: each mode returns the expected chunk, the hybrid score is the RRF sum,
+the mode can be overridden per call, an invalid mode is rejected, and `invalidate()` is what
+makes a newly indexed file searchable.

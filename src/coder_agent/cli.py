@@ -93,15 +93,21 @@ def index(
         typer.Option("--query", "-q", help="After indexing, show the top hits for this."),
     ] = None,
     k: Annotated[int, typer.Option(help="How many hits to show with --query.")] = 5,
+    mode: Annotated[
+        str, typer.Option("--mode", help="Retrieval mode for --query: hybrid, dense or bm25.")
+    ] = settings.retrieval_mode,
 ) -> None:
     """Build or refresh the local vector index of a repository (incremental by file hash)."""
     from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn, TimeElapsedColumn
 
-    from coder_agent.rag import RepoIndex
+    from coder_agent.rag import MODES, HybridRetriever, RepoIndex
 
     repo = repo.resolve()
     if not repo.is_dir():
         console.print(f"[red]Not a directory:[/red] {repo}")
+        raise typer.Exit(code=2)
+    if mode not in MODES:
+        console.print(f"[red]Unknown mode:[/red] {mode} (expected one of {', '.join(MODES)})")
         raise typer.Exit(code=2)
 
     store = RepoIndex(repo)
@@ -133,8 +139,8 @@ def index(
     console.print(f"[green]Done.[/green] {stats.summary()}")
 
     if query:
-        hits = store.search(query, k=k)
-        table = Table(title=f"Top {len(hits)} for: {query}", show_edge=False)
+        hits = HybridRetriever(store, mode=mode).search(query, k=k)  # type: ignore[arg-type]
+        table = Table(title=f"Top {len(hits)} for: {query}  [dim]({mode})[/dim]", show_edge=False)
         table.add_column("score", justify="right")
         table.add_column("kind")
         table.add_column("location")
