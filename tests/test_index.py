@@ -169,3 +169,26 @@ def test_hash_embedder_is_deterministic_and_normalised() -> None:
     assert a == b
     assert abs(sum(v * v for v in a) - 1.0) < 1e-9
     assert emb.embed_documents([""]) == [[0.0] * 32]
+
+
+def test_fast_embedder_prefixes_queries_but_not_documents() -> None:
+    import numpy as np
+
+    from coder_agent.rag import FastEmbedder
+
+    class FakeModel:
+        seen: list[tuple[str, list[str]]] = []
+
+        def embed(self, texts, batch_size=None):
+            self.seen.append(("embed", list(texts)))
+            return [np.zeros(3) for _ in texts]
+
+        def query_embed(self, text):
+            self.seen.append(("query", [text]))
+            return [np.zeros(3)]
+
+    embedder = FastEmbedder(query_prefix="Q: ")
+    embedder._model = FakeModel()
+    embedder.embed_documents(["doc one"])
+    embedder.embed_query("find it")
+    assert FakeModel.seen == [("embed", ["doc one"]), ("query", ["Q: find it"])]
