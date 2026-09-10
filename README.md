@@ -21,19 +21,30 @@ Work in progress. See the commit history for the step-by-step build.
 ### First numbers
 
 In-house suite of 12 tasks with hidden tests, `groq:openai/gpt-oss-120b`, up to 4 iterations.
-Every task the model ran was solved in one iteration; the six errors are free-tier daily quota
-exhaustion (Groq 200k tokens/day, Gemini fallback 20 requests/day), not agent failures.
+Every task was solved in one plan/act/test cycle. Six tasks first errored on the free-tier daily
+quota (Groq 200k tokens/day) and were rerun the next day with `--rerun-errors`; the results file
+records both commits.
 
-| Category | Tasks | Passed | Errors | pass@1 | Avg tokens |
-|---|---|---|---|---|---|
-| fix-bug | 3 | 1 | 2 | 33% | 3,289 |
-| add-feature | 3 | 3 | 0 | 100% | 28,984 |
-| refactor | 2 | 0 | 2 | 0% | 0 |
-| add-test | 2 | 2 | 0 | 100% | 19,222 |
-| multi-file | 2 | 0 | 2 | 0% | 0 |
-| total | 12 | 6 | 6 | 50% | 11,272 |
+| Category | Tasks | Passed | Errors | pass@1 | Avg tokens | Avg iterations |
+|---|---|---|---|---|---|---|
+| fix-bug | 3 | 3 | 0 | 100% | 12,443 | 1.0 |
+| add-feature | 3 | 3 | 0 | 100% | 28,984 | 1.0 |
+| refactor | 2 | 2 | 0 | 100% | 25,451 | 1.0 |
+| add-test | 2 | 2 | 0 | 100% | 19,222 | 1.0 |
+| multi-file | 2 | 2 | 0 | 100% | 71,164 | 1.0 |
+| total | 12 | 12 | 0 | 100% | 29,663 | 1.0 |
 
-Reproduce with `uv run python evals/run_evals.py`; raw results are in `evals/results/`.
+![pass@1 by task category](docs/figures/pass_rate.png)
+
+Where the tokens go: almost all of the budget is spent in the `act` node reading files and
+running tools, which is what codebase retrieval (milestone 5) is meant to cut.
+
+![Tokens per run by graph node](docs/figures/cost_profile.png)
+
+Reproduce with `uv run python evals/run_evals.py`; raw results are in `evals/results/` and
+`uv run python evals/figures.py` redraws every chart from them. The 12-task suite is small and
+the tasks are single-purpose, so 100% says the loop works, not that the agent is done: the
+HumanEval slice below and the retrieval ablation are the harder numbers.
 
 A second suite packages the first 30 [HumanEval](https://github.com/openai/human-eval) problems
 as repository tasks (stub module, docstring examples as the visible doctest, the original

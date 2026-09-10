@@ -780,3 +780,65 @@ and canonical passes, a wrong docstring example is skipped, gzipped JSONL parsin
 test now validates 42 tasks before and after the reference solution. A real run costs roughly
 five to ten thousand tokens per problem on `gpt-oss-120b`, so the thirty fit inside one day's
 Groq quota only if the in-house suite is not run the same day.
+
+## Step 4.4 — `figures.py`: the charts the README is built from
+
+**What we built.** Three PNGs under `docs/figures/`, drawn from the committed results JSON by
+one command, plus the two small changes that make the third chart possible.
+
+- `src/coder_agent/evals/figures.py` — the arithmetic (`iteration_curve`, `node_costs`,
+  `latest_results`) and, separately, the drawing (`draw_pass_rate`, `draw_iteration_curve`,
+  `draw_cost_profile`, `render_all`). Matplotlib is imported inside the drawing functions only.
+- `evals/figures.py` — the CLI. With no arguments it takes the newest results file per label and
+  skips the `solution`/`noop` self-checks; pass files explicitly to compare specific runs.
+- `TaskResult` grows a `usage` field: the per-node token counters the ledger already tracked now
+  travel inside the results file too. Older files load with `{}` and the cost profile falls back
+  to the ledger, matched on the `task_id` tag every eval run carries.
+- `run_task` scrubs the home directory and `site-packages` path out of stored tracebacks,
+  because results files are committed and the last one had to be cleaned by hand.
+- `matplotlib` is an optional extra (`figures`) and a dev dependency; the agent never imports it.
+
+**Key concepts.**
+- *Numbers and pixels are different code.* A chart is only as trustworthy as the arithmetic
+  behind it, and arithmetic is easy to unit-test while a PNG is not. So the curve, the per-node
+  averages and the "newest per label" rule are plain functions with exact tests; the drawing layer
+  gets one test that asserts three files came out. When a figure looks wrong, the bug is in a
+  function you can call in a REPL.
+- *Figures come from files, not from runs.* `render_all` reads `SuiteResult` objects loaded from
+  `evals/results/`. There is no path from "run the model" to "PNG"; the JSON in between is what
+  makes a chart reproducible and reviewable. Rerunning with `--rerun-errors` overwrites the same
+  file, so the figure and the table always describe one configuration.
+- *The iteration curve is cumulative and shares a denominator with the pass rate.* "Solved within
+  k iterations" over all tasks, errors included, so its last point *is* pass@1 and the two
+  figures cannot disagree. A flat curve says the ceiling was not binding; a curve still climbing
+  at `max_iterations` says one more plan/act/test cycle would have bought something.
+- *The cost profile averages over runs that happened.* An errored task that never called a model
+  has no usage; counting it would halve the average and describe nothing. The subtitle states
+  how many runs the average covers, for the same reason the table has an Errors column.
+- *Colour by role, in a fixed order.* One categorical palette (blue, orange, aqua, ...) assigned
+  in slot order per configuration, a paler step of the same blue for "errored, not graded",
+  input and output tokens in slots one and two. No rainbow, no colour that changes meaning between
+  charts, every mark also labelled with its value so nothing depends on colour alone.
+
+**How the real tools do it.** Every published agent benchmark separates the same two things:
+SWE-bench, Aider's leaderboard and the `evalplus` reports all commit per-instance JSON logs and
+regenerate their tables and plots from them with a script; the raw logs are the artefact of
+record, the figure is derived. LangSmith and Weights & Biases dashboards are the interactive
+version of the same idea: the trace store is the truth, the chart is a query over it. Storing
+per-node usage inside each result (rather than only in a separate ledger) mirrors how those logs
+carry the token counts alongside the verdict, so one file is enough to reproduce a cost figure.
+
+**Check it.**
+```bash
+uv run pytest tests/test_figures.py -q          # curve, averages, ledger fallback, three PNGs
+uv run python evals/figures.py                  # regenerate docs/figures/*.png from evals/results/
+uv run python evals/figures.py --no-ledger      # results-file data only; old files lose the cost profile
+```
+Seven tests run on a hand-built five-task suite: the curve equals `[0.2, 0.6, 0.6, 0.6]` and
+ends at the pass rate, per-node averages divide by the number of runs with usage, the ledger
+fallback picks the most recent run for a task id, `latest_results` keeps one file per label and
+drops the self-checks, and old results files without `usage` still load. The rendered figures
+were checked by eye on the real results, first with six quota errors (drawn as a pale stack, not
+as failures) and then after `--rerun-errors` completed the run at 12/12. The cost profile puts
+about 97% of the budget in `act` (about 29k tokens per run against under 1k for `plan`), which
+is the number retrieval (milestone 5) is supposed to move.

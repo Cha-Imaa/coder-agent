@@ -8,20 +8,24 @@
     "platform": "Windows-10-10.0.26200-SP0",
     "max_iterations": 4,
     "max_steps": 40,
-    "fallback_model": "google_genai:gemini-2.5-flash"
+    "fallback_model": "google_genai:gemini-2.5-flash",
+    "merged_from": [
+      "2b65a9d",
+      "15f5976"
+    ]
   },
-  "pass_rate": 0.5,
-  "errors": 6,
+  "pass_rate": 1.0,
+  "errors": 0,
   "by_category": [
     {
       "category": "fix-bug",
       "tasks": 3,
-      "passed": 1,
-      "errors": 2,
-      "pass_rate": 0.3333333333333333,
-      "avg_tokens": 3289.0,
-      "avg_iterations": 0.3333333333333333,
-      "avg_seconds": 113.79208326339722
+      "passed": 3,
+      "errors": 0,
+      "pass_rate": 1.0,
+      "avg_tokens": 12443.333333333334,
+      "avg_iterations": 1.0,
+      "avg_seconds": 63.74702000617981
     },
     {
       "category": "add-feature",
@@ -36,12 +40,12 @@
     {
       "category": "refactor",
       "tasks": 2,
-      "passed": 0,
-      "errors": 2,
-      "pass_rate": 0.0,
-      "avg_tokens": 0.0,
-      "avg_iterations": 0.0,
-      "avg_seconds": 39.829636335372925
+      "passed": 2,
+      "errors": 0,
+      "pass_rate": 1.0,
+      "avg_tokens": 25451.0,
+      "avg_iterations": 1.0,
+      "avg_seconds": 62.87208044528961
     },
     {
       "category": "add-test",
@@ -56,22 +60,22 @@
     {
       "category": "multi-file",
       "tasks": 2,
-      "passed": 0,
-      "errors": 2,
-      "pass_rate": 0.0,
-      "avg_tokens": 0.0,
-      "avg_iterations": 0.0,
-      "avg_seconds": 38.752673745155334
+      "passed": 2,
+      "errors": 0,
+      "pass_rate": 1.0,
+      "avg_tokens": 71163.5,
+      "avg_iterations": 1.0,
+      "avg_seconds": 486.1895602941513
     },
     {
       "category": "total",
       "tasks": 12,
-      "passed": 6,
-      "errors": 6,
-      "pass_rate": 0.5,
-      "avg_tokens": 11271.833333333334,
-      "avg_iterations": 0.5,
-      "avg_seconds": 108.3799211581548
+      "passed": 12,
+      "errors": 0,
+      "pass_rate": 1.0,
+      "avg_tokens": 29662.833333333332,
+      "avg_iterations": 1.0,
+      "avg_seconds": 174.2818771203359
     }
   ],
   "results": [
@@ -87,7 +91,8 @@
       "agent_seconds": 81.45043873786926,
       "grade_exit_code": 0,
       "grade_output": "..............                                                           [100%]\n14 passed in 0.02s",
-      "error": null
+      "error": null,
+      "usage": {}
     },
     {
       "task_id": "add-feature-slugify",
@@ -101,7 +106,8 @@
       "agent_seconds": 360.26922154426575,
       "grade_exit_code": 0,
       "grade_output": "............                                                             [100%]\n12 passed in 0.02s",
-      "error": null
+      "error": null,
+      "usage": {}
     },
     {
       "task_id": "add-feature-stack-peek",
@@ -115,7 +121,8 @@
       "agent_seconds": 98.30705690383911,
       "grade_exit_code": 0,
       "grade_output": "........                                                                 [100%]\n8 passed in 0.02s",
-      "error": null
+      "error": null,
+      "usage": {}
     },
     {
       "task_id": "add-test-bounded-queue",
@@ -129,7 +136,8 @@
       "agent_seconds": 78.20256972312927,
       "grade_exit_code": 0,
       "grade_output": "..........                                                               [100%]\n10 passed in 5.29s",
-      "error": null
+      "error": null,
+      "usage": {}
     },
     {
       "task_id": "add-test-mathx",
@@ -143,7 +151,8 @@
       "agent_seconds": 183.7888970375061,
       "grade_exit_code": 0,
       "grade_output": "..................................                                       [100%]\n34 passed in 4.27s",
-      "error": null
+      "error": null,
+      "usage": {}
     },
     {
       "task_id": "fix-bug-chunk-drops-tail",
@@ -157,91 +166,203 @@
       "agent_seconds": 72.08007884025574,
       "grade_exit_code": 0,
       "grade_output": ".......                                                                  [100%]\n7 passed in 0.02s",
-      "error": null
+      "error": null,
+      "usage": {}
     },
     {
       "task_id": "fix-bug-duration-units",
       "category": "fix-bug",
-      "passed": false,
-      "agent_status": "error",
-      "iterations": 0,
-      "steps": 0,
-      "input_tokens": 0,
-      "output_tokens": 0,
-      "agent_seconds": 228.6947636604309,
-      "grade_exit_code": 1,
-      "grade_output": "............F....F..F                                                    [100%]\n================================== FAILURES ===================================\n______________________________ test_empty_string ______________________________\n\n    def test_empty_string():\n        try:\n            parse_duration(\"\")\n>           assert False, \"ValueError was not raised for empty string\"\nE           AssertionError: ValueError was not raised for empty string\nE           assert False\n\ntests\\test_durations.py:48: AssertionError\n___________________________ test_rejects_garbage[] ____________________________\n\nbad = ''\n\n    @pytest.mark.parametrize(\"bad\", [\"\", \"5x\", \"abc\", \"1h 30m\"])\n    def test_rejects_garbage(bad):\n>       with pytest.raises(ValueError):\nE       Failed: DID NOT RAISE ValueError\n\ntests\\test_durations_hidden.py:24: Failed\n________________________ test_rejects_garbage[1h 30m] _________________________\n\nbad = '1h 30m'\n\n    @pytest.mark.parametrize(\"bad\", [\"\", \"5x\", \"abc\", \"1h 30m\"])\n    def test_rejects_garbage(bad):\n>       with pytest.raises(ValueError):\nE       Failed: DID NOT RAISE ValueError\n\ntests\\test_durations_hidden.py:24: Failed\n=========================== short test summary info ===========================\nFAILED tests/test_durations.py::test_empty_string - AssertionError: ValueErro...\nFAILED tests/test_durations_hidden.py::test_rejects_garbage[] - Failed: DID N...\nFAILED tests/test_durations_hidden.py::test_rejects_garbage[1h 30m] - Failed:...\n3 failed, 18 passed in 0.15s",
-      "error": "Traceback (most recent call last):\n  File \"src\\coder_agent\\evals\\runner.py\", line 176, in run_task\n    final = await agent(repo, task.prompt)\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"src\\coder_agent\\evals\\runner.py\", line 141, in graph_agent\n    outcome = await run_agent(repo, prompt, tags={\"suite\": \"in-house\", \"task_id\": repo.name})\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"src\\coder_agent\\agent.py\", line 66, in run_agent\n    async for update in graph.astream(state, stream_mode=\"updates\"):\n  File \"<site-packages>\\langgraph\\pregel\\main.py\", line 3440, in astream\n    async for _ in runner.atick(\n  File \"<site-packages>\\langgraph\\pregel\\_runner.py\", line 396, in atick\n    await arun_with_retry(\ngroq.RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_REDACTED` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 198989, Requested 4719. Please try again in 26m41.856s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}\nDuring task with name 'act' and id '82bcab83-06ec-e7df-aaaf-944dbb633af9'\n"
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 8,
+      "input_tokens": 12891,
+      "output_tokens": 1479,
+      "agent_seconds": 49.207032918930054,
+      "grade_exit_code": 0,
+      "grade_output": "..........                                                               [100%]\n10 passed in 0.02s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 229,
+          "output_tokens": 268,
+          "models": {
+            "openai/gpt-oss-120b": 1
+          }
+        },
+        "act": {
+          "calls": 8,
+          "input_tokens": 12662,
+          "output_tokens": 1211,
+          "models": {
+            "openai/gpt-oss-120b": 8
+          }
+        }
+      }
     },
     {
       "task_id": "fix-bug-shared-default-list",
       "category": "fix-bug",
-      "passed": false,
-      "agent_status": "error",
-      "iterations": 0,
-      "steps": 0,
-      "input_tokens": 0,
-      "output_tokens": 0,
-      "agent_seconds": 40.601407289505005,
-      "grade_exit_code": 1,
-      "grade_output": ".FF.F.                                                                   [100%]\n================================== FAILURES ===================================\n________________________ test_items_do_not_share_tags _________________________\n\n    def test_items_do_not_share_tags():\n        r = Registry()\n        r.add(\"first\")\n        r.add(\"second\")\n>       assert r.tags(\"first\") == [\"registered\"]\nE       AssertionError: assert ['registered'... 'registered'] == ['registered']\nE         \nE         Left contains 3 more items, first extra item: 'registered'\nE         Use -v to get more diff\n\ntests\\test_registry.py:15: AssertionError\n________________________ test_independent_default_tags ________________________\n\n    def test_independent_default_tags():\n        r = Registry()\n        r.add(\"x\")\n        r.add(\"y\")\n        r.add(\"z\")\n>       assert r.tags(\"x\") == [\"registered\"]\nE       AssertionError: assert ['registered'...istered', ...] == ['registered']\nE         \nE         Left contains 6 more items, first extra item: 'registered'\nE         Use -v to get more diff\n\ntests\\test_registry_hidden.py:9: AssertionError\n______________________ test_callers_list_is_not_mutated _______________________\n\n    def test_callers_list_is_not_mutated():\n        mine = [\"blue\"]\n        r = Registry()\n        r.add(\"x\", mine)\n>       assert mine == [\"blue\"]\nE       AssertionError: assert ['blue', 'registered'] == ['blue']\nE         \nE         Left contains one more item: 'registered'\nE         Use -v to get more diff\n\ntests\\test_registry_hidden.py:23: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_registry.py::test_items_do_not_share_tags - AssertionError:...\nFAILED tests/test_registry_hidden.py::test_independent_default_tags - Asserti...\nFAILED tests/test_registry_hidden.py::test_callers_list_is_not_mutated - Asse...\n3 failed, 3 passed in 0.14s",
-      "error": "Traceback (most recent call last):\n  File \"src\\coder_agent\\evals\\runner.py\", line 176, in run_task\n    final = await agent(repo, task.prompt)\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"src\\coder_agent\\evals\\runner.py\", line 141, in graph_agent\n    outcome = await run_agent(repo, prompt, tags={\"suite\": \"in-house\", \"task_id\": repo.name})\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"src\\coder_agent\\agent.py\", line 66, in run_agent\n    async for update in graph.astream(state, stream_mode=\"updates\"):\n  File \"<site-packages>\\langgraph\\pregel\\main.py\", line 3440, in astream\n    async for _ in runner.atick(\n  File \"<site-packages>\\langgraph\\pregel\\_runner.py\", line 396, in atick\n    await arun_with_retry(\ngroq.RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_REDACTED` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199607, Requested 1809. Please try again in 10m11.712s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}\nDuring task with name 'act' and id 'b93dd18d-8b06-5373-d7ac-bf08faa5a54b'\n"
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 8,
+      "input_tokens": 12018,
+      "output_tokens": 1075,
+      "agent_seconds": 69.95394825935364,
+      "grade_exit_code": 0,
+      "grade_output": "......                                                                   [100%]\n6 passed in 0.02s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 233,
+          "output_tokens": 414,
+          "models": {
+            "openai/gpt-oss-120b": 1
+          }
+        },
+        "act": {
+          "calls": 8,
+          "input_tokens": 11785,
+          "output_tokens": 661,
+          "models": {
+            "openai/gpt-oss-120b": 8
+          }
+        }
+      }
     },
     {
       "task_id": "multi-file-cart-discount",
       "category": "multi-file",
-      "passed": false,
-      "agent_status": "error",
-      "iterations": 0,
-      "steps": 0,
-      "input_tokens": 0,
-      "output_tokens": 0,
-      "agent_seconds": 38.19454216957092,
-      "grade_exit_code": 2,
-      "grade_output": "=================================== ERRORS ====================================\n_______________ ERROR collecting tests/test_discount_hidden.py ________________\nImportError while importing test module '<workdir>\\multi-file-cart-discount\\tests\\test_discount_hidden.py'.\nHint: make sure your test modules/packages have valid Python names.\nTraceback:\n..\\..\\..\\Programs\\Python\\Python311\\Lib\\importlib\\__init__.py:126: in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntests\\test_discount_hidden.py:4: in <module>\n    from shop.discounts import DISCOUNTS, discount_for\nE   ModuleNotFoundError: No module named 'shop.discounts'\n=========================== short test summary info ===========================\nERROR tests/test_discount_hidden.py\n!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!\n1 error in 0.20s",
-      "error": "Traceback (most recent call last):\n  File \"src\\coder_agent\\evals\\runner.py\", line 176, in run_task\n    final = await agent(repo, task.prompt)\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"src\\coder_agent\\evals\\runner.py\", line 141, in graph_agent\n    outcome = await run_agent(repo, prompt, tags={\"suite\": \"in-house\", \"task_id\": repo.name})\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"src\\coder_agent\\agent.py\", line 66, in run_agent\n    async for update in graph.astream(state, stream_mode=\"updates\"):\n  File \"<site-packages>\\langgraph\\pregel\\main.py\", line 3440, in astream\n    async for _ in runner.atick(\n  File \"<site-packages>\\langgraph\\pregel\\_runner.py\", line 396, in atick\n    await arun_with_retry(\ngroq.RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_REDACTED` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199503, Requested 1021. Please try again in 3m46.368s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}\nDuring task with name 'plan' and id '515f69e3-6184-dabd-fb3c-4f717e3e7c88'\n"
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 14,
+      "input_tokens": 38883,
+      "output_tokens": 3270,
+      "agent_seconds": 286.2642114162445,
+      "grade_exit_code": 0,
+      "grade_output": "..............                                                           [100%]\n14 passed in 0.03s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 311,
+          "output_tokens": 529,
+          "models": {
+            "openai/gpt-oss-120b": 1
+          }
+        },
+        "act": {
+          "calls": 14,
+          "input_tokens": 38572,
+          "output_tokens": 2741,
+          "models": {
+            "openai/gpt-oss-120b": 13,
+            "gemini-2.5-flash": 1
+          }
+        }
+      }
     },
     {
       "task_id": "multi-file-notes-delete",
       "category": "multi-file",
-      "passed": false,
-      "agent_status": "error",
-      "iterations": 0,
-      "steps": 0,
-      "input_tokens": 0,
-      "output_tokens": 0,
-      "agent_seconds": 39.310805320739746,
-      "grade_exit_code": 1,
-      "grade_output": "..FFF                                                                    [100%]\n================================== FAILURES ===================================\n______________ test_storage_delete_removes_and_raises_on_unknown ______________\n\n    def test_storage_delete_removes_and_raises_on_unknown():\n        s = Storage()\n        nid = s.put(\"x\")\n>       s.delete(nid)\n        ^^^^^^^^\nE       AttributeError: 'Storage' object has no attribute 'delete'\n\ntests\\test_notes_delete_hidden.py:11: AttributeError\n______________________ test_service_delete_returns_bool _______________________\n\n    def test_service_delete_returns_bool():\n        svc = NoteService()\n        nid = svc.create(\"x\")\n>       assert svc.delete(nid) is True\n               ^^^^^^^^^^\nE       AttributeError: 'NoteService' object has no attribute 'delete'\n\ntests\\test_notes_delete_hidden.py:20: AttributeError\n__________________________ test_cli_delete_messages ___________________________\n\n    def test_cli_delete_messages():\n        svc = NoteService()\n        main([\"add\", \"hello\"], svc)\n>       assert main([\"delete\", \"1\"], svc) == \"deleted 1\"\nE       AssertionError: assert 'unknown command: delete' == 'deleted 1'\nE         \nE         - deleted 1\nE         + unknown command: delete\n\ntests\\test_notes_delete_hidden.py:28: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_notes_delete_hidden.py::test_storage_delete_removes_and_raises_on_unknown\nFAILED tests/test_notes_delete_hidden.py::test_service_delete_returns_bool - ...\nFAILED tests/test_notes_delete_hidden.py::test_cli_delete_messages - Assertio...\n3 failed, 2 passed in 0.15s",
-      "error": "Traceback (most recent call last):\n  File \"src\\coder_agent\\evals\\runner.py\", line 176, in run_task\n    final = await agent(repo, task.prompt)\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"src\\coder_agent\\evals\\runner.py\", line 141, in graph_agent\n    outcome = await run_agent(repo, prompt, tags={\"suite\": \"in-house\", \"task_id\": repo.name})\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"src\\coder_agent\\agent.py\", line 66, in run_agent\n    async for update in graph.astream(state, stream_mode=\"updates\"):\n  File \"<site-packages>\\langgraph\\pregel\\main.py\", line 3440, in astream\n    async for _ in runner.atick(\n  File \"<site-packages>\\langgraph\\pregel\\_runner.py\", line 396, in atick\n    await arun_with_retry(\ngroq.RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_REDACTED` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199400, Requested 3362. Please try again in 19m53.184s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}\nDuring task with name 'plan' and id '561dc4af-6104-871b-2052-7f0f0465e867'\n"
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 25,
+      "input_tokens": 96204,
+      "output_tokens": 3970,
+      "agent_seconds": 686.1149091720581,
+      "grade_exit_code": 0,
+      "grade_output": "...........                                                              [100%]\n11 passed in 0.03s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 291,
+          "output_tokens": 484,
+          "models": {
+            "openai/gpt-oss-120b": 1
+          }
+        },
+        "act": {
+          "calls": 25,
+          "input_tokens": 95913,
+          "output_tokens": 3486,
+          "models": {
+            "openai/gpt-oss-120b": 24,
+            "gemini-2.5-flash": 1
+          }
+        }
+      }
     },
     {
       "task_id": "refactor-config-dataclass",
       "category": "refactor",
-      "passed": false,
-      "agent_status": "error",
-      "iterations": 0,
-      "steps": 0,
-      "input_tokens": 0,
-      "output_tokens": 0,
-      "agent_seconds": 40.96200919151306,
-      "grade_exit_code": 2,
-      "grade_output": "=================================== ERRORS ====================================\n__________________ ERROR collecting tests/test_appconfig.py ___________________\nImportError while importing test module '<workdir>\\refactor-config-dataclass\\tests\\test_appconfig.py'.\nHint: make sure your test modules/packages have valid Python names.\nTraceback:\n..\\..\\..\\Programs\\Python\\Python311\\Lib\\importlib\\__init__.py:126: in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntests\\test_appconfig.py:3: in <module>\n    from appconfig import Config, load_config\nE   ImportError: cannot import name 'Config' from 'appconfig' (<workdir>\\refactor-config-dataclass\\appconfig.py)\n=========================== short test summary info ===========================\nERROR tests/test_appconfig.py\n!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!\n1 error in 0.19s",
-      "error": "Traceback (most recent call last):\n  File \"src\\coder_agent\\evals\\runner.py\", line 176, in run_task\n    final = await agent(repo, task.prompt)\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"src\\coder_agent\\evals\\runner.py\", line 141, in graph_agent\n    outcome = await run_agent(repo, prompt, tags={\"suite\": \"in-house\", \"task_id\": repo.name})\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"src\\coder_agent\\agent.py\", line 66, in run_agent\n    async for update in graph.astream(state, stream_mode=\"updates\"):\n  File \"<site-packages>\\langgraph\\pregel\\main.py\", line 3440, in astream\n    async for _ in runner.atick(\n  File \"<site-packages>\\langgraph\\pregel\\_runner.py\", line 396, in atick\n    await arun_with_retry(\ngroq.RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_REDACTED` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199295, Requested 3349. Please try again in 19m2.208s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}\nDuring task with name 'plan' and id '62ca8fbf-3647-4857-d34d-78742a9ebf13'\n"
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 10,
+      "input_tokens": 29595,
+      "output_tokens": 2187,
+      "agent_seconds": 69.04285049438477,
+      "grade_exit_code": 0,
+      "grade_output": "....                                                                     [100%]\n4 passed in 0.01s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 278,
+          "output_tokens": 328,
+          "models": {
+            "openai/gpt-oss-120b": 1
+          }
+        },
+        "act": {
+          "calls": 10,
+          "input_tokens": 29317,
+          "output_tokens": 1859,
+          "models": {
+            "openai/gpt-oss-120b": 3,
+            "gemini-2.5-flash": 7
+          }
+        }
+      }
     },
     {
       "task_id": "refactor-extract-format-row",
       "category": "refactor",
-      "passed": false,
-      "agent_status": "error",
-      "iterations": 0,
-      "steps": 0,
-      "input_tokens": 0,
-      "output_tokens": 0,
-      "agent_seconds": 38.69726347923279,
-      "grade_exit_code": 2,
-      "grade_output": "=================================== ERRORS ====================================\n________________ ERROR collecting tests/test_report_hidden.py _________________\nImportError while importing test module '<workdir>\\refactor-extract-format-row\\tests\\test_report_hidden.py'.\nHint: make sure your test modules/packages have valid Python names.\nTraceback:\n..\\..\\..\\Programs\\Python\\Python311\\Lib\\importlib\\__init__.py:126: in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntests\\test_report_hidden.py:1: in <module>\n    from report import format_row, render_report, render_summary\nE   ImportError: cannot import name 'format_row' from 'report' (<workdir>\\refactor-extract-format-row\\report.py)\n=========================== short test summary info ===========================\nERROR tests/test_report_hidden.py\n!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!\n1 error in 0.22s",
-      "error": "Traceback (most recent call last):\n  File \"src\\coder_agent\\evals\\runner.py\", line 176, in run_task\n    final = await agent(repo, task.prompt)\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"src\\coder_agent\\evals\\runner.py\", line 141, in graph_agent\n    outcome = await run_agent(repo, prompt, tags={\"suite\": \"in-house\", \"task_id\": repo.name})\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"src\\coder_agent\\agent.py\", line 66, in run_agent\n    async for update in graph.astream(state, stream_mode=\"updates\"):\n  File \"<site-packages>\\langgraph\\pregel\\main.py\", line 3440, in astream\n    async for _ in runner.atick(\n  File \"<site-packages>\\langgraph\\pregel\\_runner.py\", line 396, in atick\n    await arun_with_retry(\ngroq.RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_REDACTED` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199186, Requested 962. Please try again in 1m3.936s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}\nDuring task with name 'plan' and id '4f1dcfef-5415-32f1-39bf-16756baa3da0'\n"
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 8,
+      "input_tokens": 17766,
+      "output_tokens": 1354,
+      "agent_seconds": 56.70131039619446,
+      "grade_exit_code": 0,
+      "grade_output": ".....                                                                    [100%]\n5 passed in 0.01s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 252,
+          "output_tokens": 322,
+          "models": {
+            "openai/gpt-oss-120b": 1
+          }
+        },
+        "act": {
+          "calls": 8,
+          "input_tokens": 17514,
+          "output_tokens": 1032,
+          "models": {
+            "gemini-2.5-flash": 8
+          }
+        }
+      }
     }
   ]
 }
