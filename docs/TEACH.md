@@ -1380,3 +1380,84 @@ uv run coder chat evals/suite/fix-bug-duration-units/repo --thread <id>   # pick
 The second message's plan panel shows the new task while the model's edits reference what it
 changed in the first; `coder stats` lists two runs tagged with the same thread, the second with
 `turn: 2`.
+
+## Step 6.5 — Retry, fallback, and knowing which model actually answered
+
+**What we built.** The path from a node to the network now has three layers, and the ledger
+records what each of them did.
+
+- `llm.get_llm` builds: the primary model with the provider SDK's retries pinned to
+  `llm_sdk_retries` (2); around it `ChatModelRetry`, a LangChain-level retry with exponential
+  jitter for `llm_attempts` (2) tries on any provider error (`groq.APIError`,
+  `GoogleAPICallError`); around that `with_fallbacks([...])` to the Gemini model. `ChatModelRetry`
+  is `RunnableRetry` plus one `__getattr__`: the stock wrapper forwards `invoke` but not
+  `bind_tools`, so the `act` node could not have used it.
+- `telemetry.ProviderEvents` is a callback handler that counts `on_llm_error` by exception type.
+  `agent._drive` passes it in the run config, so every model call in every node reports to it,
+  and the count goes into a new ledger column `provider_errors_json` (added to existing ledgers
+  by an `ALTER TABLE` migration on open).
+- `RunRecord.fallback_calls` derives, from the per-node `models` counts the ledger already had,
+  how many calls were answered by a model other than the configured primary. `coder stats` now
+  prints a providers line; the run footer names the failed attempts and the fallback share.
+- A run that dies is recorded too, with status `error` and the exception type in its tags, and
+  the record rides on the exception so the CLI can print its footer. Without this, a failure
+  left no trace in the ledger, and the fallback's own error was invisible: `with_fallbacks`
+  re-raises only the primary's exception.
+
+**Key concepts.**
+- *Retries live at more than one level, and they multiply.* The Groq SDK already retries 429
+  and 5xx with the server's `Retry-After`; Gemini's client defaults to six retries. A LangChain
+  retry on top of that means a dead provider costs (SDK attempts) x (LangChain attempts) calls
+  before the fallback gets a chance. Pinning both counts makes the worst case a number you can
+  say out loud: at most 2 x 3 requests and about ten seconds, which is what the real run below
+  took.
+- *The SDK does not retry the errors that matter most here.* The 400 `tool_use_failed` seen in
+  the ablation run is a 4xx, so the SDK treats it as the caller's fault and gives up, but the
+  cause is the model emitting bad JSON, which is random. That is the case for a retry above the
+  SDK: same model, same prompt, one more try, before spending a fallback request that is capped
+  at 20 a day.
+- *Wrapping a chat model is not free.* `Runnable.with_retry()` returns a generic binding;
+  LangChain's `RunnableWithFallbacks` goes out of its way to forward chat-model methods and to
+  apply them to the fallbacks too, but the retry wrapper does not. `ChatModelRetry.__getattr__`
+  forwards the call and re-wraps any runnable it returns, and the `-> Runnable` annotation on
+  the proxy is what the fallbacks wrapper inspects before mirroring the call onto the fallback.
+  `test_bind_tools_survives_retry_and_fallback_wrapping` pins the whole sandwich.
+- *Measure with callbacks, not with wrappers.* A handler in the run config reaches every model
+  call in every node without any node knowing it is there. Counting `on_llm_error` per exception
+  type is one line and answers the question the resume line needs: how often did the free tier
+  fail, and did the fallback carry the run.
+- *What the ledger said once it could.* Of the 17 runs recorded before this step, the fallback
+  answered at least one call in 12, and 25 of 191 calls overall (13%) went to Gemini. Most of
+  those runs show exactly one Gemini call, which fits a single `tool_use_failed` glitch per run
+  being handed straight to the fallback; the retry layer should now keep those on the primary.
+  That is a hypothesis the next eval run can check in `coder stats`.
+- *Verified under a real rate limit.* Groq's 200k tokens-per-day window was exhausted when this
+  step was finished, so a `coder run` on a copy of a benchmark task was the test:
+
+  | what | value |
+  |---|---|
+  | wall time until the run gave up | 9.8 s |
+  | Groq attempts on the failing call | 2 (`RateLimitError` x2) |
+  | Gemini attempt | 1 (`GoogleRateLimitError`, its own daily quota was gone too) |
+  | ledger row | status `error`, tag `error: RateLimitError`, both counts stored |
+
+  Before this step the same situation produced a traceback and nothing in the ledger.
+
+**How the real tools do it.** Every hosted agent has this stack. Claude Code and Cursor retry
+transient API errors with backoff and surface the count in the UI; Aider retries with backoff
+on rate limits and has a `--weak-model` for cheap side calls, which is a planned fallback rather
+than an emergency one. LiteLLM, the router most open-source agents put in front of providers,
+does exactly our three layers as configuration: `num_retries`, `fallbacks`, and per-model
+success and failure counters. OpenAI's and Anthropic's SDKs both honour `Retry-After` and both
+stop at 4xx, the same split that motivates the LangChain-level layer here.
+
+**Check it.**
+```bash
+uv run pytest tests/test_provider.py -q            # 9 tests, no network
+uv run coder stats                                 # "providers · fallback answered in N run(s) · failed attempts: ..."
+uv run coder run evals/suite/fix-bug-duration-units/repo "fix the duration parsing" --yes
+```
+The footer of a run that needed the fallback reads like `... · 1 BadRequestError · 1 answered by
+the fallback`. To see the retry layer alone, set `CODER_FALLBACK_MODEL=` (empty) in `.env` and
+run during a quota outage: the run fails after `llm_attempts` tries and the ledger row shows
+`{"RateLimitError": 2}` with status `error`.

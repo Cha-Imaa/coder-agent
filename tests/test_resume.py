@@ -45,7 +45,9 @@ async def test_crash_then_resume_continues_from_the_failed_node(wired):
     with pytest.raises(RuntimeError, match="call 2"):
         await run_agent(repo, "do it", thread_id="t1", ledger_path=ledger)
     assert checkpoint_path(repo).exists()
-    assert Ledger(ledger).recent() == []  # nothing recorded for the crashed attempt
+    crashed = Ledger(ledger).recent()  # the crashed attempt is recorded as an error, with why
+    assert [r["status"] for r in crashed] == ["error"]
+    assert json.loads(crashed[0]["tags_json"]) == {"thread_id": "t1", "error": "RuntimeError"}
 
     out = await resume_agent(repo, "t1", ledger_path=ledger)
 
@@ -55,7 +57,7 @@ async def test_crash_then_resume_continues_from_the_failed_node(wired):
     assert any("1. call echo" in str(m.content) for m in llm.calls[2])
     assert out.final["steps"] == 2  # the failed act call was never committed to state
     rows = Ledger(ledger).recent()
-    assert len(rows) == 1
+    assert [r["status"] for r in rows] == ["passed", "error"]
     assert json.loads(rows[0]["tags_json"]) == {"thread_id": "t1", "resumed": True}
     assert rows[0]["task"] == "do it"  # inputs come from the checkpoint too
 

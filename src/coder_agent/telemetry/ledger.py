@@ -69,12 +69,21 @@ class RunRecord:
     test_command: str | None
     usage: Usage = field(default_factory=dict)
     tags: dict[str, Any] = field(default_factory=dict)
+    # Failed model attempts by exception type, from `ProviderEvents`; the calls that then went to
+    # the fallback are visible in `usage[node]["models"]` and summed by `fallback_calls`.
+    provider_errors: dict[str, int] = field(default_factory=dict)
     run_id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
     started_at: float = field(default_factory=time.time)
 
     @classmethod
     def from_state(
-        cls, state: dict[str, Any], *, model: str, wall_seconds: float, tags: dict | None = None
+        cls,
+        state: dict[str, Any],
+        *,
+        model: str,
+        wall_seconds: float,
+        tags: dict | None = None,
+        provider_errors: dict[str, int] | None = None,
     ) -> RunRecord:
         return cls(
             repo=str(state.get("repo", "")),
@@ -88,6 +97,7 @@ class RunRecord:
             test_command=state.get("test_command"),
             usage=state.get("usage", {}) or {},
             tags=tags or {},
+            provider_errors=provider_errors or {},
         )
 
     @property
@@ -95,14 +105,36 @@ class RunRecord:
         _, i, o = totals(self.usage)
         return i + o
 
+    @property
+    def fallback_calls(self) -> int:
+        return fallback_calls(self.usage, self.model)
+
     def footer(self) -> str:
         """One line for the end of a CLI run."""
         calls, i, o = totals(self.usage)
         models = sorted({m for v in self.usage.values() for m in v.get("models", {})})
-        return (
+        line = (
             f"{calls} model calls · {i:,} in / {o:,} out tokens · {self.wall_seconds:.0f}s · "
             f"{self.iterations} iteration(s) · {', '.join(models) or self.model}"
         )
+        if self.provider_errors:
+            failed = ", ".join(f"{n} {name}" for name, n in sorted(self.provider_errors.items()))
+            line += f" · {failed} · {self.fallback_calls} answered by the fallback"
+        return line
+
+
+def fallback_calls(usage: Usage, configured_model: str) -> int:
+    """Calls answered by a model other than the configured primary.
+
+    The primary is configured as `provider:name` while `response_metadata` reports the bare
+    name, so a model counts as the primary when its name is part of the configured string.
+    """
+    return sum(
+        n
+        for v in usage.values()
+        for name, n in v.get("models", {}).items()
+        if name not in configured_model
+    )
 
 
 _SCHEMA = """
@@ -123,12 +155,29 @@ CREATE TABLE IF NOT EXISTS node_usage (
 """
 
 
+# Columns added after the first release, applied with ALTER TABLE to ledgers that predate them.
+# SQLite has no "ADD COLUMN IF NOT EXISTS", so the existing columns are read first.
+_MIGRATIONS: tuple[tuple[str, str, str], ...] = (
+    ("runs", "provider_errors_json", "TEXT"),
+)
+
+_RUN_COLUMNS = (
+    "run_id", "started_at", "repo", "task", "model", "status", "iterations", "steps",
+    "wall_seconds", "tests_passed", "test_command", "input_tokens", "output_tokens",
+    "usage_json", "tags_json", "provider_errors_json",
+)
+
+
 class Ledger:
     def __init__(self, path: Path) -> None:
         self.path = path
         path.parent.mkdir(parents=True, exist_ok=True)
         with self._conn() as c:
             c.executescript(_SCHEMA)
+            for table, column, kind in _MIGRATIONS:
+                present = {r["name"] for r in c.execute(f"PRAGMA table_info({table})")}
+                if column not in present:
+                    c.execute(f"ALTER TABLE {table} ADD COLUMN {column} {kind}")
 
     def _conn(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.path)
@@ -139,12 +188,14 @@ class Ledger:
         _, i, o = totals(rec.usage)
         with self._conn() as c:
             c.execute(
-                "INSERT OR REPLACE INTO runs VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                f"INSERT OR REPLACE INTO runs ({', '.join(_RUN_COLUMNS)}) "
+                f"VALUES ({', '.join('?' * len(_RUN_COLUMNS))})",
                 (
                     rec.run_id, rec.started_at, rec.repo, rec.task, rec.model, rec.status,
                     rec.iterations, rec.steps, rec.wall_seconds,
                     None if rec.tests_passed is None else int(rec.tests_passed), rec.test_command,
                     i, o, json.dumps(rec.usage), json.dumps(rec.tags),
+                    json.dumps(rec.provider_errors),
                 ),
             )
             c.executemany(
@@ -197,6 +248,15 @@ class Ledger:
                     " SUM(output_tokens) output_tokens FROM node_usage GROUP BY node ORDER BY node"
                 )
             ]
+            # Provider health is derived per run in Python: whether the fallback answered
+            # depends on the run's own configured model, which SQL cannot compare in JSON.
+            fallback_runs = 0
+            provider_errors: dict[str, int] = {}
+            for row in c.execute("SELECT model, usage_json, provider_errors_json FROM runs"):
+                if fallback_calls(json.loads(row["usage_json"] or "{}"), row["model"] or ""):
+                    fallback_runs += 1
+                for name, count in json.loads(row["provider_errors_json"] or "{}").items():
+                    provider_errors[name] = provider_errors.get(name, 0) + count
         n = agg["n"] or 0
         return {
             "runs": n,
@@ -206,4 +266,6 @@ class Ledger:
             "avg_seconds": agg["secs"] or 0,
             "avg_iterations": agg["iters"] or 0,
             "per_node": per_node,
+            "fallback_runs": fallback_runs,
+            "provider_errors": provider_errors,
         }
