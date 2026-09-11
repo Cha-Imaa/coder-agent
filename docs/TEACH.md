@@ -1675,6 +1675,21 @@ the `Context ·` line before the plan lists `durations.py` first; without it the
   under-reports that module (it shows 0% of 140 lines while its tests exercise every tool).
   Fixing it means `coverage`'s subprocess hooks, which is not worth it for one file and a badge.
 
+- *What the first green run cost: two bugs the laptop never showed.* The suite had passed 307
+  tests on Windows for weeks; the first Linux run failed two of them, and both were real.
+  First, `typer` forces coloured help whenever `GITHUB_ACTIONS` is in the environment and
+  splices escape codes into option names, so `"--yes" in result.output` was false; the test now
+  strips ANSI before comparing. Second, and worse, `test_loop_reflects_and_fixes_on_second_iteration`
+  ran to the iteration cap on Python 3.12 only. The buggy `return x * 3` and the fix
+  `return x * 2` have the same length, and on a fast runner the fix landed in the same second
+  as the first pytest run. CPython validates a cached `.pyc` by source mtime and size, both
+  unchanged, so iteration 2 imported the bytecode of the buggy module and the tests failed
+  again. That is not a test artefact: the agent edits a module and re-runs the tests seconds
+  later, so any same-length fix could be shadowed in a real run. The Docker sandbox already set
+  `PYTHONDONTWRITEBYTECODE=1`; the local sandbox now does too, with a regression test that
+  pins the source mtime to force the collision. Slow machines hide timing bugs; CI is a second
+  machine with different timing, which is a large part of its value.
+
 **How the real tools do it.** Every open coding agent on GitHub (aider, OpenHands, SWE-agent,
 Cline) runs lint and tests in GitHub Actions on push and pull request, most with a Python
 matrix; aider and OpenHands publish to Codecov. `uv` in CI via `setup-uv` with the cache on is
