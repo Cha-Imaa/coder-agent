@@ -1944,3 +1944,74 @@ gh repo view Cha-Imaa/coder-agent --web     # GitHub renders the two Mermaid dia
 ```
 On the repository page, the graph diagram shows nine nodes and the `approve` detour; the
 component diagram shows the file server feeding the sandbox and the graph feeding the ledger.
+
+## Step 8.5 — Repo hygiene: licence, contributing guide, templates, changelog
+
+**What we built.** `LICENSE` (MIT), `CONTRIBUTING.md`, `CHANGELOG.md`, two issue forms and a
+contact-links file under `.github/ISSUE_TEMPLATE/`, `.github/PULL_REQUEST_TEMPLATE.md`, licence
+metadata in `pyproject.toml`, and `tests/test_repo_hygiene.py`.
+
+- *MIT licence, declared twice.* The `LICENSE` file is what GitHub reads to show the licence
+  badge on the repository page; `license = "MIT"` and `license-files = ["LICENSE"]` in
+  `pyproject.toml` are what a package index reads (PEP 639 form: an SPDX identifier string,
+  not the older `{ text = ... }` table). Without the metadata a wheel would carry no licence at
+  all, which matters for the PyPI stretch goal.
+- *`CONTRIBUTING.md` says what CI will do to your pull request*, in the same words CI uses:
+  `uv sync --extra dev`, `uv run ruff check .`, `uv run pytest -q`. It also carries the three
+  project rules that a newcomer cannot infer from the code: every disk and shell action goes
+  through the sandbox package, docstrings say why, and a finished roadmap step is ticked in
+  `PLAN.md` and logged in `TEACH.md` in the same commit.
+- *Issue forms instead of Markdown templates.* GitHub's YAML issue forms render as real form
+  fields with required-field validation, so a bug report arrives with the command, the output,
+  the area and the model that answered instead of an empty template. `config.yml` adds two
+  contact links (the docs site, and a pre-filled "results with another model" issue) and keeps
+  blank issues enabled.
+- *A pull request template that is a checklist*, six boxes: lint and tests, tests added or an
+  explanation, sandbox rule, plan and learning log, changelog, and no keys or local paths in
+  the diff (the eval results once leaked a local path; that is why the last box exists).
+- *`CHANGELOG.md` in Keep a Changelog form* with one `Unreleased` section grouped by feature
+  rather than by commit, each with the date it landed. It says explicitly that `0.1.0` is
+  tagged after the acceptance walkthrough of milestone 9, which is where the tag moved in the
+  plan: a release tag on a project nobody has installed fresh is a promise, not a release.
+- *Five tests* read the files the way GitHub and a package index would: the licence text and
+  metadata agree; each issue form parses as YAML, has a name and description, unique block ids,
+  known block types and a label on every visible block (a malformed form is not an error on
+  GitHub, it just silently does not appear in the "new issue" chooser); the PR template names
+  the commands CI runs; the changelog has an `Unreleased` section; `CONTRIBUTING.md` and
+  `ci.yml` name the same commands, so if one changes the other must.
+
+**Key concepts.**
+- *Hygiene files are read by machines first.* `LICENSE` drives the licence badge and the
+  "licensed under" API field; `pyproject` metadata drives the package index; the issue forms
+  drive the new-issue chooser; `CODEOWNERS` and `SECURITY.md` (not added here, no need yet)
+  drive review routing and the security tab. Each is a contract with a specific reader, and
+  each reader fails silently, hence the tests.
+- *Why a changelog when there is a git log.* The log records what changed in the code; the
+  changelog records what a user would notice, grouped so that a reader upgrading from one
+  version to the next reads a screen, not three hundred commits. The `Fixed` section is the
+  useful part: the two entries there are exactly the kind of thing someone hitting the same
+  problem searches for.
+- *Tagging is a milestone-9 act.* Semantic versioning says `0.x` may break anything, so the
+  number itself is cheap; what is not cheap is the claim behind a tag that "this commit works
+  from a fresh clone". The plan already had that check as the acceptance walkthrough, so the
+  tag belongs at its end, and this step was reworded to say so.
+- *Licence choice.* MIT because the project vendors nothing copyleft, wants to be copied into
+  other people's learning projects without ceremony, and because the frameworks it sits on
+  (LangGraph, MCP SDK, Chroma) are MIT or Apache-2.0, so there is no compatibility question.
+
+**How the real tools do it.** Every serious open-source agent repository carries the same set:
+LangGraph and the MCP SDK are MIT with a `CONTRIBUTING.md` that names the exact `make` targets
+CI runs; Aider, OpenHands and SWE-agent use YAML issue forms with a required "version" or
+"model" field because triage is impossible without it; OpenHands and uv keep a Keep-a-Changelog
+file, ruff generates its release notes from PR labels instead. Most large projects also add
+`SECURITY.md` (how to report a vulnerability privately), `CODEOWNERS`, and a `release-please`
+or `git-cliff` job that turns conventional commits into the changelog automatically; the
+conventional-commit style adopted on day one here is what makes that automation possible later.
+
+**Check it.**
+```bash
+uv run pytest tests/test_repo_hygiene.py -q      # licence, forms, templates, changelog
+gh api repos/Cha-Imaa/coder-agent -q .license.spdx_id   # MIT, once GitHub has re-scanned
+gh issue create --web                             # the chooser shows Bug report, Feature request, two links
+```
+The last command opens the browser on the template chooser; nothing is filed until you submit.

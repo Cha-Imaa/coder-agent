@@ -125,14 +125,15 @@ points, not a step count, so finishing a big step moves the bar more than a smal
 - [x] README: architecture diagrams (Mermaid), results tables and figures, quick start, layout (3pt)
 - [ ] Demo recording script and GIF, embedded as the README hero (2pt)
 - [x] Docs site with MkDocs Material on GitHub Pages: TEACH, design doc, results (3pt)
-- [ ] Repo hygiene: LICENSE, CONTRIBUTING, issue templates, tagged `v0.1.0` release with changelog (1pt)
+- [x] Repo hygiene: LICENSE, CONTRIBUTING, issue and PR templates, CHANGELOG (1pt)
 
 ### 9. Hand-off
 - [ ] Acceptance run by the owner, on a fresh clone in a new directory: install, `coder index`,
   `coder run` on a suite task with the approval prompt, `coder chat` with a follow-up turn,
   `coder fix-issue --pr` against a throwaway repository, `--sandbox docker`, `run_evals.py` on a
   few tasks, `figures.py`. Every rough edge found is written down as an issue and fixed before
-  the release is tagged; the walkthrough itself goes into the docs site as "Try it" (3pt)
+  `v0.1.0` is tagged from the changelog; the walkthrough itself goes into the docs site as
+  "Try it" (3pt)
 
 ### Stretch
 - Publish to PyPI under a unique name
