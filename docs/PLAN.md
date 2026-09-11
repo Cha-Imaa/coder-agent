@@ -122,8 +122,8 @@ points, not a step count, so finishing a big step moves the bar more than a smal
 
 ### 8. Presentation
 - [x] GitHub Actions: ruff + pytest on push, coverage badge, Python 3.11 and 3.12 (2pt)
-- [ ] README: hero GIF, architecture diagram (Mermaid), results table and figures, quick start (3pt)
-- [ ] Demo recording script and GIF (2pt)
+- [x] README: architecture diagrams (Mermaid), results tables and figures, quick start, layout (3pt)
+- [ ] Demo recording script and GIF, embedded as the README hero (2pt)
 - [x] Docs site with MkDocs Material on GitHub Pages: TEACH, design doc, results (3pt)
 - [ ] Repo hygiene: LICENSE, CONTRIBUTING, issue templates, tagged `v0.1.0` release with changelog (1pt)
 

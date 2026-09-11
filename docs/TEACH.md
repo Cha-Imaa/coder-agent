@@ -1873,3 +1873,74 @@ gh api repos/Cha-Imaa/coder-agent/pages -q .html_url
 ```
 The last line prints the site URL; the first deployment appears there a minute or two after
 the workflow's `deploy` job finishes.
+
+## Step 8.2 — README: the pitch, two diagrams, the numbers, and a test that keeps them honest
+
+**What we built.** A rewritten `README.md` and `tests/test_readme.py`. The README is the page a
+recruiter or a reviewer sees first, so it has to answer four questions in the order they are
+asked: what is this, how do I run it, how does it work, does it work.
+
+- *Quick start first.* Clone, `uv sync`, copy `.env.example`, five commands. A table of the
+  `coder run` flags that change behaviour (`--yes`, `--sandbox docker`, `--resume`, `--model`,
+  `--max-iterations`, `--test-command`) with one line each, taken from the Typer help strings so
+  the two cannot drift far apart.
+- *Two Mermaid diagrams.* The first is the graph itself, drawn from `graph/build.py`: every node,
+  every conditional edge with the condition as the edge label (`tool calls`, `model stopped`,
+  `red, iterations left`, `step budget spent`), and the `approve` detour that only exists when
+  the run was started without `--yes`. The second is the component view around the graph: CLI,
+  the two MCP servers, the sandbox the file server dispatches into, the retrieval stack, the LLM
+  chain and the ledger. A table under the first diagram says in one line what each node does,
+  checked against the node docstrings (for example `reflect` makes no model call and `finish`
+  does not write the ledger; the caller in `agent.py` does).
+- *Results, copied from `docs/results.md`, not retyped.* The pass-rate table, the three figures,
+  the retrieval table reduced to the two rows that carry the message (hybrid with and without
+  the reranker), and a "still being measured" list so nobody mistakes the suite score for a
+  benchmark result. The hero GIF moved to step 8.3, where the recording script lives; a README
+  should not link an image that does not exist yet.
+- *Project layout.* One line per package under `src/coder_agent/`, so a reader can go from the
+  diagram to the file that implements a box.
+- *Three tests in `tests/test_readme.py`.* Every relative link and image target exists on disk;
+  every figure under `docs/figures/` is shown (the ablation figure is exempt until its arms are
+  run); code fences are balanced and there are exactly two `mermaid` blocks. The second test
+  failed on the first run because the iteration curve was missing from the README, which is
+  the point of having it.
+
+**Key concepts.**
+- *A README is documentation with a funnel.* Most visitors leave after the first screen, so the
+  first screen carries the one-paragraph pitch, the stack table and the docs link; the quick
+  start is next because a reader who can run it will forgive a lot; the architecture comes
+  after, for the reader who stayed; the numbers last, because they only mean something once
+  the reader knows what was measured. The order is the same one a good paper abstract uses.
+- *Diagrams from code, not from memory.* Both diagrams were drawn by reading `build.py`,
+  `nodes.py` and `approval.py` and then checked line by line against them. Two claims written
+  from memory turned out wrong (`reflect` summarising, `finish` writing the ledger) and were
+  fixed before commit. A diagram that is slightly wrong is worse than none, because it is
+  trusted more than prose.
+- *Mermaid renders on GitHub and in MkDocs Material.* GitHub renders ` ```mermaid ` fences
+  natively since 2022, and step 8.4 registered the same fence in `mkdocs.yml`, so one source
+  serves both. Labels with spaces or punctuation go in quotes; `<br/>` is the line break inside
+  a node; `⇄` and `→` are plain Unicode and render fine, which keeps the labels short.
+- *The tests are about drift.* Nothing in CI reads the README, so the only way a renamed figure
+  or a moved doc breaks the build is a test that resolves the relative targets. The same idea
+  as the nav tests of step 8.4: a documentation file is data, and data gets validated.
+- *Numbers in two places is one place too many.* The README's tables are copies of
+  `docs/results.md`, which is the source of truth because it is where the scripts' output is
+  pasted first. When the ablation and HumanEval numbers land, both files change in the same
+  commit, and the "still being measured" list shrinks.
+
+**How the real tools do it.** Open-source agent repositories converge on the same README shape:
+badges, a two-line pitch, a GIF or screenshot, install, usage, architecture, benchmark table,
+links out. Aider's README leads with its benchmark numbers and a chart because the numbers are
+its argument; OpenHands and SWE-agent lead with a screenshot and a one-command start because
+the experience is theirs; LangGraph's README leads with a code snippet because the API is the
+product. The architecture diagram as Mermaid in the README (rather than a PNG that goes stale)
+is the pattern used by uv, ruff and most of the LangChain ecosystem. Link checkers such as
+`lychee` or `markdown-link-check` in CI are the grown-up version of `test_readme.py`.
+
+**Check it.**
+```bash
+uv run pytest tests/test_readme.py -q       # links, figures, fences
+gh repo view Cha-Imaa/coder-agent --web     # GitHub renders the two Mermaid diagrams inline
+```
+On the repository page, the graph diagram shows nine nodes and the `approve` detour; the
+component diagram shows the file server feeding the sandbox and the graph feeding the ledger.
