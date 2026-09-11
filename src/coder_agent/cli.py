@@ -141,6 +141,95 @@ async def _run(
 
 
 @app.command()
+def chat(
+    repo: Annotated[Path, typer.Argument(help="Path to the repository to work in.")] = Path("."),
+    thread: Annotated[
+        str | None,
+        typer.Option("--thread", metavar="THREAD", help="Continue an earlier chat by thread id."),
+    ] = None,
+    model: Annotated[str | None, typer.Option(help="provider:model, overrides CODER_MODEL.")] = None,
+    max_iterations: Annotated[int | None, typer.Option(help="Plan/act/test cycles per turn.")] = None,
+    yes: Annotated[
+        bool, typer.Option("--yes", "-y", help="Do not ask before file edits and shell commands.")
+    ] = False,
+    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Show full tool output.")] = False,
+) -> None:
+    """Multi-turn session: every message is a task run on one thread, so the agent remembers.
+
+    Each message goes through the full plan/act/test loop; the next message sees the whole
+    history. `/resume` continues a turn that was interrupted, `/quit` leaves. The thread id is
+    printed at the start; `--thread` reopens it later, even after a crash.
+    """
+    repo = repo.resolve()
+    if not repo.is_dir():
+        console.print(f"[red]Not a directory:[/red] {repo}")
+        raise typer.Exit(code=2)
+    if model:
+        settings.model = model
+    if max_iterations is not None:
+        settings.max_iterations = max_iterations
+
+    from coder_agent.agent import new_thread_id
+
+    thread = thread or new_thread_id()
+    try:
+        code = asyncio.run(_chat(repo, thread, yes, verbose))
+    except KeyboardInterrupt:
+        console.print()
+        console.print(
+            f'[dim]Interrupted. Come back with:[/dim] coder chat "{repo}" --thread {thread}'
+            "  [dim]then type /resume[/dim]"
+        )
+        code = 130
+    raise typer.Exit(code=code)
+
+
+async def _chat(repo: Path, thread: str, yes: bool, verbose: bool) -> int:
+    from rich.panel import Panel
+    from rich.prompt import Prompt
+
+    from coder_agent.agent import ThreadInProgress, UnknownThread, resume_agent, run_agent
+    from coder_agent.ui.render import Renderer
+
+    renderer = Renderer(console, verbose=verbose)
+    approve = None if yes else renderer.ask_approval
+    console.print(Panel(
+        f"thread [bold]{thread}[/bold] · /resume continues an interrupted turn · /quit leaves\n"
+        f"[dim]reopen later with: coder chat \"{repo}\" --thread {thread}[/dim]",
+        title=f"coder chat · {settings.model}", subtitle=str(repo), border_style="cyan",
+    ))
+
+    while True:
+        try:
+            text = Prompt.ask("[bold cyan]you[/bold cyan]", console=console).strip()
+        except EOFError:
+            return 0
+        if not text:
+            continue
+        if text in ("/quit", "/exit", "/q"):
+            return 0
+        try:
+            if text == "/resume":
+                outcome = await resume_agent(repo, thread, on_update=renderer.update, approve=approve)
+            else:
+                outcome = await run_agent(
+                    repo, text, thread_id=thread, on_update=renderer.update, approve=approve
+                )
+        except ThreadInProgress:
+            console.print("[yellow]The last turn did not finish; type /resume to continue it.[/yellow]")
+            continue
+        except UnknownThread:
+            console.print("[yellow]Nothing to resume yet; give the agent a task first.[/yellow]")
+            continue
+        except Exception as exc:  # noqa: BLE001 - keep the session alive, the checkpoint is safe
+            console.print(f"[red]Turn stopped:[/red] {type(exc).__name__}: {exc}")
+            console.print("[dim]Type /resume to continue it, or give a new task.[/dim]")
+            continue
+        if outcome.ran:
+            console.print(f"[dim]{outcome.record.footer()}[/dim]")
+
+
+@app.command()
 def index(
     repo: Annotated[Path, typer.Argument(help="Repository to index.")] = Path("."),
     rebuild: Annotated[

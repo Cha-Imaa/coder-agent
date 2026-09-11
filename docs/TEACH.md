@@ -1317,3 +1317,66 @@ uv run coder run evals/suite/fix-bug-duration-units/repo "fix the duration parsi
 ```
 The first prompt shows a coloured diff and waits. A reason rejects the edit; the next model turn
 starts from that feedback. With `--yes` the run looks exactly like it did in step 3.
+
+## Step 6.3 — `coder chat`: many tasks, one thread
+
+**What we built.** A conversation with the agent, where every message is a full plan/act/test
+run and the next message remembers the last.
+
+- `agent.run_agent` treats a `thread_id` that already finished a run as a follow-up turn. It
+  streams the graph with a *turn patch* instead of fresh inputs: the new task, a `HumanMessage`
+  carrying it, `turn + 1`, and the loop and verdict fields reset (`iteration`, `steps`,
+  `status`, `tests_passed`, `test_output`, `plan`, `summary`). `messages` is not reset: its
+  reducer appends, so the earlier turns stay in the conversation the model sees. A thread whose
+  last run has not finished raises `ThreadInProgress`, because a new task on top of a half-done
+  one would be a mess; `resume_agent` is the way to finish it.
+- `state.turn` is new: 1 for a `coder run`, growing per chat message. The ledger record of a
+  follow-up turn is tagged with it and counts only that turn's tokens, while the graph state's
+  `usage` keeps the thread total.
+- `coder chat <repo> [--thread ID] [-y]` is a loop around that: print the thread id, read a
+  line, run it, print the footer, repeat. `/resume` continues an interrupted turn, `/quit`
+  leaves, Ctrl+C prints how to come back. A turn that dies keeps the session alive; the
+  checkpoint is on disk either way.
+
+**Key concepts.**
+- *A chat is a thread with more than one input.* Nothing in the graph knows about chat. The
+  same `StateGraph` runs from `START` each time; what differs is that the second invocation on
+  the same `thread_id` starts from the checkpointed state instead of an empty one. Reducers
+  decide what a re-entry means: `add_messages` appends, plain fields are overwritten by the
+  patch, untouched fields keep their value (that is how `test_command`, detected once by
+  `prepare`, carries over).
+- *Reset what must not carry over.* The bug that this design invites is inheriting counters:
+  turn two would start with `iteration == 1` from turn one and, after one failing test run, hit
+  `max_iterations` early. `_new_turn` is the explicit list of fields that describe *a run*
+  rather than *a thread*. `test_second_task_on_a_finished_thread_keeps_the_history` checks both
+  halves: the model's second act call sees `first task, done one, second task`, and the second
+  turn's counters start at zero.
+- *Retrieval runs again, planning runs again.* Each turn passes through `retrieve_context` and
+  `plan` with the new task, so the planner is briefed for the new request, and the old plan is
+  cleared rather than shown next to it. The conversation, not the plan, is the memory.
+- *Dispatch is testable without a model.* The chat loop is tested by replacing `run_agent` and
+  `resume_agent` with fakes and feeding lines on stdin, which pins the commands and the error
+  path in milliseconds. The graph semantics are tested separately with the scripted model. Two
+  small tests instead of one slow one.
+
+**How the real tools do it.** Every interactive coding agent is this loop: Claude Code, Aider
+and Codex CLI keep one growing conversation per session and run the tool loop per message, and
+all three persist the transcript so a session can be reopened. The difference is what they
+reset: Aider re-sends its repo map every turn (our `retrieve_context`), Claude Code compacts the
+transcript when it grows (our step 3.3 `manage_context`, which now also runs across turns), and
+none of them carry a previous turn's retry budget forward. LangGraph's own docs model chat as
+exactly this, a thread id on a checkpointed graph, which is why the whole step is under a
+hundred lines.
+
+**Check it.**
+```bash
+uv run pytest tests/test_chat.py -q                                  # 5 tests, no network
+uv run coder chat evals/suite/fix-bug-duration-units/repo
+# you> fix the duration parsing
+# you> now add a test for negative durations
+# you> /quit
+uv run coder chat evals/suite/fix-bug-duration-units/repo --thread <id>   # picks the thread up
+```
+The second message's plan panel shows the new task while the model's edits reference what it
+changed in the first; `coder stats` lists two runs tagged with the same thread, the second with
+`turn: 2`.

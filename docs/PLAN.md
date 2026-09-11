@@ -110,7 +110,7 @@ points, not a step count, so finishing a big step moves the bar more than a smal
 ### 6. Memory, control and safety
 - [x] SQLite checkpointer; `coder run --resume <thread>` continues after a crash or rate limit (3pt)
 - [x] Human-in-the-loop: `interrupt()` before writes and risky commands, `--yes` to skip (3pt)
-- [ ] `coder chat`: multi-turn session over the same graph with thread resume (3pt)
+- [x] `coder chat`: multi-turn session over the same graph with thread resume (3pt)
 - [ ] Docker sandbox mode: commands run in a container with the repo mounted (4pt)
 - [ ] Provider fallback verified under real rate limits; retry with backoff; metrics in the ledger (2pt)
 
