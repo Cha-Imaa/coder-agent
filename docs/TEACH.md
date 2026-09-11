@@ -1251,3 +1251,69 @@ uv run coder run evals/suite/fix-bug-duration-units/repo --resume nope      # ex
 Resuming a run that already finished prints its status and runs nothing. The checkpoint file is
 `.coder-agent/checkpoints.sqlite` inside the target repo; `sqlite3` on it shows one row per
 node per thread in `checkpoints`.
+
+## Step 6.2 — Human-in-the-loop: approve edits and commands before they run
+
+**What we built.** The agent now asks before it touches anything.
+
+- `graph/approval.py` defines `RISKY_TOOLS` (`edit_file`, `write_file`, `run_command`) and an
+  `approve` node. The node calls LangGraph's `interrupt()` with the pending risky calls; the run
+  stops, the checkpoint is written, and the stream ends with an `__interrupt__` event. The
+  answer comes back through `Command(resume=...)`: `True` lets `ToolNode` run the calls
+  unchanged; `False` or a string answers every tool call on the model's message with a
+  `ToolMessage` saying the user declined (and why), and routes back to `act`.
+- `build_graph(..., require_approval=True)` wires the node in. The routing after `act` only
+  detours through `approve` when the last message carries at least one risky call; reads and
+  searches go straight to `tools`. Without the flag the graph is unchanged, which is how the
+  eval runner keeps running unattended.
+- `agent.run_agent(..., approve=hook)`: the hook receives the payload and returns the decision.
+  `_drive` loops: stream until the graph ends or interrupts, ask, restart the stream with the
+  answer. `approve=None` means nobody is watching, so the gate is not built, and a resumed
+  thread that was parked at a prompt is waved through.
+- `coder run` asks by default: each pending call is shown as a unified diff (`edit_file`), the
+  file content (`write_file`) or the command line, followed by `Approve? y / n / a reason`. A
+  reason is passed to the model verbatim, which turns the prompt into a steering channel. `--yes`
+  (`-y`) skips it all. The act system prompt tells the model a rejection can happen and not to
+  retry the same call.
+
+**Key concepts.**
+- *`interrupt()` is a checkpoint with a question attached.* Nothing about it is special: the
+  node raises, LangGraph saves the state with `next == ("approve",)`, and the caller sees the
+  payload. That is why Ctrl+C at the prompt is harmless, and why `--resume` on such a thread asks
+  the same question again (`test_interrupted_at_the_prompt_then_resumed_asks_again`). It is also
+  why the gate needs a checkpointer and came right after step 6.1.
+- *The node re-runs from the top.* On resume LangGraph does not continue from the line after
+  `interrupt()`; it executes the node again and `interrupt()` returns the answer instead of
+  raising. Anything before the call runs twice, so the node computes its payload from state and
+  does nothing else. Side effects belong after the call, or in the next node.
+- *A rejection has to be a tool result.* The model's message says "call `edit_file`"; the
+  provider will refuse the next turn unless every call id gets a `ToolMessage`. So a rejection
+  answers all calls on that message, including the safe ones that were never executed, and the
+  text carries the user's reason. `test_rejection_answers_every_call_and_returns_to_act` checks
+  both ids are answered and that the model's next prompt contains the rejection.
+- *Gate at the graph, not in the tool.* The MCP server could ask for confirmation itself, but it
+  runs in a subprocess with no terminal, and the eval runner has no human. Putting the gate in
+  the orchestration layer keeps the tools dumb and the policy in one place, and lets a
+  different front end (`coder chat`, a web UI) answer the same interrupt differently.
+- *Approve per message, decide per call later.* The payload lists the risky calls; today the
+  answer applies to all of them. The shape is ready for per-call answers (a dict of id to
+  decision) without changing the graph, which is the obvious next refinement.
+
+**How the real tools do it.** Claude Code asks before every file edit and shell command unless
+the user has allowed the tool or the pattern (`--dangerously-skip-permissions` is the equivalent
+of `--yes`), and treats a typed reply to the prompt as feedback to the model, exactly as the
+reason string here. Aider auto-applies edits but asks before running commands and lets you
+`/undo`. Cursor's agent shows the diff and waits for Accept. OpenHands has a "confirmation mode"
+that pauses the event stream before each action. All of them separate *reads*, which are free,
+from *writes and execution*, which are gated; the `RISKY_TOOLS` set is that line drawn for our
+six tools.
+
+**Check it.**
+```bash
+uv run pytest tests/test_approval.py -q                      # 12 tests, no network
+uv run coder run evals/suite/fix-bug-duration-units/repo "fix the duration parsing"
+# answer y to the edit, then type "also add a test for negative values" to the next one
+uv run coder run evals/suite/fix-bug-duration-units/repo "fix the duration parsing" --yes
+```
+The first prompt shows a coloured diff and waits. A reason rejects the edit; the next model turn
+starts from that feedback. With `--yes` the run looks exactly like it did in step 3.
