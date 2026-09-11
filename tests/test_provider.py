@@ -169,7 +169,7 @@ async def test_run_records_provider_errors_in_the_ledger(monkeypatch, tmp_path):
                                max_attempt_number=2, wait_exponential_jitter=False),
     )
 
-    async def fake_load_tools(repo):
+    async def fake_load_tools(repo, github=False):
         return [echo]
 
     monkeypatch.setattr(client, "load_tools", fake_load_tools)

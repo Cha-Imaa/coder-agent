@@ -160,7 +160,7 @@ def wired(monkeypatch, tmp_path, edit_file):
 
     llm = scripted("plan", tool_call("edit_file", path="a.py", old_string="x", new_string="y"), "done")
 
-    async def fake_load_tools(repo):
+    async def fake_load_tools(repo, github=False):
         return [echo, edit_file.tool]
 
     monkeypatch.setattr(llm_mod, "get_llm", lambda: llm)
