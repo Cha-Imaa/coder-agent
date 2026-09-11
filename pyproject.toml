@@ -38,6 +38,8 @@ dev = [
     "ruff>=0.6",
     "matplotlib>=3.8",
     "pytest-cov>=6",
+    # scripts/demo.py draws the README GIF; matplotlib pulls Pillow in anyway, this makes it explicit.
+    "pillow>=10",
 ]
 # Only `evals/figures.py` draws; the agent itself never imports matplotlib.
 figures = ["matplotlib>=3.8"]
