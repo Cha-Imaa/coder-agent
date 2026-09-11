@@ -27,7 +27,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "pytest-asyncio>=0.24", "ruff>=0.6", "matplotlib>=3.8"]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.6",
+    "matplotlib>=3.8",
+    "pytest-cov>=6",
+]
 # Only `evals/figures.py` draws; the agent itself never imports matplotlib.
 figures = ["matplotlib>=3.8"]
 
@@ -50,3 +56,11 @@ extend-exclude = ["evals/suite", "evals/humaneval"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["coder_agent"]
+# The MCP server is spawned as a subprocess by its tests, so its lines are not seen in-process;
+# the number under-reports that module rather than paying for subprocess coverage hooks.
+
+[tool.coverage.report]
+precision = 0
