@@ -3,6 +3,10 @@ name = "coder-agent"
 version = "0.1.0"
 description = "A terminal coding agent: plans a change, edits files, runs tests, and iterates. Built with LangGraph, MCP, and local RAG."
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Chaimaa Abi" }]
+keywords = ["coding-agent", "langgraph", "mcp", "rag", "llm"]
 requires-python = ">=3.11"
 dependencies = [
     "langchain>=0.3",

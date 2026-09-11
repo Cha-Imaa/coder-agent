@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://cha-imaa.github.io/coder-agent/
+    about: Learning log, system design, results and roadmap.
+  - name: Evaluation results with another model
+    url: https://github.com/Cha-Imaa/coder-agent/issues/new?title=results%3A+&labels=results
+    about: Ran evals/run_evals.py with a different model? Open an issue and attach the JSON.
