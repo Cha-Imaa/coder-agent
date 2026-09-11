@@ -73,6 +73,15 @@ def test_frames_cap_long_gaps_and_merge_identical_screens(tmp_path: Path) -> Non
         assert a.cells != b.cells, "identical consecutive frames are merged"
 
 
+def test_typing_the_command_animates_instead_of_one_long_frame(tmp_path: Path) -> None:
+    cast = demo.Cast.load(_cast(tmp_path, [[0.0, "o", "hello\r\n"]], title="coder run ./repo fix"))
+    frames = demo.frames_from_cast(cast, typing_delay=0.04, min_frame=0.06, hold=1.0)
+    typing = [f for f in frames[:-1] if _plain(f)[0].startswith("$ ") and _plain(f)[1] == ""]
+    assert len(typing) >= 2, "the command is typed over several frames"
+    assert max(f.duration for f in typing) < 1.0, "no typing frame sits still for seconds"
+    assert all(f.duration >= 0.06 for f in frames[:-1]), "every shown frame is long enough to see"
+
+
 def test_render_writes_an_animated_gif(tmp_path: Path) -> None:
     from PIL import Image, ImageFont
 

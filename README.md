@@ -5,6 +5,8 @@
 ![python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
 [![docs](https://github.com/Cha-Imaa/coder-agent/actions/workflows/docs.yml/badge.svg)](https://cha-imaa.github.io/coder-agent/)
 
+![coder run fixing a bug: plan, file read, approved edit, tests passing](docs/figures/demo.gif)
+
 A terminal coding agent that takes a task in plain English, reads a target repository, plans a
 change, edits files, runs the tests, and iterates on failures until they pass. Point it at an
 issue URL and it opens the pull request.
@@ -216,6 +218,7 @@ src/coder_agent/
   telemetry/        SQLite ledger of tokens, latency, iterations, outcome per run
   evals/            task suites, isolated runner, retrieval eval, figures
 evals/              the 12-task suite, the HumanEval slice, results and entry-point scripts
+scripts/            demo recorder and GIF renderer (demo.py, record_demo.ps1)
 docs/               learning log (TEACH.md), roadmap (PLAN.md), system design, results, figures
 tests/              pytest, no network and no API key needed
 ```

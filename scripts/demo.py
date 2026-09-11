@@ -314,8 +314,12 @@ def frames_from_cast(
     """Replay the cast through the screen model and emit one frame per visible change.
 
     Time between events is capped at `max_gap`, because a model call that took twelve seconds
-    makes a bad GIF; frames closer than `min_frame` are merged; identical screens extend the
-    previous frame instead of adding one.
+    makes a bad GIF; identical screens extend the previous frame instead of adding one; a frame
+    that has not yet been shown for `min_frame` takes the newer screen instead of a new slot, so
+    a burst of tiny writes becomes a few visible frames rather than dozens the eye cannot
+    follow. The test is on the previous frame's duration, not the new one's: testing the new
+    one merged every 40 ms typing step into a single frame, and the whole typed command sat
+    still for eight seconds.
     """
     cols = int(cast.header.get("width", 100))
     screen = Screen(cols, rows or int(cast.header.get("height", 28)))
@@ -325,8 +329,8 @@ def frames_from_cast(
         cells = screen.snapshot()
         if frames and frames[-1].cells == cells:
             frames[-1].duration += duration
-        elif frames and duration < min_frame:
-            frames[-1].cells = cells  # too quick to see: show the newer state for the same slot
+        elif frames and frames[-1].duration < min_frame:
+            frames[-1].cells = cells  # too quick to see: show the newer state in the same slot
             frames[-1].duration += duration
         else:
             frames.append(Frame(cells, duration))
