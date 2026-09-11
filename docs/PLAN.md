@@ -118,7 +118,7 @@ points, not a step count, so finishing a big step moves the bar more than a smal
 ### 7. Multi-server and model comparison
 - [ ] Second MCP server: GitHub (read issue, open PR) so `coder fix-issue <url>` works end to end (4pt)
 - [ ] Ollama local model as a third provider; model comparison figure (3pt)
-- [ ] Reranker (cross-encoder) as an optional retrieval stage; measured (2pt)
+- [x] Reranker (cross-encoder) as an optional retrieval stage; measured (2pt)
 
 ### 8. Presentation
 - [ ] GitHub Actions: ruff + pytest on push, coverage badge, Python 3.11 and 3.12 (2pt)

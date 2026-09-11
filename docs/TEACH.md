@@ -1546,3 +1546,81 @@ The footer of a run that needed the fallback reads like `... · 1 BadRequestErro
 the fallback`. To see the retry layer alone, set `CODER_FALLBACK_MODEL=` (empty) in `.env` and
 run during a quota outage: the run fails after `llm_attempts` tries and the ledger row shows
 `{"RateLimitError": 2}` with status `error`.
+
+## Step 7.3 — Reranker: a cross-encoder as an optional second retrieval stage
+
+**What we built.** The retriever can now take a second, slower look at its own shortlist.
+
+- `rag/reranker.py`: a `Reranker` protocol (`score(query, texts) -> list[float]`), an
+  `OverlapReranker` stand-in for tests, and `FastEmbedReranker`, which wraps fastembed's
+  `TextCrossEncoder` with `Xenova/ms-marco-MiniLM-L-6-v2` (80 MB, ONNX, CPU) cached in the same
+  `~/.coder-agent/models` as the embedder. `default_reranker()` returns one when
+  `CODER_RERANK=true`, else `None`.
+- `HybridRetriever(..., reranker=, rerank_candidates=)`: when a reranker is present, the first
+  stage (bm25, dense or hybrid) is asked for `rerank_candidates` chunks instead of `k`, the
+  reranker scores each `(query, path-and-symbol header + code)` pair, and the top `k` by that
+  score are returned with the cross-encoder logit as `Hit.score`. Ties keep the first-stage
+  order; `search(..., rerank=False)` skips the stage per call.
+- The `retrieve_context` node passes `default_reranker()`, so the agent gets the stage from one
+  setting; `rerank_candidates` (20) and the model name are settings too.
+- The retrieval eval understands `<mode>+rerank` modes and `evals/retrieval_eval.py --rerank`
+  adds the reranked twin of every selected mode, so the table shows both stages side by side on
+  the same index and the same candidate pool.
+
+**Key concepts.**
+- *Bi-encoder versus cross-encoder.* The embedding model encodes the query and each chunk
+  separately; relevance is one dot product, which is why the whole corpus can be scored in
+  milliseconds and why the model can never look at the two texts together. A cross-encoder
+  takes the pair as one input and runs a full transformer over it, so it can notice that "convert
+  minutes correctly" and a docstring saying "minutes are treated as hours" are about the same
+  bug. That is a forward pass per pair, so it is only ever run on a shortlist: retrieve wide and
+  cheap, then rerank narrow and expensive. Two stages is the standard shape of search systems
+  since well before LLMs.
+- *Scores are logits, not similarities.* MS MARCO cross-encoders output an unnormalised score,
+  negative for irrelevant pairs (about -6 for the distractors in the smoke test, +0.1 for the
+  right chunk). They sort well and threshold badly, which is why `Hit.score` carries them but
+  nothing compares them across queries.
+- *What the measurement said.* `uv run python evals/retrieval_eval.py --suite all --rerank`,
+  40 tasks with gold files, `k=20` candidates, 1.5 minutes end to end on the CPU:
+
+  | mode | recall@1 | recall@3 | recall@5 | MRR |
+  |---|---|---|---|---|
+  | hybrid | 0.08 | 0.99 | 1.00 | 0.56 |
+  | dense | 0.08 | 0.99 | 1.00 | 0.56 |
+  | bm25 | 0.08 | 0.99 | 1.00 | 0.55 |
+  | hybrid+rerank | 0.50 | 0.99 | 1.00 | 0.76 |
+  | dense+rerank | 0.50 | 0.99 | 1.00 | 0.76 |
+  | bm25+rerank | 0.50 | 0.99 | 1.00 | 0.76 |
+
+  Recall@3 was already 0.99, so on these small repos the first stage never *misses* the file; the
+  problem was rank one. Without reranking, every first-stage mode puts the visible test file
+  (`tests/test_durations.py`) ahead of the module it tests (`durations.py`): the prompt describes
+  behaviour, and the test spells that behaviour out in the same words. Recall@1 is 0.00 on the
+  30 HumanEval tasks and 0.33 on the ten in-house ones. The cross-encoder fixes exactly half of
+  those cases (recall@1 to 0.50 on both suites, MRR 0.56 to 0.76) and the three reranked rows
+  are identical because they rerank the same twenty candidates. The other half are still
+  test-file-first, which is a fair result: the test *is* relevant to the task, and the planner
+  reads both anyway.
+- *Why it stays off by default.* The stage costs about 1.5 s per query (twenty pairs, six-layer
+  model) on top of a retrieval that takes well under a second, and it changes which chunk is
+  first, not which chunks are present, in a context block that already holds six. The number
+  that would justify switching it on is a pass-rate or token difference on the agent benchmark,
+  which the pending retrieval ablation is the place to measure; this step only shows that the
+  ranking itself improves and that the mechanism is in place.
+
+**How the real tools do it.** Cursor and Sourcegraph Cody both describe a retrieve-then-rerank
+pipeline for codebase context, with a small reranker over the embedding hits before the prompt
+is assembled; Cohere Rerank and Voyage rerank-2 are the hosted versions of the same model class.
+Aider's repo map avoids the question by ranking files with graph centrality rather than a model.
+LlamaIndex and LangChain expose the stage as a node postprocessor or a
+`ContextualCompressionRetriever` around a `CrossEncoderReranker`, which is the same wrapper this
+module is, minus the framework.
+
+**Check it.**
+```bash
+uv run pytest tests/test_reranker.py tests/test_retrieval_eval.py -q      # 15 tests, no model download
+uv run python evals/retrieval_eval.py --mode hybrid --mode hybrid+rerank   # two rows, about a minute
+CODER_RERANK=true uv run coder run evals/suite/fix-bug-duration-units/repo "fix the duration parsing" -v
+```
+The first run downloads the 80 MB model to `~/.coder-agent/models`. With `CODER_RERANK=true`
+the `Context ·` line before the plan lists `durations.py` first; without it the test file leads.

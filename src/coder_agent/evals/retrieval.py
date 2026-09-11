@@ -18,9 +18,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from coder_agent.config import settings
 from coder_agent.evals.tasks import EvalTask
 from coder_agent.rag.embeddings import Embedder, default_embedder
 from coder_agent.rag.index import RepoIndex
+from coder_agent.rag.reranker import FastEmbedReranker, Reranker, default_reranker
 from coder_agent.rag.retriever import MODES, HybridRetriever, Mode
 
 RESULTS_DIR = Path(__file__).resolve().parents[3] / "evals" / "results"
@@ -138,13 +140,31 @@ def _ranked_files(hits) -> list[str]:
 
 ProgressFn = Callable[[EvalTask, int, int], None]
 
+RERANK_SUFFIX = "+rerank"
+
+
+def split_mode(mode: str) -> tuple[Mode, bool]:
+    """`"hybrid+rerank"` -> `("hybrid", True)`; a bare mode -> `(mode, False)`. Validates both."""
+    base, reranked = (
+        (mode[: -len(RERANK_SUFFIX)], True) if mode.endswith(RERANK_SUFFIX) else (mode, False)
+    )
+    if base not in MODES:
+        raise ValueError(f"unknown retrieval mode {mode!r}; choose from {all_modes()}")
+    return base, reranked  # type: ignore[return-value]
+
+
+def all_modes() -> list[str]:
+    """The three first-stage modes and their reranked variants, in table order."""
+    return [*MODES, *(f"{m}{RERANK_SUFFIX}" for m in MODES)]
+
 
 def evaluate(
     tasks: Sequence[EvalTask],
-    modes: Sequence[Mode] = MODES,
+    modes: Sequence[str] = MODES,
     *,
     ks: tuple[int, ...] = DEFAULT_KS,
     embedder: Embedder | None = None,
+    reranker: Reranker | None = None,
     depth: int | None = None,
     progress: ProgressFn | None = None,
 ) -> RetrievalReport:
@@ -152,9 +172,14 @@ def evaluate(
 
     The index lives in a temp directory so the benchmark repos stay untouched, and one embedder
     is shared across tasks so the model loads once. `depth` is how many chunks to retrieve; the
-    deepest k in `ks` is enough, since ranks past it never count.
+    deepest k in `ks` is enough, since ranks past it never count. A mode ending in `+rerank`
+    runs the same first stage, then the cross-encoder over `rerank_candidates` chunks, so the
+    two rows of the table differ only by the second stage.
     """
     depth = depth or max(ks)
+    parsed = [split_mode(m) for m in modes]
+    if any(reranked for _, reranked in parsed) and reranker is None:
+        reranker = default_reranker() or FastEmbedReranker()
     embedder = embedder or default_embedder()  # once, not once per task: the model load is slow
     results: list[RetrievalResult] = []
     tasks = [t for t in tasks if gold_files(t)]
@@ -165,10 +190,15 @@ def evaluate(
             gold = gold_files(task)
             index = RepoIndex(task.repo_dir, embedder, index_dir=Path(tmp) / task.id)
             index.update()
-            for mode in modes:
-                hits = HybridRetriever(index, mode, candidates=depth * 3).search(
-                    task.prompt.strip(), k=depth * 3
+            for mode, (base, reranked) in zip(modes, parsed, strict=True):
+                retriever = HybridRetriever(
+                    index, base, candidates=depth * 3, reranker=reranker if reranked else None,
+                    rerank_candidates=settings.rerank_candidates,
                 )
+                # Retrieve past the deepest k so a gold file's *file* rank is measured even when
+                # several chunks of one file come first. With reranking the pool is the same
+                # `rerank_candidates` the agent uses, so the number is the one the agent gets.
+                hits = retriever.search(task.prompt.strip(), k=depth * 3)
                 results.append(
                     RetrievalResult(task.id, task.category, mode, gold, _ranked_files(hits))
                 )
