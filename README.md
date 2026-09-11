@@ -3,6 +3,7 @@
 [![ci](https://github.com/Cha-Imaa/coder-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Cha-Imaa/coder-agent/actions/workflows/ci.yml)
 [![coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Cha-Imaa/coder-agent/badges/coverage.json)](https://github.com/Cha-Imaa/coder-agent/actions/workflows/ci.yml)
 ![python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
+[![docs](https://github.com/Cha-Imaa/coder-agent/actions/workflows/docs.yml/badge.svg)](https://cha-imaa.github.io/coder-agent/)
 
 A terminal coding agent that takes a task in plain English, reads a target repository, plans a change,
 edits files, runs the tests, and iterates on failures until they pass.
@@ -20,7 +21,9 @@ Built to learn the agentic-AI stack end to end, on a zero-cost setup:
 
 ## Status
 
-Work in progress. See the commit history for the step-by-step build.
+Work in progress. See the commit history for the step-by-step build, or the
+[docs site](https://cha-imaa.github.io/coder-agent/) for the learning log, the system design
+and the results in one place.
 
 ### First numbers
 

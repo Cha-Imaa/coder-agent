@@ -37,6 +37,8 @@ dev = [
 ]
 # Only `evals/figures.py` draws; the agent itself never imports matplotlib.
 figures = ["matplotlib>=3.8"]
+# Only the docs site build (mkdocs.yml, .github/workflows/docs.yml) needs this.
+docs = ["mkdocs-material>=9"]
 
 [project.scripts]
 coder = "coder_agent.cli:app"

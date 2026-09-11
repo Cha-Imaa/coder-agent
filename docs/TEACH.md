@@ -1792,3 +1792,84 @@ For a real end-to-end run, use a repository you own: open an issue on it, then
 `uv run coder fix-issue OWNER/REPO#N --pr --yes` with `GITHUB_TOKEN` set. The command prints
 each stage (issue, checkout, agent, commit, push, pull request) and ends with the pull request
 URL; the ledger row for the run carries `source=github`.
+
+---
+
+## Step 8.4 — Docs site: MkDocs Material on GitHub Pages
+
+**What we built.** `mkdocs.yml`, two new pages under `docs/`, `.github/workflows/docs.yml`, and a
+`docs` extra in `pyproject.toml`. The site is <https://cha-imaa.github.io/coder-agent/>.
+
+- `mkdocs.yml` points `docs_dir` at the existing `docs/` folder, so the learning log, the system
+  design and the plan are published as they are, without copies. Two pages are new:
+  `docs/index.md` (what the project is, the stack, how to read the site, quick start) and
+  `docs/results.md` (every number the README quotes, plus the retrieval and reranker tables from
+  steps 5.4 and 7.3 and a list of what is still being measured). The figures under
+  `docs/figures/` are already inside `docs_dir`, so the pages reference them as `figures/x.png`.
+- Material theme with a light/dark toggle, section navigation, code-copy buttons and an "edit
+  this page" link back to GitHub. The markdown extensions are the usual Material set:
+  admonitions, task lists (the plan's checkboxes render as checkboxes), fenced code with
+  highlighting, and a `mermaid` fence for the architecture diagram the README will get in
+  step 8.2.
+- The workflow has two jobs. `build` runs read-only: `uv sync --extra docs --frozen`, then
+  `mkdocs build --strict`, then uploads the `site/` directory as a Pages artifact. `deploy`
+  needs `build` and is the only job with `pages: write` and `id-token: write`; it hands the
+  artifact to `actions/deploy-pages`. It triggers on pushes to `main` that touch `docs/`,
+  `mkdocs.yml` or the lock, and on manual dispatch.
+- GitHub Pages was switched to the "GitHub Actions" source with one API call,
+  `gh api -X POST repos/<owner>/<repo>/pages -f build_type=workflow`, instead of the settings
+  page. `mkdocs-material` lives in its own `docs` extra so the agent's install never pulls in a
+  static-site generator; `uv lock` pins it (mkdocs 1.6.1, Material 9.7.7).
+- Three tests in `tests/test_docs_site.py` read `mkdocs.yml` as text: every nav entry exists,
+  every `docs/*.md` is in the nav, and the workflow builds strict from the lock with a read-only
+  token. They run without mkdocs installed, which is the point: the dev environment does not
+  carry the docs extra, and CI's `--strict` build is the real gate.
+
+**Key concepts.**
+- *`--strict` is the docs equivalent of a failing test.* MkDocs treats a broken relative link, a
+  missing anchor or a page absent from the nav as a warning and still writes the site. With
+  `--strict` each of those is a non-zero exit, so a renamed file breaks the build instead of
+  shipping a 404. Locally the build took 0.64 seconds for five pages, so there is no reason not
+  to run it strict everywhere.
+- *Why a workflow and not `mkdocs gh-deploy`.* `gh-deploy` builds on the laptop and force-pushes
+  the HTML to a `gh-pages` branch, so the published site reflects whatever working tree the
+  developer happened to have. Building from `main` in Actions means the site can never be ahead
+  of or behind the repository, and the deploy job's token comes from GitHub's OIDC provider
+  (`id-token: write`) rather than a long-lived secret. The build job keeps `contents: read`;
+  the same least-privilege split as the CI workflow in step 8.1.
+- *Deployments do not cancel each other.* CI uses `cancel-in-progress: true` because a stale
+  test run has no value. The Pages workflow uses a `pages` concurrency group with
+  `cancel-in-progress: false`: a half-finished deployment cancelled mid-flight can leave the
+  site in an odd state, so a second push simply queues behind the first.
+- *`site_url` is not decoration.* MkDocs needs the final URL to write absolute links in the
+  sitemap and canonical tags, and Material uses it for the search index and social cards. On a
+  project page the URL is `https://<owner>.github.io/<repo>/`, lowercase owner, trailing slash.
+- *One source, three readers.* The README stays the short pitch for someone who lands on
+  GitHub; the docs site is where the long-form learning log becomes navigable (a 1,800-line
+  Markdown file with a table of contents and search is a different object from the same file in
+  a code viewer); and the same `docs/` folder is what the acceptance walkthrough in step 9
+  lands in as "Try it".
+- *A warning worth reading.* Material prints a notice at build time that MkDocs 2.0 will remove
+  the plugin system and that Material will not follow it. Nothing to do today: the lock pins
+  MkDocs 1.6.1 and Material 9.7.7, and `--frozen` in the workflow means the site builds with
+  exactly those until someone chooses to upgrade.
+
+**How the real tools do it.** Material for MkDocs is the default choice in the Python tooling
+world: FastAPI, Typer, Pydantic, uv and ruff all publish their docs with it, and the LangGraph
+docs were built on it through 2025. The deploy pattern (build job uploads with
+`upload-pages-artifact`, separate job calls `deploy-pages` under the `github-pages` environment)
+is the one GitHub's own starter workflows use for every static site generator. Larger agent
+projects go further, with versioned docs (`mike`), API reference generated from docstrings
+(`mkdocstrings`) and link checkers in CI; the shape is the same, more plugins.
+
+**Check it.**
+```bash
+uv sync --extra docs
+uv run mkdocs serve                           # http://127.0.0.1:8000 with live reload
+uv run mkdocs build --strict                  # the command CI runs; exit code 0 or nothing ships
+uv run pytest tests/test_docs_site.py -q      # nav and workflow checks, no mkdocs needed
+gh run list --workflow docs.yml --limit 3     # build then deploy, green on main
+gh api repos/Cha-Imaa/coder-agent/pages -q .html_url
+```
+The last line prints the site URL; the first deployment appears there a minute or two after
+the workflow's `deploy` job finishes.
