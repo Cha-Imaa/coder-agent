@@ -18,12 +18,17 @@ from pydantic import Field
 
 class ScriptedLLM(FakeMessagesListChatModel):
     calls: list[list[BaseMessage]] = Field(default_factory=list)
+    # 1-based call numbers that raise instead of answering; the scripted reply is kept for the
+    # retry, which is how a rate-limited node behaves when the run is resumed.
+    fail_on_call: set[int] = Field(default_factory=set)
 
     def bind_tools(self, tools: Any, **kwargs: Any) -> ScriptedLLM:  # type: ignore[override]
         return self
 
     def _generate(self, messages: list[BaseMessage], *args: Any, **kwargs: Any):  # type: ignore[override]
         self.calls.append(list(messages))
+        if len(self.calls) in self.fail_on_call:
+            raise RuntimeError(f"fake provider failure on call {len(self.calls)}")
         return super()._generate(messages, *args, **kwargs)
 
 

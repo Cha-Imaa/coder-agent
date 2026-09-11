@@ -1180,3 +1180,74 @@ actor both receive the context, that a graph built without a retriever adds no s
 retrieval runs once across two iterations. The eval tests build a task directory with one
 changed, one unchanged and one new solution file, and check the gold set, the metrics, the
 Markdown table, the JSON round trip, and an end-to-end run over a real index in all three modes.
+
+## Step 6.1 — SQLite checkpointer and `coder run --resume`
+
+**What we built.** Every run now leaves a trail it can be picked up from.
+
+- `agent.run_agent` compiles the graph with LangGraph's `AsyncSqliteSaver` pointed at
+  `<repo>/.coder-agent/checkpoints.sqlite`, next to the vector index. Each run gets a thread id
+  (eight hex characters, or one you pass in), shown in the header panel and in the footer, and
+  stored in the ledger's tags so a run in `coder stats` can be matched to its checkpoints.
+- `agent.resume_agent(repo, thread_id)` opens the same file, refuses an unknown thread
+  (`UnknownThread`), returns a finished thread without running anything, and otherwise streams
+  the graph again with `None` as input: LangGraph takes the saved state and executes the nodes
+  that were scheduled next. The ledger gets one record covering the whole thread, tagged
+  `resumed: true`.
+- `coder run <repo> --resume <thread>` is the CLI face of that. The task argument becomes
+  optional (one of task or `--resume` is required). When a run dies with any exception the CLI
+  prints the exact command to continue it, rather than a stack trace and a lost afternoon.
+- `tests/fakes.ScriptedLLM` gains `fail_on_call={n}`: call *n* raises and the scripted reply is
+  kept for the retry, which is what a 429 followed by a resume looks like from the graph's side.
+
+**Key concepts.**
+- *Checkpoints are per superstep.* LangGraph writes the state after every node finishes, not
+  during. If `act` dies on a rate limit, the checkpoint holds the state up to the end of the
+  previous node, with `next == ("act",)`. Resuming re-runs `act` from the same messages: the
+  failed model call was never committed, so `steps` is not bumped for it and the conversation
+  has no half-written turn. `test_crash_then_resume_continues_from_the_failed_node` pins exactly
+  this: four model calls in total (plan, the act that failed, the act that retried, the final
+  answer), one plan, and the retried act prompted with the plan from the checkpoint.
+- *The thread id is the memory key.* A checkpointer stores many checkpoints per thread and many
+  threads per file; `configurable.thread_id` in the run config chooses which conversation you are
+  continuing. `coder chat` (step 6.3) will reuse the same id across turns; here one run is one
+  thread. Everything about resume is a consequence of that one config key.
+- *Input `None` means "continue".* Passing the original input again would re-apply it through
+  the reducers (`add_messages` would append the task a second time). Passing `None` tells
+  LangGraph there is nothing to merge: start from the checkpoint and run `next`.
+- *Why the file lives in the repo, not in `~/.coder-agent`.* Checkpoints hold tool outputs and
+  diffs of that repository; they belong with it and disappear with it. The eval runner deletes
+  each task's working copy, checkpoints included, so 42 benchmark runs leave nothing behind. The
+  ledger stays in the home directory because it aggregates across repos.
+- *Messages survive the round trip.* The saver serialises state with LangGraph's
+  `JsonPlusSerializer`, which knows LangChain message types, so `ToolMessage`s with their
+  `tool_call_id`s come back as the same objects and the model sees an intact tool-call history.
+  The MCP tools are reloaded on resume; a tool result already in the messages is never re-run.
+- *One ledger record per thread.* The crashed attempt writes nothing (the exception leaves
+  `_drive` before the record). The resumed attempt seeds its fold with the checkpoint's usage
+  and outcome fields, so the record it writes counts every token the thread spent, including the
+  ones before the crash. Wall time is only the resumed part; it is the number that could not be
+  reconstructed.
+
+**How the real tools do it.** Claude Code's `--resume` and `--continue` reopen a session from a
+transcript stored per project directory; Codex CLI and Aider keep a per-repo history file for
+the same purpose. Devin and OpenHands go further and store the whole event stream so a run can be
+replayed and forked from any point, which is what LangGraph's checkpoint history
+(`graph.get_state_history`) enables and what human-in-the-loop (step 6.2) will build on: an
+`interrupt()` is just a checkpoint whose `next` is the node waiting for an answer. Cursor's
+agent "checkpoints" are the same idea applied to the working tree: a restore point per step.
+The common lesson is that durable execution is a property of the orchestrator, not of the model;
+LangGraph ships it as a pluggable saver (SQLite here, Postgres in production) so the graph code
+does not change.
+
+**Check it.**
+```bash
+uv run pytest tests/test_resume.py -q                # 7 tests, no network
+uv run coder run evals/suite/fix-bug-duration-units/repo "fix the duration parsing"
+# note the thread id in the header; press Ctrl+C mid-run, then:
+uv run coder run evals/suite/fix-bug-duration-units/repo --resume <thread>
+uv run coder run evals/suite/fix-bug-duration-units/repo --resume nope      # exit 2, unknown thread
+```
+Resuming a run that already finished prints its status and runs nothing. The checkpoint file is
+`.coder-agent/checkpoints.sqlite` inside the target repo; `sqlite3` on it shows one row per
+node per thread in `checkpoints`.
