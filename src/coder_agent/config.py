@@ -94,6 +94,10 @@ class Settings(BaseSettings):
     # because evals run across many repos and the numbers belong together.
     ledger_path: Path = Path.home() / ".coder-agent" / "ledger.sqlite"
     models_dir: Path = Path.home() / ".coder-agent" / "models"
+    # `coder fix-issue <url>` without --repo clones the repository here, one directory per
+    # owner/name, and fetches into it on later runs. GitHub credentials are not settings: the
+    # GitHub tool server reads the standard GITHUB_TOKEN from its environment.
+    checkouts_dir: Path = Path.home() / ".coder-agent" / "checkouts"
 
     def state_dir(self, repo: Path) -> Path:
         return repo / self.state_dir_name

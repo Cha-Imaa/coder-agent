@@ -19,18 +19,25 @@ from typing import Any
 from langchain_core.tools import BaseTool, StructuredTool
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
+# GitHub tools that change things outside the repository. The server exposes them for other
+# clients (`coder fix-issue` itself, an IDE); the model does not get them. It cannot push (the
+# sandbox denylist), so it could never open a valid pull request anyway, and outward-facing
+# actions are the user's to take. Which tools a model sees is client policy, not server policy.
+GITHUB_WRITE_TOOLS = frozenset({"open_pull_request"})
 
-def server_config(repo: Path) -> dict:
-    """Connection spec for our own server. Uses the current interpreter so the venv is respected.
 
-    The server is its own process with its own `Settings`, read from the environment. A flag
+def server_config(repo: Path, github: bool = False) -> dict:
+    """Connection specs for our servers. Uses the current interpreter so the venv is respected.
+
+    Each server is its own process with its own `Settings`, read from the environment. A flag
     such as `--sandbox docker` changes the client's settings only, so the values that matter are
     mirrored into the child's environment on top of the parent's (a partial `env` would replace
-    the whole environment, losing PATH and the API keys).
+    the whole environment, losing PATH and the API keys). The GitHub server inherits the
+    environment unchanged: that is how `GITHUB_TOKEN` reaches it and only it.
     """
     from coder_agent.sandbox import env_overrides
 
-    return {
+    config = {
         "coder-tools": {
             "transport": "stdio",
             "command": sys.executable,
@@ -38,6 +45,14 @@ def server_config(repo: Path) -> dict:
             "env": {**os.environ, **env_overrides()},
         }
     }
+    if github:
+        config["github"] = {
+            "transport": "stdio",
+            "command": sys.executable,
+            "args": ["-m", "coder_agent.mcp_server.github"],
+            "env": dict(os.environ),
+        }
+    return config
 
 
 def strict_arguments(tool: BaseTool) -> BaseTool:
@@ -69,7 +84,12 @@ def strict_arguments(tool: BaseTool) -> BaseTool:
     return tool
 
 
-async def load_tools(repo: Path) -> list[BaseTool]:
-    """Discover and return the tools for `repo`."""
-    client = MultiServerMCPClient(server_config(repo))
-    return [strict_arguments(t) for t in await client.get_tools()]
+async def load_tools(repo: Path, *, github: bool = False) -> list[BaseTool]:
+    """Discover and return the tools for `repo`, plus the GitHub read tools when asked.
+
+    `get_tools` returns one flat list across servers; the model never learns which process
+    answers which tool, and `ToolNode` does not care either.
+    """
+    client = MultiServerMCPClient(server_config(repo, github=github))
+    tools = await client.get_tools()
+    return [strict_arguments(t) for t in tools if t.name not in GITHUB_WRITE_TOOLS]

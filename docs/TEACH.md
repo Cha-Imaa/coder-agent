@@ -1707,3 +1707,88 @@ gh api repos/Cha-Imaa/coder-agent/contents/coverage.json?ref=badges -q .content 
 ```
 The last line prints the JSON shields renders; the README badge updates within a few minutes of
 a push to `main` (shields caches endpoint badges for about five minutes).
+
+## Step 7.1 — A second MCP server: GitHub issues in, pull requests out
+
+**What we built.** `mcp_server/github.py`, `fix_issue.py`, the `coder fix-issue` command, and
+the client change that loads two servers into one tool list.
+
+- The GitHub server is a second FastMCP process with two tools. `get_issue(owner, repo, number)`
+  fetches an issue and its latest comments over the REST API and renders them as one Markdown
+  block (title, labels, body capped at 8k characters, the last five comments). `open_pull_request`
+  posts a pull request from an existing remote branch. Both are thin wrappers over a
+  `GitHubAPI` class that owns the endpoint, the headers and the error wording; the same class
+  is what the CLI uses directly, so the tool and the command cannot drift apart.
+- `tools/client.py` grows a `github=True` switch. `MultiServerMCPClient` gets a second entry
+  (`python -m coder_agent.mcp_server.github`), performs a second handshake, and returns one flat
+  list. The client then drops `open_pull_request` before the model sees it: the write tool
+  exists for other clients and for the command, not for the model.
+- `fix_issue.py` is the pipeline around the agent: parse the URL (or `owner/repo#N`), fetch the
+  issue, clone the repository under `~/.coder-agent/checkouts` or use `--repo`, check out
+  `coder/issue-N`, run `run_agent` with the issue text as the task and the GitHub tools on,
+  and, only with `--pr` and only when the tests pass, commit (`fix: <title> (#N)`), push and
+  open the pull request with `Closes #N` in its body. Git runs on the host through
+  `subprocess`, never through the sandbox.
+- 35 tests. A local `FakeGitHub` HTTP server stands in for api.github.com so the MCP server
+  runs over real stdio in tests; a bare git repository stands in for the remote so the push is
+  real; the agent step is a fake that edits a file and reports a status. `GITHUB_API_URL`
+  points the real server at the fake, which is also how the server would talk to GitHub
+  Enterprise.
+
+**Key concepts.**
+- *Multiple servers, one tool list.* The model never learns that `read_file` and `get_issue` are
+  answered by different processes: MCP tools are name plus JSON schema plus description, and
+  `ToolNode` calls whichever `BaseTool` carries the name. That is what makes MCP a plug-in
+  model rather than a library: adding a capability is adding a process to the config, and the
+  graph, the prompt and the approval gate need no change. The one thing to watch is name
+  collisions across servers; the adapter does not namespace, so two servers exposing
+  `search` would shadow each other.
+- *Credentials live with the server that needs them.* `GITHUB_TOKEN` is read by the GitHub
+  server from its own environment. The file-tool server never sees it, and the model can never
+  print it, because no tool returns it. This is the least-privilege argument for splitting
+  servers by backend rather than by feature: each process holds exactly the secret for its API.
+  For the `--pr` step the command holds the token too, because it is the one opening the
+  request; the same variable, read at the same place, by the same class.
+- *Which tools the model gets is client policy.* The server advertises `open_pull_request`
+  because a human in an IDE or the MCP Inspector should be able to call it. The agent does not
+  get it, for two reasons that reinforce each other. The sandbox denylist blocks `git push`, so
+  the model could never create the remote branch a valid pull request needs. And a pull request
+  under the user's name on someone else's repository is outward-facing; the design rule since
+  step 6.2 is that such actions happen when the user asks, in a fixed order. `--pr` is that ask.
+  Filtering on the client rather than removing the tool from the server keeps both uses.
+- *The model does one arrow of the pipeline.* Parse, clone, branch, commit, push and open are
+  deterministic and cheap to get right in Python; the model's job is the part that needs
+  judgement, the fix. Putting the plumbing outside the graph means a failed run leaves a clean
+  branch to inspect, a passed run without `--pr` leaves uncommitted edits to review, and the
+  ledger tags the run `source=github, issue=<url>` so these runs can be grouped later. It also
+  means the whole `fix-issue` path is testable without a model: the fake agent proves the
+  plumbing, the eval suite proves the agent.
+- *An issue is a bad task description, on purpose.* Issues are written for maintainers, not for
+  a planner: screenshots, stack traces, "same here" comments. The rendering keeps the body and
+  the latest comments because the reproduction steps and the maintainer's verdict on the right
+  fix are usually there, clips both, and the task framing in front of it says what "done"
+  means: reproduce with a test where practical, smallest change, existing tests still pass.
+  Against a real issue (`pallets/flask#10`) the render came back as expected; against a pull
+  request number the server refused with a message that names the mistake, since GitHub serves
+  pull requests from the issues endpoint too.
+
+**How the real tools do it.** Anthropic's reference `github` MCP server (now GitHub's own,
+in Go) exposes the same shape at larger scale: dozens of read tools, a few write tools, one
+`GITHUB_PERSONAL_ACCESS_TOKEN`, and clients such as Claude Desktop and Cursor merge it with
+filesystem servers exactly as `MultiServerMCPClient` does here. OpenHands' "resolver" and
+SWE-agent's GitHub mode are the `fix-issue` pipeline as a GitHub Action: triggered by a label,
+they clone, run the agent, and open a pull request with the issue linked, with the agent never
+holding push rights itself. Aider does the git half in-process (auto-commit per edit) but leaves
+pushing to the user, the same line this step draws.
+
+**Check it.**
+```bash
+uv run pytest tests/test_github_server.py tests/test_fix_issue.py -q     # 35 tests, no network
+uv run python scripts/list_tools.py . --github                            # 7 tools, no open_pull_request
+uv run python -m coder_agent.mcp_server.github                            # the server alone, for the Inspector
+uv run coder fix-issue pallets/flask#10 --repo path/to/your/flask/clone   # any public issue, no token
+```
+For a real end-to-end run, use a repository you own: open an issue on it, then
+`uv run coder fix-issue OWNER/REPO#N --pr --yes` with `GITHUB_TOKEN` set. The command prints
+each stage (issue, checkout, agent, commit, push, pull request) and ends with the pull request
+URL; the ledger row for the run carries `source=github`.

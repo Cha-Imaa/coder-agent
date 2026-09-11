@@ -12,7 +12,7 @@ Built to learn the agentic-AI stack end to end, on a zero-cost setup:
 | Concern | Technology |
 |---|---|
 | Agent orchestration | LangGraph state graph (plan → act → test → reflect) |
-| Tools | Model Context Protocol (MCP) server exposing file and shell tools |
+| Tools | Two Model Context Protocol (MCP) servers: file and shell tools scoped to the repo, GitHub issues and pull requests |
 | Codebase retrieval | tree-sitter chunking, local embeddings (bge-small) + Chroma vector store |
 | LLM | Groq free tier, Gemini free tier as fallback, swappable via one env var |
 | Observability | LangSmith tracing |
@@ -61,3 +61,15 @@ follow once the daily quota allows a full run.
 uv sync --extra dev
 cp .env.example .env   # fill in your keys
 ```
+
+```bash
+uv run coder run path/to/repo "make the failing tests pass"     # one task, approve each edit
+uv run coder chat path/to/repo                                   # several tasks on one thread
+uv run coder fix-issue https://github.com/OWNER/REPO/issues/N --pr   # issue in, pull request out
+uv run coder index path/to/repo --query "where are durations parsed"
+uv run coder stats
+```
+
+`fix-issue` clones the repository (or works in `--repo` your clone), runs the agent on a
+`coder/issue-N` branch, and with `--pr` commits, pushes and opens the pull request once the
+tests pass. Reads need no token; `--pr` needs `GITHUB_TOKEN`.

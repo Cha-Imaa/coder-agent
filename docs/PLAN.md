@@ -30,11 +30,11 @@ START -> retrieve_context -> plan -> act <-> tools -> run_tests -> reflect
 
 | Layer | Module | Responsibility |
 |---|---|---|
-| CLI | `cli.py` | `coder run`, `coder index`, `coder chat`, `coder stats`; streams graph events with Rich |
+| CLI | `cli.py` | `coder run`, `coder chat`, `coder fix-issue`, `coder index`, `coder stats`; streams graph events with Rich |
 | Config | `config.py` | Typed settings from `.env` (model, iterations, timeouts) |
 | LLM | `llm.py` | `init_chat_model` + fallback provider on rate limit |
 | Graph | `graph/` | State schema, nodes, edges, checkpointer, context management |
-| Tools | `mcp_server/`, `tools/` | MCP server exposing file/shell tools; adapter that loads them as LangChain tools |
+| Tools | `mcp_server/`, `tools/` | MCP servers: file/shell tools (`server.py`), GitHub issues and PRs (`github.py`); adapter that loads them as LangChain tools |
 | Sandbox | `sandbox/` | Path jail, command denylist, timeouts; Docker runner |
 | Retrieval | `rag/` | Language-aware chunking, incremental Chroma index, hybrid retriever |
 | Telemetry | `telemetry/` | Per-run ledger (tokens, latency, iterations, outcome) in SQLite; LangSmith tracing |
@@ -116,7 +116,7 @@ points, not a step count, so finishing a big step moves the bar more than a smal
 - [x] Provider fallback verified under real rate limits; retry with backoff; metrics in the ledger (2pt)
 
 ### 7. Multi-server and model comparison
-- [ ] Second MCP server: GitHub (read issue, open PR) so `coder fix-issue <url>` works end to end (4pt)
+- [x] Second MCP server: GitHub (read issue, open PR) so `coder fix-issue <url>` works end to end (4pt)
 - [ ] Ollama local model as a third provider; model comparison figure (3pt)
 - [x] Reranker (cross-encoder) as an optional retrieval stage; measured (2pt)
 
@@ -127,6 +127,13 @@ points, not a step count, so finishing a big step moves the bar more than a smal
 - [ ] Docs site with MkDocs Material on GitHub Pages: TEACH, design doc, results (3pt)
 - [ ] Repo hygiene: LICENSE, CONTRIBUTING, issue templates, tagged `v0.1.0` release with changelog (1pt)
 
+### 9. Hand-off
+- [ ] Acceptance run by the owner, on a fresh clone in a new directory: install, `coder index`,
+  `coder run` on a suite task with the approval prompt, `coder chat` with a follow-up turn,
+  `coder fix-issue --pr` against a throwaway repository, `--sandbox docker`, `run_evals.py` on a
+  few tasks, `figures.py`. Every rough edge found is written down as an issue and fixed before
+  the release is tagged; the walkthrough itself goes into the docs site as "Try it" (3pt)
+
 ### Stretch
 - Publish to PyPI under a unique name
 - Web search MCP server for library documentation lookups
@@ -136,7 +143,8 @@ points, not a step count, so finishing a big step moves the bar more than a smal
 ## Verification
 
 - `uv run pytest`: sandbox, MCP tools, graph routing, chunker, retriever, eval runner
-- `uv run python scripts/list_tools.py .` prints six tools with schemas
+- `uv run python scripts/list_tools.py .` prints six tools with schemas; `--github` adds `get_issue`
+- `uv run coder fix-issue OWNER/REPO#N --repo path/to/clone` leaves the fix on `coder/issue-N`; `--pr` opens the pull request
 - `coder run evals/tasks/fix_bug_01 "make the tests pass"` succeeds with a full LangSmith trace
 - `uv run python evals/run_evals.py` writes `evals/results/*.json` and prints the pass-rate table
 - `uv run python evals/figures.py` regenerates every PNG in `docs/figures/`

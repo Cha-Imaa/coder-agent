@@ -82,13 +82,13 @@ async def _open_saver(repo: Path) -> AsyncIterator[Any]:
         yield saver
 
 
-async def _build(repo: Path, saver: Any, require_approval: bool):
+async def _build(repo: Path, saver: Any, require_approval: bool, github: bool = False):
     from coder_agent.graph import build_graph
     from coder_agent.graph.retrieval import default_retriever
     from coder_agent.llm import get_llm
     from coder_agent.tools.client import load_tools
 
-    tools = await load_tools(repo)
+    tools = await load_tools(repo, github=github)
     return build_graph(
         get_llm(), tools, checkpointer=saver, retriever=default_retriever(),
         require_approval=require_approval,
@@ -105,8 +105,12 @@ async def run_agent(
     approve: ApproveHook | None = None,
     tags: dict[str, Any] | None = None,
     ledger_path: Path | None = None,
+    github: bool = False,
 ) -> RunOutcome:
     """Run the graph on `repo` for `task`, record the run in the ledger, return the outcome.
+
+    `github=True` also starts the GitHub tool server so the model can re-read the issue a task
+    came from; `coder fix-issue` sets it, plain runs do not pay for a second process.
 
     `tags` are stored alongside the run so eval runs can be told apart from interactive ones
     (`{"suite": ..., "task_id": ...}`) when the figures are drawn from the ledger later.
@@ -123,7 +127,7 @@ async def run_agent(
     tags = {**(tags or {}), "thread_id": thread_id}
 
     async with _open_saver(repo) as saver:
-        graph = await _build(repo, saver, require_approval=approve is not None)
+        graph = await _build(repo, saver, require_approval=approve is not None, github=github)
         seed = state
         if await saver.aget_tuple(_config(thread_id)) is not None:
             snapshot = await graph.aget_state(_config(thread_id))
