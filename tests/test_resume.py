@@ -27,7 +27,7 @@ def wired(monkeypatch, tmp_path):
 
     llm = scripted("1. call echo\n2. answer", tool_call("echo", text="ping"), "Done.")
 
-    async def fake_load_tools(repo):
+    async def fake_load_tools(repo, github=False):
         return [echo]
 
     monkeypatch.setattr(llm_mod, "get_llm", lambda: llm)
