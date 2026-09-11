@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 
 from coder_agent.config import settings
-from coder_agent.sandbox.local import CommandResult, run_command
+from coder_agent.sandbox import CommandResult, run_command
 
 # Ordered: the first matching rule wins. Python first because it is the primary target.
 _RULES: list[tuple[str, str]] = [

@@ -11,6 +11,7 @@ messages over its stdin/stdout. Nothing touches the network.
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -20,12 +21,21 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 
 
 def server_config(repo: Path) -> dict:
-    """Connection spec for our own server. Uses the current interpreter so the venv is respected."""
+    """Connection spec for our own server. Uses the current interpreter so the venv is respected.
+
+    The server is its own process with its own `Settings`, read from the environment. A flag
+    such as `--sandbox docker` changes the client's settings only, so the values that matter are
+    mirrored into the child's environment on top of the parent's (a partial `env` would replace
+    the whole environment, losing PATH and the API keys).
+    """
+    from coder_agent.sandbox import env_overrides
+
     return {
         "coder-tools": {
             "transport": "stdio",
             "command": sys.executable,
             "args": ["-m", "coder_agent.mcp_server.server", str(repo.resolve())],
+            "env": {**os.environ, **env_overrides()},
         }
     }
 
