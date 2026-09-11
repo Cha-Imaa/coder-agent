@@ -7,14 +7,18 @@ helpers are pure functions on messages so they can be unit-tested without a term
 
 from __future__ import annotations
 
+import difflib
 import json
 from typing import Any
 
 from langchain_core.messages import AIMessage, ToolMessage
 from rich.console import Console
 from rich.panel import Panel
+from rich.prompt import Prompt
 from rich.syntax import Syntax
 from rich.text import Text
+
+from coder_agent.graph.approval import rejected
 
 ARG_PREVIEW = 80
 RESULT_PREVIEW_LINES = 12
@@ -46,6 +50,38 @@ def format_tool_result(msg: ToolMessage, max_lines: int = RESULT_PREVIEW_LINES) 
 
 def is_diff(text: str) -> bool:
     return text.startswith("OK: edited") and "\n@@" in text
+
+
+def preview_call(call: dict[str, Any]) -> tuple[str, str | None]:
+    """(headline, body) for an approval prompt: a diff for edits, the content for writes, the
+    command for shell. The body is what the human actually needs to read before saying yes."""
+    args = call["args"]
+    name = call["name"]
+    if name == "edit_file":
+        diff = difflib.unified_diff(
+            str(args.get("old_string", "")).splitlines(),
+            str(args.get("new_string", "")).splitlines(),
+            fromfile=str(args.get("path", "")), tofile=str(args.get("path", "")), lineterm="",
+        )
+        return f"edit {args.get('path', '?')}", "\n".join(diff)
+    if name == "write_file":
+        content = str(args.get("content", ""))
+        lines = content.splitlines()
+        return f"write {args.get('path', '?')} ({len(lines)} lines)", content
+    if name == "run_command":
+        return "run command", f"$ {args.get('command', '')}"
+    return format_tool_call(call), None
+
+
+def parse_decision(answer: str) -> bool | str:
+    """`y`/`yes`/empty approves; `n`/`no` rejects; anything else rejects with that text as the
+    reason the model gets to read."""
+    text = answer.strip()
+    if text.lower() in ("", "y", "yes"):
+        return True
+    if text.lower() in ("n", "no"):
+        return False
+    return text
 
 
 class Renderer:
@@ -110,6 +146,30 @@ class Renderer:
             lines = patch.get("test_output", "").splitlines()
             shown = lines if self.verbose else lines[-RESULT_PREVIEW_LINES:]
             self.console.print(Text(indent("\n".join(shown)), style="dim"))
+
+    def ask_approval(self, payload: dict[str, Any]) -> bool | str:
+        """Show each pending risky call with its diff / content / command and ask once for all.
+
+        Passed to `run_agent(approve=...)`; the graph is paused (and checkpointed) while this
+        blocks, so Ctrl+C here and `--resume` later asks the same question again.
+        """
+        for call in payload.get("tool_calls", []):
+            headline, body = preview_call(call)
+            self.console.print(Text("? ", style="bold yellow") + Text(headline, style="bold"))
+            if body and call["name"] == "edit_file":
+                self.console.print(Syntax(body, "diff", theme="ansi_dark", word_wrap=True))
+            elif body:
+                self.console.print(Text(indent(body), style="dim"))
+        answer = Prompt.ask("[bold yellow]Approve?[/bold yellow] [dim]y / n / a reason[/dim]",
+                            console=self.console, default="y", show_default=False)
+        return parse_decision(answer)
+
+    def _on_approve(self, patch: dict[str, Any]) -> None:
+        # An approval returns an empty patch; only a rejection has something to show.
+        for msg in patch.get("messages", []):
+            if isinstance(msg, ToolMessage) and rejected(msg):
+                self.console.print(Text("✗ rejected, asking the agent to reconsider", style="yellow"))
+                break
 
     def _on_reflect(self, patch: dict[str, Any]) -> None:
         self.console.print(Text("↻ feeding the failures back and re-planning", style="magenta"))
