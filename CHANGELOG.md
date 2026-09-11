@@ -10,6 +10,11 @@ The first release, `0.1.0`, is tagged once the acceptance walkthrough in `docs/P
 (milestone 9) has been run on a fresh clone and every rough edge it finds is fixed.
 
 ### Added
+- **Demo recorder** (2026-09-11): `scripts/demo.py` records a `coder run` through a pipe to an
+  asciinema v2 cast, answering the approval prompt, and renders the cast to a GIF with Rich and
+  Pillow, no ffmpeg or asciinema needed; `scripts/record_demo.ps1` does both on a fresh copy of
+  a suite task. The CLI now honours `FORCE_COLOR`, which on Windows is the difference between
+  ANSI colours and no colours at all when stdout is not a console.
 - **Agent loop** (2026-09-09): LangGraph state graph with `prepare`, `retrieve_context`, `plan`,
   `act`, `tools`, `run_tests`, `reflect` and `finish` nodes; the test command is the ground
   truth, up to four plan/act/test iterations; tool-output trimming and conversation
