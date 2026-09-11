@@ -2015,3 +2015,73 @@ gh api repos/Cha-Imaa/coder-agent -q .license.spdx_id   # MIT, once GitHub has r
 gh issue create --web                             # the chooser shows Bug report, Feature request, two links
 ```
 The last command opens the browser on the template chooser; nothing is filed until you submit.
+
+## Step 8.3 — Demo recorder: a real run, recorded through a pipe, drawn as a GIF
+
+**What we built.** `scripts/demo.py` with three subcommands and `scripts/record_demo.ps1` that
+chains them; `tests/test_demo.py`; a `FORCE_COLOR` switch in the CLI; and the result,
+`docs/figures/demo.gif`, at the top of the README. The GIF is a real `coder run` on the suite
+task `fix-bug-duration-units`: 5 model calls, 9,648 tokens, 17 seconds, one iteration, tests
+passing. Rendered it is 112 frames, 27 seconds, 0.5 MB.
+
+- *`prepare TASK_ID DEST`* copies the task's repository out of `evals/suite/` into a temporary
+  directory and prints its prompt, so the recording never edits the suite and a second take
+  starts from a clean tree.
+- *`record OUT.cast -- coder run ...`* starts the CLI with stdout piped, stamps every chunk with
+  the time since start and writes it as an asciinema v2 event (`[seconds, "o", text]`). A reader
+  thread moves chunks into a queue so the main loop can also watch the clock and kill a child
+  that hangs on a rate limit. The one prompt `coder run` asks, `Approve?`, is matched on the
+  colour-stripped tail of the output and answered `y` after a short pause; the answer is written
+  as an `"i"` event because a pipe never echoes what was typed.
+- *`render IN.cast OUT.gif`* replays the cast through a small terminal model (`Screen`: a grid
+  of characters with a Rich `Style` each, cursor movement, carriage return, erase-line, colours)
+  and emits one frame per visible change. Gaps longer than 1.5 seconds are cut to 1.5, because
+  a twelve-second model call is dead air in a GIF; identical screens extend the previous frame;
+  the last frame holds for three seconds. Pillow draws each frame with DejaVu Sans Mono (the
+  font matplotlib ships, so nothing new to install), quantises it to 128 colours and writes the
+  animated GIF with per-frame durations.
+- *`FORCE_COLOR` in the CLI.* Rich turns colour off when stdout is not a terminal, and a pipe is
+  not a terminal, so the first recordings were monochrome. The CLI now passes
+  `force_terminal=True` to its console when `FORCE_COLOR` is set, the same variable Node,
+  Rust's `termcolor` and GitHub Actions use for this. The recorder sets it, plus `COLORTERM`,
+  `COLUMNS`, `LINES` and `PYTHONIOENCODING=utf-8` so box-drawing characters survive a Windows
+  pipe that would otherwise be cp1252.
+- *One bug found by looking at the output.* The first render held the fully typed command still
+  for nine seconds and then started. The frame merger was asked "is the new frame shorter than
+  60 ms?" and, if so, folded it into the previous one; every 40 ms typing step qualified, so the
+  whole animation collapsed into one frame. The right question is "has the previous frame been
+  shown long enough yet?": now a short frame only absorbs into a predecessor that is itself
+  still under 60 ms. A test types a command and asserts it spreads over several frames, none
+  of them seconds long.
+
+**Key concepts.**
+- *Why not asciinema, vhs, terminalizer or agg.* None of them runs natively on Windows without
+  WSL, and every GIF path needs ffmpeg or a headless browser on top. The project already
+  installs Rich (which knows how to decode ANSI into styles) and Pillow (through matplotlib),
+  so the whole pipeline is 500 lines of Python with zero new dependencies, and it runs on the
+  laptop that develops the agent. The cast is still standard asciinema v2, so `asciinema play`
+  and `agg` accept it unchanged.
+- *A pipe is not a terminal.* Three things differ: colour is off unless forced, input is not
+  echoed, and the child cannot ask the terminal for its size. The recorder fakes all three (env
+  variables, an explicit `"i"` event, `COLUMNS`/`LINES`) rather than allocating a pseudo-terminal,
+  which Python only does on POSIX (`pty`) and Windows only through ConPTY bindings the project
+  would have to add.
+- *Time compression is editing, and it is declared.* Capping gaps changes the GIF's clock; the
+  numbers in the footer of the run (17 s, 5 calls) are the real ones, and the cast keeps the real
+  timestamps. The GIF shows what happened, at a pace a reader tolerates.
+- *This one ran on Gemini.* Groq's daily budget was spent on the ablation when the recording
+  was made, so the run went to `google_genai:gemini-2.5-flash` directly (`CODER_MODEL` set for
+  the recording, fallback empty); the header in the GIF says so. Same graph, same tools, same
+  approval prompt: that the provider is one environment variable is the point of step 6.5.
+
+**How the real tools do it.** Aider's README animation is an asciinema recording rendered with
+`agg` (Rust, needs a font path and a POSIX shell); Codex and Claude Code use `vhs` from
+Charmbracelet, which scripts the keystrokes in a `.tape` file and records a headless terminal
+through ffmpeg; OpenHands embeds a screen recording of the web UI. All of them record a real
+run rather than a mock-up, and all of them compress silences, `vhs` with an explicit `Sleep`
+budget and `agg` with `--idle-time-limit`, which is what `--max-gap` is here.
+
+**Check it.** `.\scripts\record_demo.ps1` records and renders a fresh take (about 10k tokens on
+the current model); `uv run python scripts/demo.py render $env:TEMP\coder-demo\fix-bug-duration-units.cast out.gif`
+re-renders the kept cast without spending a token; `uv run pytest tests/test_demo.py -q` runs
+the eleven recorder, screen-model and CLI-colour tests.
