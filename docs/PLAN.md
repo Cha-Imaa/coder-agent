@@ -121,7 +121,7 @@ points, not a step count, so finishing a big step moves the bar more than a smal
 - [x] Reranker (cross-encoder) as an optional retrieval stage; measured (2pt)
 
 ### 8. Presentation
-- [ ] GitHub Actions: ruff + pytest on push, coverage badge, Python 3.11 and 3.12 (2pt)
+- [x] GitHub Actions: ruff + pytest on push, coverage badge, Python 3.11 and 3.12 (2pt)
 - [ ] README: hero GIF, architecture diagram (Mermaid), results table and figures, quick start (3pt)
 - [ ] Demo recording script and GIF (2pt)
 - [ ] Docs site with MkDocs Material on GitHub Pages: TEACH, design doc, results (3pt)

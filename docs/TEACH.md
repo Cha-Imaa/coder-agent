@@ -1624,3 +1624,71 @@ CODER_RERANK=true uv run coder run evals/suite/fix-bug-duration-units/repo "fix 
 ```
 The first run downloads the 80 MB model to `~/.coder-agent/models`. With `CODER_RERANK=true`
 the `Context ·` line before the plan lists `durations.py` first; without it the test file leads.
+
+## Step 8.1 — CI: ruff and pytest on every push, a coverage badge with no third-party service
+
+**What we built.** `.github/workflows/ci.yml` and `scripts/coverage_badge.py`.
+
+- One `test` job on `ubuntu-latest`, a matrix over Python 3.11 and 3.12, four steps: check out,
+  `astral-sh/setup-uv` with the matrix Python and the uv cache on, `uv sync --extra dev --frozen`,
+  then `ruff check .` and `pytest --cov`. The 3.11 leg uploads `coverage.json` as a workflow
+  artifact.
+- A `badge` job that runs only on pushes to `main`, after both legs pass. It downloads the
+  report, converts it with `scripts/coverage_badge.py` into shields.io's endpoint JSON
+  (`{"schemaVersion": 1, "label": "coverage", "message": "88%", "color": "green"}`), and
+  force-pushes that one file as an orphan `badges` branch using the workflow's own
+  `GITHUB_TOKEN`. The README's coverage badge is
+  `img.shields.io/endpoint?url=<raw URL of that file>`; the CI badge is the one GitHub serves for
+  the workflow.
+- `pytest-cov` joins the dev extras; `[tool.coverage.run] source = ["coder_agent"]` in
+  `pyproject.toml` means `--cov` with no argument measures the package and nothing else. Three
+  tests for the badge script, because it is the only code between the number and the README.
+
+**Key concepts.**
+- *Why `--frozen`.* `uv sync` on its own may re-resolve and quietly rewrite `uv.lock` if
+  `pyproject.toml` moved ahead of it. In CI that would mean testing a dependency set nobody
+  committed. `--frozen` installs exactly what the lock pins and fails if the two disagree, which
+  turns "forgot to run `uv lock`" into a red build instead of drift.
+- *What actually runs in CI that does not run locally.* GitHub's Ubuntu runners ship a Docker
+  daemon, so the four sandbox integration tests from step 6.4 that skip on a laptop without
+  Docker Desktop build the `coder-sandbox` image and run for real: no network, no host
+  filesystem, writes land in the mounted repo. The suite needs no API key and downloads no
+  model; every model and embedder in the tests is a fake, which is what made this step a
+  configuration exercise rather than a mocking exercise.
+- *A badge is a URL that returns an SVG.* GitHub renders the CI badge from the workflow's latest
+  run on the default branch. Coverage has no built-in equivalent, and the usual answer (Codecov,
+  Coveralls) is a third account and an upload token for a single integer. shields.io's
+  *endpoint* badge renders any JSON that follows a five-field schema, fetched from any public
+  URL, so the workflow publishes the JSON itself. An orphan branch is the cheapest public URL a
+  repo already owns: `raw.githubusercontent.com/<owner>/<repo>/badges/coverage.json`, no Pages
+  build, no gist token. Force-pushing a single-commit branch each time keeps the history a
+  history of nothing.
+- *Least privilege in the workflow.* The workflow-level `permissions: contents: read` strips
+  the token to read-only for every job; only the `badge` job raises it to `contents: write`,
+  and only pushes to `main` reach that job. A pull request from a fork gets a read-only token
+  and never touches the branch. `concurrency` with `cancel-in-progress` means a second push
+  while the first is still running cancels the stale run; the free tier is 2,000 minutes a month
+  and a full run is several of them.
+- *Where the coverage number is honest and where it is not.* 88% line coverage over
+  `src/coder_agent`. The MCP server module is spawned as a subprocess by its own tests, so the
+  lines it executes there are invisible to coverage running in the pytest process; the number
+  under-reports that module (it shows 0% of 140 lines while its tests exercise every tool). Fixing it means `coverage`'s subprocess hooks, which is not worth
+  it for one file and a badge.
+
+**How the real tools do it.** Every open coding agent on GitHub (aider, OpenHands, SWE-agent,
+Cline) runs lint and tests in GitHub Actions on push and pull request, most with a Python
+matrix; aider and OpenHands publish to Codecov. `uv` in CI via `setup-uv` with the cache on is
+the pattern Astral documents and that most `uv` projects have converged on since 2024. The
+orphan-branch badge is a pattern from before Codecov existed and still common in projects that
+refuse extra accounts; `genbadge` and `coverage-badge` are the pip-installable versions of the
+forty lines in `scripts/coverage_badge.py`.
+
+**Check it.**
+```bash
+uv run pytest --cov -q                       # the same command CI runs, prints the table
+uv run python scripts/coverage_badge.py coverage.json /tmp/badge.json && cat /tmp/badge.json
+gh run list --workflow ci.yml --limit 3      # green on main
+gh api repos/Cha-Imaa/coder-agent/contents/coverage.json?ref=badges -q .content | base64 -d
+```
+The last line prints the JSON shields renders; the README badge updates within a few minutes of
+a push to `main` (shields caches endpoint badges for about five minutes).
