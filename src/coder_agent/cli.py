@@ -30,6 +30,27 @@ app = typer.Typer(no_args_is_help=True, add_completion=False, rich_markup_mode="
 console = Console()
 
 
+def _configure_sandbox(mode: str | None) -> None:
+    """Apply `--sandbox`, verify Docker is usable before any token is spent, and say what runs where.
+
+    Exits with a plain reason when the daemon is down or the image will not build; a missing
+    Docker should never surface as a failed tool call halfway through a run.
+    """
+    from coder_agent.sandbox import SandboxError, configure, docker_limits
+
+    try:
+        configure(mode)
+    except SandboxError as exc:  # includes DockerUnavailable
+        console.print(f"[red]Sandbox:[/red] {exc}")
+        raise typer.Exit(code=2) from None
+    if settings.sandbox_mode == "docker":
+        limits = docker_limits()
+        console.print(
+            f"[dim]Sandbox · docker · image={limits.image} network={limits.network} "
+            f"memory={limits.memory} cpus={limits.cpus}[/dim]"
+        )
+
+
 def _version(value: bool) -> None:
     if value:
         console.print(f"coder-agent {__version__}")
@@ -63,17 +84,24 @@ def run(
     yes: Annotated[
         bool, typer.Option("--yes", "-y", help="Do not ask before file edits and shell commands.")
     ] = False,
+    sandbox: Annotated[
+        str | None,
+        typer.Option(help="Where commands run: local (host, denylist) or docker (container)."),
+    ] = None,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Show full tool output.")] = False,
 ) -> None:
     """Plan a change, edit files with tools, run the tests, iterate.
 
     Before every file edit, file write or shell command the run pauses and shows what the agent
     wants to do; answer y, n, or type a reason to reject and steer it. `--yes` skips the prompt.
+    With `--sandbox docker` every command, including the test run, executes in a throwaway
+    container with no network and only the repo mounted.
     """
     repo = repo.resolve()
     if not repo.is_dir():
         console.print(f"[red]Not a directory:[/red] {repo}")
         raise typer.Exit(code=2)
+    _configure_sandbox(sandbox)
     if (task is None) == (resume is None):
         console.print("[red]Give a task to start a run, or --resume THREAD to continue one.[/red]")
         raise typer.Exit(code=2)
@@ -153,6 +181,10 @@ def chat(
     yes: Annotated[
         bool, typer.Option("--yes", "-y", help="Do not ask before file edits and shell commands.")
     ] = False,
+    sandbox: Annotated[
+        str | None,
+        typer.Option(help="Where commands run: local (host, denylist) or docker (container)."),
+    ] = None,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Show full tool output.")] = False,
 ) -> None:
     """Multi-turn session: every message is a task run on one thread, so the agent remembers.
@@ -165,6 +197,7 @@ def chat(
     if not repo.is_dir():
         console.print(f"[red]Not a directory:[/red] {repo}")
         raise typer.Exit(code=2)
+    _configure_sandbox(sandbox)
     if model:
         settings.model = model
     if max_iterations is not None:

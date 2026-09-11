@@ -25,8 +25,8 @@ from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
+from coder_agent.sandbox import run_command as sandbox_run
 from coder_agent.sandbox.local import SandboxError, resolve_in_repo
-from coder_agent.sandbox.local import run_command as sandbox_run
 
 # The repo root is fixed for the lifetime of the server process. It comes from argv so the client
 # controls it and the model cannot change it.
@@ -232,8 +232,9 @@ def run_command(command: str, timeout: int = 120) -> str:
     """Run a shell command in the repository root and return exit code and output.
 
     Use it to run tests (for example `python -m pytest -q`), linters, or scripts. Destructive
-    commands (recursive deletes, git push, package installs) are blocked by policy. Output is
-    truncated in the middle if very long; the exit code is always on the first line.
+    commands (recursive deletes, git push, package installs) are blocked by policy, and the
+    command may run in an isolated container without network access. Output is truncated in the
+    middle if very long; the exit code is always on the first line.
     """
     try:
         result = sandbox_run(REPO, command, timeout=timeout)

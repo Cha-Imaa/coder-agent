@@ -43,6 +43,7 @@ START -> retrieve_context -> plan -> act <-> tools -> run_tests -> reflect
 ### Safety rails
 - Every path is resolved and must stay inside the target repo.
 - Shell commands run with a timeout, capped output, and a denylist (`rm -rf`, `git push`, package installs unless allowed).
+- `--sandbox docker`: every command runs in a fresh container with no network, capped memory/CPU/pids, and the repo as its only mount.
 - File writes show a diff and require confirmation unless `--yes`.
 
 ## Results we will produce
@@ -111,7 +112,7 @@ points, not a step count, so finishing a big step moves the bar more than a smal
 - [x] SQLite checkpointer; `coder run --resume <thread>` continues after a crash or rate limit (3pt)
 - [x] Human-in-the-loop: `interrupt()` before writes and risky commands, `--yes` to skip (3pt)
 - [x] `coder chat`: multi-turn session over the same graph with thread resume (3pt)
-- [ ] Docker sandbox mode: commands run in a container with the repo mounted (4pt)
+- [x] Docker sandbox mode: commands run in a container with the repo mounted (4pt)
 - [x] Provider fallback verified under real rate limits; retry with backoff; metrics in the ledger (2pt)
 
 ### 7. Multi-server and model comparison

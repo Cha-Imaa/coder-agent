@@ -1381,6 +1381,91 @@ The second message's plan panel shows the new task while the model's edits refer
 changed in the first; `coder stats` lists two runs tagged with the same thread, the second with
 `turn: 2`.
 
+## Step 6.4 — Docker sandbox: the model's commands run in a throwaway container
+
+**What we built.** A second implementation of "run this command" and a switch between the two.
+
+- `sandbox/docker.py` runs one command as `docker run --rm` on a fresh container: the target repo
+  is mounted read-write at `/work` and is the only mount, `--network none`, `--memory 1g`,
+  `--cpus 1`, `--pids-limit 256`, `--cap-drop ALL`, `--security-opt no-new-privileges`, a tmpfs on
+  `/tmp`, and on Linux `--user <uid>:<gid>` so files the tests create are not owned by root.
+  `build_argv` is a pure function so all of that is pinned by a test that never talks to a daemon.
+- `sandbox/Dockerfile` is the default image (`coder-sandbox`): `python:3.11-slim` plus pytest.
+  `ensure_image` builds it on first use; any other image name must already exist, because
+  building an arbitrary tag from an unknown context is not something a sandbox should do by itself.
+- `sandbox/__init__.py` is the dispatcher. `run_command(repo, command)` reads
+  `settings.sandbox_mode` and calls `local` or `docker`; the MCP server's `run_command` tool and
+  the graph's `run_tests` node both import it, so neither knows which one it got.
+  `configure(mode)` applies `--sandbox`, probes the daemon and builds the image before the first
+  model call, so a missing Docker costs zero tokens.
+- The tool server is a separate process with its own `Settings`. `tools/client.server_config`
+  now passes the parent's environment plus `CODER_SANDBOX_*` mirrored from the in-process
+  settings, so `coder run --sandbox docker` reaches the child too.
+- `--sandbox local|docker` on `coder run`, `coder chat` and `evals/run_evals.py`;
+  `CODER_SANDBOX_MODE` in `.env` sets the default. The denylist still runs first in Docker mode,
+  so `git push` gets the same `ERROR:` in both modes instead of a puzzling "could not resolve host".
+
+**Key concepts.**
+- *Two kinds of guardrail.* The denylist stops the model from doing something obviously
+  destructive by accident; it can only block patterns it knows and it is trivially wrong for a
+  command it has never seen. A container turns the question around: instead of listing what is
+  forbidden, it lists what exists. Nothing outside `/work` is there to delete, there is no
+  network to exfiltrate to, and a runaway process hits a memory cap instead of the host's. The
+  four integration tests say exactly this: pytest runs against the mounted repo, a file written
+  inside appears on the host, `ls /` shows no host directories, and opening a socket fails.
+- *Timeouts need two kills.* `subprocess.run(timeout=)` kills the `docker` CLI, which is only a
+  client; the container keeps running until the daemon notices the detached client, which it
+  may never do. So every container gets a name and a timeout is followed by `docker kill <name>`.
+  The unit test asserts the second call and that its name matches the first.
+- *Infrastructure failures must not look like test failures.* When the daemon died mid-run during
+  this step, the tool returned `exit_code=125` and a connection error as if the tests had failed;
+  a model would happily start "fixing" that. `DockerUnavailable` is now raised for that shape
+  (CLI exit 125 or 127, empty stdout, the daemon's own wording on stderr) and it subclasses
+  `SandboxError`, so the tool server returns it as `ERROR: docker sandbox unavailable ...`; in the
+  `run_tests` node it stops the run with a checkpoint, and `coder run --resume` continues once
+  Docker is back.
+- *Check the answer, not the exit code.* `docker info --format '{{.ServerVersion}}'` exits 0 with
+  an empty string when the daemon is down: the client half of the report succeeded. The first
+  version of the probe trusted the exit code and the integration tests ran against a dead daemon
+  instead of skipping. The probe now requires a non-empty version.
+- *Configuration has to cross a process boundary.* A CLI flag mutates the client's `settings`
+  object; the MCP server loaded its own copy from `.env` at start-up and would happily keep
+  running commands on the host. Passing `env` to the stdio transport fixes that, but a partial
+  `env` replaces the child's whole environment (no PATH, no API keys), which is why the parent's
+  environment is copied first and the overrides layered on top.
+- *What it costs, and what broke while measuring.* The unit tests inject a fake `subprocess.run`
+  and take under a second; the first real run, on Docker Desktop with the WSL2 backend, built the
+  image (pull `python:3.11-slim`, install pytest) and ran the four container tests in under 30
+  seconds inside the 50-test sandbox run. The full 5-minute suite then killed Docker Desktop: its
+  WSL engine refused to restart with `OCI runtime create failed ... File exists` and needs a
+  `wsl --shutdown`. So the per-command container overhead is not in this table yet; on the host
+  `echo hi` takes 0.02 s and the one-test pytest 1.7 s, and a container start is typically a few
+  hundred milliseconds to a couple of seconds on top of each command. The default stays `local`
+  because the eval numbers were taken there and the free-tier budget is tokens, not seconds;
+  `docker` is the mode for a repo you do not trust the model with. The crash did produce one
+  useful test: with the daemon down, `coder run ... --sandbox docker` exits in about a second with
+  `Sandbox: docker daemon not reachable` and no model call, and the unknown mode `firecracker`
+  is rejected the same way.
+
+**How the real tools do it.** This is the layer every serious agent has grown. OpenAI Codex runs
+in a network-disabled container by default and needs an explicit flag to allow egress; Claude
+Code's sandbox mode restricts filesystem writes to the project and proxies network access, and
+its devcontainer reference setup uses a firewall allowlist; SWE-agent and OpenHands run every
+command inside a per-task Docker container with the repo mounted, exactly this shape, because an
+agent that runs `pip install` and arbitrary tests thousands of times a day will eventually do
+something you did not want. The common pattern is the one here: the model never sees the
+boundary, it just gets an exit code and output, and the harness decides where the process lives.
+
+**Check it.**
+```bash
+uv run pytest tests/test_docker_sandbox.py -q     # 21 unit tests, +4 in containers when a daemon is up
+uv run coder run evals/suite/fix-bug-duration-units/repo "fix the duration parsing" --yes --sandbox docker
+```
+The run prints a `Sandbox · docker · image=coder-sandbox network=none ...` line, and
+`docker ps` during the test step shows a `coder-<id>` container that is gone afterwards. Stop
+Docker Desktop and run the same command: it exits immediately with `Sandbox: docker daemon not
+reachable`, before any model call.
+
 ## Step 6.5 — Retry, fallback, and knowing which model actually answered
 
 **What we built.** The path from a node to the network now has three layers, and the ledger
