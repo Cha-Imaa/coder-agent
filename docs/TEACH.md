@@ -1672,8 +1672,8 @@ the `Context ·` line before the plan lists `durations.py` first; without it the
 - *Where the coverage number is honest and where it is not.* 88% line coverage over
   `src/coder_agent`. The MCP server module is spawned as a subprocess by its own tests, so the
   lines it executes there are invisible to coverage running in the pytest process; the number
-  under-reports that module (it shows 0% of 140 lines while its tests exercise every tool). Fixing it means `coverage`'s subprocess hooks, which is not worth
-  it for one file and a badge.
+  under-reports that module (it shows 0% of 140 lines while its tests exercise every tool).
+  Fixing it means `coverage`'s subprocess hooks, which is not worth it for one file and a badge.
 
 **How the real tools do it.** Every open coding agent on GitHub (aider, OpenHands, SWE-agent,
 Cline) runs lint and tests in GitHub Actions on push and pull request, most with a Python
