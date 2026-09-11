@@ -19,9 +19,11 @@ Status = Literal["running", "passed", "failed", "gave_up"]
 
 
 class AgentState(TypedDict, total=False):
-    # Inputs
+    # Inputs. `turn` counts the tasks given to this thread: 1 for `coder run`, growing with every
+    # `coder chat` message, so a follow-up can be told apart from a first task in the ledger.
     task: str
     repo: str
+    turn: int
 
     # Conversation with the model: tool calls and tool results live here.
     messages: Annotated[list[AnyMessage], add_messages]

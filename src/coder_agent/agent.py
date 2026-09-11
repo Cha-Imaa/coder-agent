@@ -42,6 +42,10 @@ class UnknownThread(LookupError):
     """`--resume` named a thread this repo has no checkpoint for."""
 
 
+class ThreadInProgress(RuntimeError):
+    """A new task was given to a thread whose last run has not finished; resume it first."""
+
+
 @dataclass
 class RunOutcome:
     final: dict[str, Any]
@@ -105,18 +109,63 @@ async def run_agent(
 
     `tags` are stored alongside the run so eval runs can be told apart from interactive ones
     (`{"suite": ..., "task_id": ...}`) when the figures are drawn from the ledger later.
+
+    A `thread_id` that already finished a run makes this a follow-up turn: the new task is
+    appended to the same conversation, the loop counters start over, and the model sees what it
+    did before. That is what `coder chat` is built on. A thread that is still mid-run (crashed
+    or waiting at an approval prompt) raises `ThreadInProgress`; it wants `resume_agent`.
     """
     thread_id = thread_id or new_thread_id()
-    state: dict[str, Any] = {"task": task, "repo": str(repo)}
+    state: dict[str, Any] = {"task": task, "repo": str(repo), "turn": 1}
     if test_cmd:
         state["test_command"] = test_cmd
+    tags = {**(tags or {}), "thread_id": thread_id}
 
     async with _open_saver(repo) as saver:
         graph = await _build(repo, saver, require_approval=approve is not None)
+        seed = state
+        if await saver.aget_tuple(_config(thread_id)) is not None:
+            snapshot = await graph.aget_state(_config(thread_id))
+            if snapshot.next:
+                raise ThreadInProgress(thread_id)
+            turn = int(snapshot.values.get("turn", 1)) + 1
+            state = _new_turn(task, test_cmd, turn)
+            # The checkpoint overlaid with this turn's inputs, minus usage: the ledger record
+            # should name the new task and cost this turn only, while the graph state keeps
+            # accumulating across turns for the thread total.
+            seed = {k: v for k, v in snapshot.values.items() if k != "usage"} | state
+            tags["turn"] = turn
         return await _drive(
-            graph, thread_id, state, seed=state, on_update=on_update, approve=approve,
-            tags={**(tags or {}), "thread_id": thread_id}, ledger_path=ledger_path,
+            graph, thread_id, state, seed=seed, on_update=on_update, approve=approve,
+            tags=tags, ledger_path=ledger_path,
         )
+
+
+def _new_turn(task: str, test_cmd: str | None, turn: int) -> dict[str, Any]:
+    """The state patch that starts another task on a finished thread.
+
+    `messages` is appended by its reducer, so the conversation keeps the earlier turns; the loop
+    counters and verdict fields are plain values and must be reset explicitly or the second turn
+    would inherit `iteration == max_iterations` and never retry. The human turn is seeded here
+    because `plan` only does so for an empty conversation.
+    """
+    from langchain_core.messages import HumanMessage
+
+    patch: dict[str, Any] = {
+        "task": task,
+        "turn": turn,
+        "messages": [HumanMessage(task)],
+        "plan": "",
+        "iteration": 0,
+        "steps": 0,
+        "status": "running",
+        "tests_passed": None,
+        "test_output": "",
+        "summary": "",
+    }
+    if test_cmd:
+        patch["test_command"] = test_cmd
+    return patch
 
 
 async def resume_agent(
