@@ -1,4 +1,5 @@
-"""Command-line entry point: `coder run <repo> "<task>"`, `coder index <repo>`, `coder stats`.
+"""Command-line entry point: `coder run <repo> "<task>"`, `coder run <repo> --resume <thread>`,
+`coder index <repo>`, `coder stats`.
 
 The CLI is deliberately thin. It resolves the repo, loads the MCP tools, builds the graph, and
 streams node updates to the renderer. All behaviour lives in the graph so the same code path is
@@ -47,11 +48,17 @@ def _root(
 @app.command()
 def run(
     repo: Annotated[Path, typer.Argument(help="Path to the repository to work in.")],
-    task: Annotated[str, typer.Argument(help="What to do, in plain English.")],
+    task: Annotated[
+        str | None, typer.Argument(help="What to do, in plain English. Omit with --resume.")
+    ] = None,
     model: Annotated[str | None, typer.Option(help="provider:model, overrides CODER_MODEL.")] = None,
     max_iterations: Annotated[int | None, typer.Option(help="Plan/act/test cycles.")] = None,
     test_cmd: Annotated[
         str | None, typer.Option(help="Command that runs the tests; auto-detected if omitted.")
+    ] = None,
+    resume: Annotated[
+        str | None,
+        typer.Option("--resume", metavar="THREAD", help="Continue an interrupted run by thread id."),
     ] = None,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Show full tool output.")] = False,
 ) -> None:
@@ -60,26 +67,65 @@ def run(
     if not repo.is_dir():
         console.print(f"[red]Not a directory:[/red] {repo}")
         raise typer.Exit(code=2)
+    if (task is None) == (resume is None):
+        console.print("[red]Give a task to start a run, or --resume THREAD to continue one.[/red]")
+        raise typer.Exit(code=2)
     if model:
         settings.model = model
     if max_iterations is not None:
         settings.max_iterations = max_iterations
 
-    status = asyncio.run(_run(repo, task, verbose, test_cmd))
-    raise typer.Exit(code=0 if status == "passed" else 1)
+    from coder_agent.agent import new_thread_id
+
+    thread = resume or new_thread_id()
+    try:
+        code = asyncio.run(_run(repo, task, verbose, test_cmd, resume, thread))
+    except KeyboardInterrupt:
+        # Ctrl+C cancels the event loop, not the coroutine, so the hint is printed here. The
+        # checkpoint of the last finished node is already on disk.
+        console.print()
+        console.print(f'[dim]Interrupted. Resume with:[/dim] coder run "{repo}" --resume {thread}')
+        code = 130
+    raise typer.Exit(code=code)
 
 
-async def _run(repo: Path, task: str, verbose: bool, test_cmd: str | None) -> str:
+async def _run(
+    repo: Path,
+    task: str | None,
+    verbose: bool,
+    test_cmd: str | None,
+    resume: str | None,
+    thread: str,
+) -> int:
     # Imports here so `coder --version` stays fast and does not need provider packages.
-    from coder_agent.agent import run_agent
+    from coder_agent.agent import UnknownThread, resume_agent, run_agent
     from coder_agent.ui.render import Renderer
 
     renderer = Renderer(console, verbose=verbose)
-    renderer.header(str(repo), task, settings.model)
+    renderer.header(str(repo), task or f"resume thread {thread}", settings.model, thread=thread)
 
-    outcome = await run_agent(repo, task, test_cmd=test_cmd, on_update=renderer.update)
-    console.print(f"[dim]{outcome.record.footer()}[/dim]")
-    return outcome.status
+    try:
+        if resume:
+            outcome = await resume_agent(repo, resume, on_update=renderer.update)
+        else:
+            outcome = await run_agent(
+                repo, task or "", thread_id=thread, test_cmd=test_cmd, on_update=renderer.update
+            )
+    except UnknownThread:
+        console.print(f"[red]No checkpoint for thread[/red] {resume} in {repo}")
+        return 2
+    except Exception as exc:  # noqa: BLE001 - the whole point is to tell the user how to go on
+        console.print(f"[red]Run stopped:[/red] {type(exc).__name__}: {exc}")
+        console.print(f'[dim]Resume with:[/dim] coder run "{repo}" --resume {thread}')
+        return 1
+
+    if not outcome.ran:
+        console.print(
+            f"[yellow]Thread {thread} already finished[/yellow] with status {outcome.status}."
+        )
+    else:
+        console.print(f"[dim]{outcome.record.footer()} · thread {thread}[/dim]")
+    return 0 if outcome.status == "passed" else 1
 
 
 @app.command()
