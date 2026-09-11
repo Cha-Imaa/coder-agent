@@ -1,4 +1,4 @@
-"""Figures from eval results: pass-rate bars, iteration curve, cost profile.
+"""Figures from eval results: pass-rate bars, iteration curve, cost profile, two comparisons.
 
 The numbers are computed here from `SuiteResult` objects; drawing is a thin matplotlib layer on
 top. Keeping the two apart means the arithmetic (which is what a reader of the README trusts)
@@ -9,6 +9,7 @@ in the README always corresponds to a JSON someone can open.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +25,12 @@ SELF_CHECK_MODELS = {"reference-solution", "noop"}
 # The retrieval ablation compares the same agent under four retrieval settings. Fixed order and a
 # fixed colour per mode, so the bars read the same in every regeneration of the figure.
 ABLATION_MODES: tuple[str, ...] = ("off", "bm25", "dense", "hybrid")
+
+# The model comparison holds everything else fixed: the in-house suite, the default retrieval mode.
+# Results files from before `meta["suite"]` and `meta["retrieval_mode"]` were written are all
+# in-house runs in the default mode, so a missing key counts as the default.
+COMPARISON_SUITE = "inhouse"
+COMPARISON_RETRIEVAL = "hybrid"
 
 # One light palette, applied by role. Categorical hues are used in this fixed order; the lighter
 # blue is a step of the same ramp and marks the share of a bar that was never graded.
@@ -50,12 +57,23 @@ def latest_results(results_dir: Path = RESULTS_DIR) -> list[SuiteResult]:
     """
     newest: dict[str, SuiteResult] = {}
     for path in sorted(results_dir.glob("*.json")):
+        if not is_suite_file(path):
+            continue  # the retrieval eval writes its own JSON into the same directory
         suite = load_result(path)
         if suite.model in SELF_CHECK_MODELS:
             continue
         if suite.label not in newest or suite.started_at >= newest[suite.label].started_at:
             newest[suite.label] = suite
     return sorted(newest.values(), key=lambda s: s.started_at)
+
+
+def is_suite_file(path: Path) -> bool:
+    """True for a `run_evals.py` results file, which alone carries a label and a model."""
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    return isinstance(data, dict) and {"label", "model", "results"} <= data.keys()
 
 
 def ablation_suites(suites: list[SuiteResult]) -> list[SuiteResult]:
@@ -89,6 +107,53 @@ def ablation_rows(suites: list[SuiteResult]) -> list[dict[str, Any]]:
                 "passed": sum(r.passed for r in suite.results),
                 "pass_rate": suite.pass_rate,
                 "avg_tokens": tokens,
+            }
+        )
+    return rows
+
+
+def comparison_suites(suites: list[SuiteResult]) -> list[SuiteResult]:
+    """The newest suite per model in the baseline configuration, oldest model first.
+
+    Ablation arms other than hybrid, HumanEval runs and self-checks are left out: a model
+    comparison is only fair when the model is the one thing that changed. Suites are keyed by
+    `model` (the "provider:model" string), not by label, so a rerun of the same model replaces
+    its older numbers the way `latest_results` does per label.
+    """
+    newest: dict[str, SuiteResult] = {}
+    for suite in suites:
+        if suite.model in SELF_CHECK_MODELS:
+            continue
+        if suite.meta.get("suite", COMPARISON_SUITE) != COMPARISON_SUITE:
+            continue
+        if suite.meta.get("retrieval_mode", COMPARISON_RETRIEVAL) != COMPARISON_RETRIEVAL:
+            continue
+        if suite.model not in newest or suite.started_at >= newest[suite.model].started_at:
+            newest[suite.model] = suite
+    return sorted(newest.values(), key=lambda s: s.started_at)
+
+
+def model_rows(suites: list[SuiteResult]) -> list[dict[str, Any]]:
+    """Per model: pass rate, passed/total, mean tokens and mean wall seconds per graded task.
+
+    Seconds are reported next to tokens because they answer different questions for a local
+    model: tokens are free on this machine, so what a reader wants to know is how much slower
+    the run is than the hosted provider, not how much it cost.
+    """
+    rows = []
+    for suite in comparison_suites(suites):
+        graded = [r for r in suite.results if not r.error]
+        n = len(graded) or 1
+        rows.append(
+            {
+                "model": suite.model,
+                "label": suite.label,
+                "tasks": len(suite.results),
+                "passed": sum(r.passed for r in suite.results),
+                "errors": suite.errors,
+                "pass_rate": suite.pass_rate,
+                "avg_tokens": sum(r.total_tokens for r in graded) / n,
+                "avg_seconds": sum(r.agent_seconds for r in graded) / n,
             }
         )
     return rows
@@ -273,51 +338,94 @@ def _kilo(value: float) -> str:
     return f"{value / 1000:.1f}k" if value < 10_000 else f"{value / 1000:.0f}k"
 
 
-def draw_ablation(suites: list[SuiteResult], out: Path) -> Path:
-    """Two panels, one axis each: pass@1 per retrieval mode, and mean tokens per task.
+def _bar_panels(
+    rows: list[dict[str, Any]],
+    labels: list[str],
+    colours: list[str],
+    panels: list[tuple[str, str, str]],
+    out: Path,
+) -> Path:
+    """One row of bar panels, one axis each, the same bar colour per row across every panel.
 
-    Tokens sit in their own panel rather than on a second y-axis: two scales on one plot invite
-    reading a crossing as meaningful. Bars keep one colour per mode across both panels so the eye
-    can match them without a legend.
+    `panels` lists (title, subtitle, key); the "pass_rate" key gets a percent axis and a
+    passed/total annotation, every other key a compact count axis. Each quantity sits in its own
+    panel rather than on a second y-axis: two scales on one plot invite reading a crossing as
+    meaningful. Colour, not a legend, ties a model or mode across the panels.
     """
-    rows = ablation_rows(suites)
-    fig, ax = _figure(8.5, 4)
     import matplotlib.pyplot as plt
 
+    fig, _ = _figure(4.2 * len(panels), 4)
     fig.clf()
-    ax, ax2 = fig.subplots(1, 2, gridspec_kw={"width_ratios": [1.15, 1], "wspace": 0.35})
-    colours = {mode: SERIES[i] for i, mode in enumerate(ABLATION_MODES)}
+    ratios = [1.15 if key == "pass_rate" else 1 for _, _, key in panels]
+    axes = fig.subplots(1, len(panels), gridspec_kw={"width_ratios": ratios, "wspace": 0.35})
+    axes = list(axes) if len(panels) > 1 else [axes]
     xs = list(range(len(rows)))
-    labels = [r["mode"] for r in rows]
 
-    for panel in (ax, ax2):
+    for panel, (title, subtitle, key) in zip(axes, panels, strict=True):
         for side in ("top", "right", "left"):
             panel.spines[side].set_visible(False)
         panel.tick_params(length=0)
         panel.set_xticks(xs, labels)
-
-    for x, row in zip(xs, rows, strict=True):
-        colour = colours[row["mode"]]
-        ax.bar(x, row["pass_rate"], 0.62, color=colour, edgecolor=SURFACE, linewidth=1.5)
-        ax.text(
-            x, row["pass_rate"] + 0.02, f"{row['passed']}/{row['tasks']}", ha="center",
-            va="bottom", fontsize=9, color=INK_SOFT,
-        )
-        ax2.bar(x, row["avg_tokens"], 0.62, color=colour, edgecolor=SURFACE, linewidth=1.5)
-        ax2.text(
-            x, row["avg_tokens"], _kilo(row["avg_tokens"]), ha="center", va="bottom",
-            fontsize=9, color=INK_SOFT,
-        )
-    _percent_axis(ax)
-    ax2.yaxis.grid(True, color=GRID, linewidth=0.8)
-    ax2.set_axisbelow(True)
-    ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: _kilo(v)))
-    ax2.set_ylim(0, max((r["avg_tokens"] for r in rows), default=1) * 1.2 or 1)
-    models = sorted({s.model for s in ablation_suites(suites)})
-    _title(ax, "pass@1 by retrieval mode", f"Same agent and tasks · {', '.join(models)}")
-    _title(ax2, "tokens per task", "Mean over graded tasks, all model calls")
+        for x, row, colour in zip(xs, rows, colours, strict=True):
+            value = row[key]
+            panel.bar(x, value, 0.62, color=colour, edgecolor=SURFACE, linewidth=1.5)
+            if key == "pass_rate":
+                text, dy = f"{row['passed']}/{row['tasks']}", 0.02
+            elif key == "avg_seconds":
+                text, dy = f"{value:.0f}s", 0.0
+            else:
+                text, dy = _kilo(value), 0.0
+            panel.text(x, value + dy, text, ha="center", va="bottom", fontsize=9, color=INK_SOFT)
+        if key == "pass_rate":
+            _percent_axis(panel)
+        else:
+            panel.yaxis.grid(True, color=GRID, linewidth=0.8)
+            panel.set_axisbelow(True)
+            fmt = (lambda v, _: f"{v:.0f}s") if key == "avg_seconds" else (lambda v, _: _kilo(v))
+            panel.yaxis.set_major_formatter(plt.FuncFormatter(fmt))
+            panel.set_ylim(0, max((r[key] for r in rows), default=1) * 1.2 or 1)
+        _title(panel, title, subtitle)
     fig.savefig(out, bbox_inches="tight")
     return out
+
+
+def draw_ablation(suites: list[SuiteResult], out: Path) -> Path:
+    """Two panels: pass@1 per retrieval mode, and mean tokens per task, one colour per mode."""
+    rows = ablation_rows(suites)
+    colours = {mode: SERIES[i] for i, mode in enumerate(ABLATION_MODES)}
+    models = sorted({s.model for s in ablation_suites(suites)})
+    return _bar_panels(
+        rows,
+        labels=[r["mode"] for r in rows],
+        colours=[colours[r["mode"]] for r in rows],
+        panels=[
+            ("pass@1 by retrieval mode", f"Same agent and tasks · {', '.join(models)}", "pass_rate"),
+            ("tokens per task", "Mean over graded tasks, all model calls", "avg_tokens"),
+        ],
+        out=out,
+    )
+
+
+def draw_model_comparison(suites: list[SuiteResult], out: Path) -> Path:
+    """Three panels: pass@1, tokens and wall seconds per task, one colour per model.
+
+    The x labels are the model names without their provider, since that is how a reader knows
+    them; the provider is in the subtitle. Seconds include tool calls and test runs, so the panel
+    reads as "how long a task takes with this model", which is the number a local model changes.
+    """
+    rows = model_rows(suites)
+    providers = sorted({r["model"].split(":", 1)[0] for r in rows})
+    return _bar_panels(
+        rows,
+        labels=[r["model"].split(":", 1)[-1] for r in rows],
+        colours=[SERIES[i % len(SERIES)] for i in range(len(rows))],
+        panels=[
+            ("pass@1 by model", f"Same suite and retrieval · {', '.join(providers)}", "pass_rate"),
+            ("tokens per task", "Mean over graded tasks, all model calls", "avg_tokens"),
+            ("seconds per task", "Mean wall time over graded tasks", "avg_seconds"),
+        ],
+        out=out,
+    )
 
 
 def draw_cost_profile(suite: SuiteResult, out: Path, ledger: Ledger | None = None) -> Path:
@@ -359,8 +467,9 @@ def render_all(
     suites: list[SuiteResult], out_dir: Path = FIGURES_DIR, ledger: Ledger | None = None
 ) -> list[Path]:
     """The three standing figures, plus the retrieval ablation once at least two modes have
-    results. The cost profile describes the newest suite only: stacking several configurations'
-    node costs into one chart would hide which one the budget belongs to."""
+    results and the model comparison once two models have run the baseline configuration. The
+    cost profile describes the newest suite only: stacking several configurations' node costs
+    into one chart would hide which one the budget belongs to."""
     out_dir.mkdir(parents=True, exist_ok=True)
     paths = [
         draw_pass_rate(suites, out_dir / "pass_rate.png"),
@@ -369,4 +478,6 @@ def render_all(
     ]
     if len(ablation_suites(suites)) >= 2:
         paths.append(draw_ablation(suites, out_dir / "retrieval_ablation.png"))
+    if len(comparison_suites(suites)) >= 2:
+        paths.append(draw_model_comparison(suites, out_dir / "model_comparison.png"))
     return paths

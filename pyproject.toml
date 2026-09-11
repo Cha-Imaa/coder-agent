@@ -40,11 +40,15 @@ dev = [
     "pytest-cov>=6",
     # scripts/demo.py draws the README GIF; matplotlib pulls Pillow in anyway, this makes it explicit.
     "pillow>=10",
+    "langchain-ollama>=0.3",
 ]
 # Only `evals/figures.py` draws; the agent itself never imports matplotlib.
 figures = ["matplotlib>=3.8"]
 # Only the docs site build (mkdocs.yml, .github/workflows/docs.yml) needs this.
 docs = ["mkdocs-material>=9"]
+# Third provider: a model served by a local Ollama daemon (`ollama:qwen2.5-coder:7b`). Not a core
+# dependency because most users never run one; the code path is exercised in CI through `dev`.
+ollama = ["langchain-ollama>=0.3"]
 
 [project.scripts]
 coder = "coder_agent.cli:app"

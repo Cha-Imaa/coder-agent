@@ -22,6 +22,7 @@ from coder_agent.evals import (
     run_task,
     solution_agent,
 )
+from coder_agent.evals.runner import label_for_model
 
 SUITE = load_suite()
 # Two cheap tasks from different categories keep the module under ten seconds.
@@ -171,3 +172,9 @@ async def test_grade_output_is_capped(task: EvalTask, tmp_path: Path):
     result = await run_task(task, noop_agent, tmp_path)
     assert len(result.grade_output) <= 2000
     assert "failed" in result.grade_output or "error" in result.grade_output.lower()
+
+
+def test_label_for_model_drops_the_provider_and_keeps_ollama_tags_whole():
+    assert label_for_model("groq:openai/gpt-oss-120b") == "openai-gpt-oss-120b"
+    assert label_for_model("google_genai:gemini-2.5-flash") == "gemini-2.5-flash"
+    assert label_for_model("ollama:qwen2.5-coder:7b") == "qwen2.5-coder-7b"

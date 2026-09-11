@@ -73,4 +73,6 @@ Gemini, most of them a single Groq `tool_use_failed` glitch handed straight to t
   `off` arm has five of twelve tasks graded so far; the other arms wait on the daily quota.
   The figure is drawn automatically once two or more arms are complete.
 - **HumanEval slice** (thirty problems packaged as repository tasks): needs a full quota window.
-- **Model comparison** (Groq, Gemini, a local Ollama model): planned, see the [roadmap](PLAN.md).
+- **Model comparison** (Groq, Gemini, a local Ollama model): the Ollama provider is wired
+  (`run_evals.py --model ollama:qwen2.5-coder:7b`); `figures.py` draws pass rate, tokens and
+  seconds per task side by side once a second model has run the in-house suite.

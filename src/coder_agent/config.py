@@ -20,9 +20,19 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # "provider:model" string understood by langchain's init_chat_model.
+    # "provider:model" string understood by langchain's init_chat_model. Three providers are
+    # wired: `groq:` and `google_genai:` (hosted, free tiers) and `ollama:` (a model served by a
+    # local daemon, e.g. `ollama:qwen2.5-coder:7b`; the model's own tag keeps its colon).
     model: str = "groq:openai/gpt-oss-120b"
     fallback_model: str | None = "google_genai:gemini-2.5-flash"
+
+    # Local models (see llm.py). Ollama allocates `ollama_num_ctx` tokens of context per request;
+    # its own default is 2,048, which the tool schemas plus one file read exceed, and the daemon
+    # then drops the oldest messages silently rather than erroring. 16k covers the trimmed
+    # conversation the graph sends when `context_budget_tokens` is lowered to match (a 7B model
+    # on a laptop CPU has no room for the 60k budget the hosted models get).
+    ollama_base_url: str = "http://127.0.0.1:11434"
+    ollama_num_ctx: int = 16_384
 
     # Resilience (see llm.py). `llm_sdk_retries` is the provider SDK's own retry count (429/5xx
     # with Retry-After); `llm_attempts` is how many times the primary is tried at LangChain level
