@@ -2,7 +2,9 @@
 
 `init_chat_model` is LangChain's provider-agnostic constructor: the string
 "groq:openai/gpt-oss-120b" selects both the integration package and the model. Swapping providers
-is then a config change, not a code change.
+is then a config change, not a code change: `ollama:qwen2.5-coder:7b` runs the same graph against
+a model served on this machine, with no key and no quota (see `model_kwargs` for the one place
+the providers differ).
 
 Three layers stand between a node's `llm.invoke(...)` and the network, innermost first:
 
@@ -49,6 +51,15 @@ def _provider_errors() -> tuple[type[BaseException], ...]:
         types.append(google_exceptions.GoogleAPICallError)
     except ImportError:  # pragma: no cover
         pass
+    try:
+        import ollama
+
+        # The daemon answered with an error (model still loading, out of memory for the context
+        # size): worth one more try. `ollama.RequestError` (nothing listening) is left out, since
+        # retrying a daemon that is not running only delays the fallback.
+        types.append(ollama.ResponseError)
+    except ImportError:  # pragma: no cover
+        pass
     return tuple(types)
 
 
@@ -79,10 +90,28 @@ class ChatModelRetry(RunnableRetry):
         return proxied
 
 
+def provider_of(model: str) -> str:
+    """The provider half of a "provider:model" string ("ollama:qwen2.5-coder:7b" -> "ollama")."""
+    return model.split(":", 1)[0] if ":" in model else ""
+
+
+def model_kwargs(model: str) -> dict[str, Any]:
+    """Constructor arguments that differ per provider.
+
+    The hosted SDKs take `max_retries`; Ollama's client has no such knob (a local daemon does not
+    rate-limit) and instead needs the context size and the daemon's address, which are per-call
+    options in its API rather than model settings. `init_chat_model` forwards whatever it is
+    given, so the provider decides the shape here.
+    """
+    if provider_of(model) == "ollama":
+        return {"base_url": settings.ollama_base_url, "num_ctx": settings.ollama_num_ctx}
+    return {"max_retries": settings.llm_sdk_retries}
+
+
 def get_llm(temperature: float = 0.0) -> Runnable:
     """The configured chat model, retried on transient errors, with the fallback behind it."""
     primary: Runnable = init_chat_model(
-        settings.model, temperature=temperature, max_retries=settings.llm_sdk_retries
+        settings.model, temperature=temperature, **model_kwargs(settings.model)
     )
     if TRANSIENT_ERRORS and settings.llm_attempts > 1:
         primary = ChatModelRetry(
@@ -97,6 +126,6 @@ def get_llm(temperature: float = 0.0) -> Runnable:
     if not settings.fallback_model:
         return primary
     fallback = init_chat_model(
-        settings.fallback_model, temperature=temperature, max_retries=settings.llm_sdk_retries
+        settings.fallback_model, temperature=temperature, **model_kwargs(settings.fallback_model)
     )
     return primary.with_fallbacks([fallback])

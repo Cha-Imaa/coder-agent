@@ -274,6 +274,17 @@ async def run_suite(
     return suite
 
 
+def label_for_model(model: str) -> str:
+    """Results-file label for a "provider:model" string, safe as a file name.
+
+    The provider is dropped and every `/` and `:` becomes `-`, so `groq:openai/gpt-oss-120b`
+    labels as `openai-gpt-oss-120b` and `ollama:qwen2.5-coder:7b` as `qwen2.5-coder-7b` (Ollama
+    tags carry a second colon; splitting on the last one would label that run "7b").
+    """
+    name = model.split(":", 1)[-1]
+    return name.replace("/", "-").replace(":", "-")
+
+
 def _meta() -> dict[str, Any]:
     """Enough provenance to reproduce a number: commit, platform, and the loop settings."""
     from coder_agent.config import settings

@@ -55,8 +55,8 @@ script under `evals/` or `scripts/` so it can be regenerated after any change.
 |---|---|---|
 | Pass-rate table | `evals/run_evals.py` | pass@1 on the in-house suite, per task category |
 | Public slice | `evals/run_evals.py --suite humaneval` | pass@1 on 30 HumanEval problems run as repo tasks, comparable to published numbers |
-| Retrieval ablation | `evals/ablate.py` | pass rate and tokens with no retrieval / BM25 / dense / hybrid |
-| Model comparison | `evals/ablate.py --models` | Groq gpt-oss-120b vs Gemini 2.5 Flash vs a local Ollama model |
+| Retrieval ablation | `evals/run_evals.py --retrieval <mode>`, then `evals/figures.py` | pass rate and tokens with no retrieval / BM25 / dense / hybrid |
+| Model comparison | `evals/run_evals.py --model <provider:model>`, then `evals/figures.py` | Groq gpt-oss-120b vs Gemini 2.5 Flash vs a local Ollama model: pass rate, tokens, seconds |
 | Iteration curve | `evals/figures.py` | share of tasks solved after 1, 2, 3, 4 iterations |
 | Cost profile | `evals/figures.py` | tokens per node per run, where the context budget goes |
 | Retrieval quality | `evals/retrieval_eval.py` | recall@k of the gold files for each task |

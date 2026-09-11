@@ -14,9 +14,11 @@ import pytest
 from coder_agent.evals.figures import (
     ablation_rows,
     ablation_suites,
+    comparison_suites,
     iteration_curve,
     latest_results,
     max_iterations,
+    model_rows,
     node_costs,
     render_all,
 )
@@ -106,6 +108,15 @@ def test_latest_results_keeps_newest_per_label_and_skips_self_checks(tmp_path: P
     assert [(s.label, s.started_at) for s in suites] == [("other", 1.5), ("run", 2.0)]
 
 
+def test_latest_results_skips_files_the_retrieval_eval_wrote(tmp_path: Path):
+    _suite("a", started_at=1.0).write(tmp_path)
+    (tmp_path / "20260911-retrieval.json").write_text(
+        json.dumps({"meta": {}, "ks": [1, 3], "summary": {}, "results": []}), encoding="utf-8"
+    )
+    (tmp_path / "broken.json").write_text("{not json", encoding="utf-8")
+    assert [s.label for s in latest_results(tmp_path)] == ["a"]
+
+
 def test_results_files_round_trip_usage_and_load_without_it(tmp_path: Path):
     path = _suite().write(tmp_path)
     loaded = load_result(path)
@@ -157,3 +168,40 @@ def test_render_all_writes_three_pngs(tmp_path: Path):
     paths = render_all([_suite("a", started_at=1.0), _suite("b", started_at=2.0)], tmp_path)
     assert [p.name for p in paths] == ["pass_rate.png", "iteration_curve.png", "cost_profile.png"]
     assert all(p.stat().st_size > 1000 for p in paths)
+
+
+def _model_run(model: str, started_at: float, passed: int, **meta) -> SuiteResult:
+    suite = _suite(model.split(":", 1)[-1], model=model, started_at=started_at)
+    suite.meta.update(meta)
+    for i, r in enumerate(suite.results):
+        r.passed = i < passed
+        r.agent_seconds = 10.0
+    return suite
+
+
+def test_comparison_suites_keep_one_baseline_run_per_model():
+    suites = [
+        _model_run("groq:big", 1.0, 2),
+        _model_run("groq:big", 2.0, 3),  # newer run of the same model replaces the older one
+        _model_run("ollama:small:7b", 3.0, 1, suite="inhouse", retrieval_mode="hybrid"),
+        _model_run("groq:big", 4.0, 5, retrieval_mode="off"),  # ablation arm, not the baseline
+        _model_run("groq:big", 5.0, 5, suite="humaneval"),  # other suite, not comparable
+        _model_run("noop", 6.0, 0),  # harness self-check
+    ]
+    chosen = comparison_suites(suites)
+    assert [(s.model, s.started_at) for s in chosen] == [("groq:big", 2.0), ("ollama:small:7b", 3.0)]
+
+
+def test_model_rows_average_tokens_and_seconds_over_graded_tasks():
+    rows = model_rows([_model_run("groq:big", 1.0, 2), _model_run("ollama:small:7b", 2.0, 1)])
+    assert [(r["model"], r["passed"], r["tasks"], r["errors"]) for r in rows] == [
+        ("groq:big", 2, 5, 1), ("ollama:small:7b", 1, 5, 1),
+    ]
+    assert rows[0]["pass_rate"] == pytest.approx(0.4)
+    assert rows[0]["avg_tokens"] == 110 and rows[0]["avg_seconds"] == 10.0
+
+
+def test_render_all_adds_the_model_comparison_when_two_models_exist(tmp_path: Path):
+    pytest.importorskip("matplotlib")
+    paths = render_all([_model_run("groq:big", 1.0, 3), _model_run("ollama:small:7b", 2.0, 1)], tmp_path)
+    assert paths[-1].name == "model_comparison.png" and paths[-1].stat().st_size > 1000

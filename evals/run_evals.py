@@ -9,6 +9,7 @@
     uv run python evals/run_evals.py --agent noop         # harness self-check, must be 0%
     uv run python evals/run_evals.py --retrieval off      # ablation: one run per mode, then
     uv run python evals/run_evals.py --retrieval hybrid   #   `evals/figures.py` draws the chart
+    uv run python evals/run_evals.py --model ollama:qwen2.5-coder:7b   # model comparison arm
 
 Results go to `evals/results/<timestamp>-<label>.json`; the table is also printed as Markdown
 so it can be pasted into the README.
@@ -32,6 +33,7 @@ from coder_agent.evals.runner import (
     SuiteResult,
     TaskResult,
     graph_agent,
+    label_for_model,
     load_result,
     noop_agent,
     run_suite,
@@ -121,7 +123,7 @@ def main(
         console.print(f"[red]Unknown agent:[/red] {agent}")
         raise typer.Exit(code=2)
 
-    label = label or (agent if agent != "graph" else settings.model.split(":")[-1].replace("/", "-"))
+    label = label or (agent if agent != "graph" else label_for_model(settings.model))
     if retrieval is not None and agent == "graph":
         label = f"{label}-retrieval-{retrieval}"  # one results label per ablation arm
     if suite != "inhouse":
@@ -140,6 +142,7 @@ def main(
             f"{r.iterations} iter · {r.total_tokens:>7,} tok · {r.agent_seconds:5.0f}s{note}"
         )
 
+    suite_name = suite
     suite = asyncio.run(
         run_suite(
             tasks,
@@ -151,6 +154,7 @@ def main(
             pause_seconds=pause,
         )
     )
+    suite.meta["suite"] = suite_name  # figures compare models on the same suite only
     if previous is not None:
         suite = previous.merged_with(suite)
     path = suite.write(results_dir)
