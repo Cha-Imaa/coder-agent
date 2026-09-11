@@ -7,6 +7,7 @@ one). The scripted model asks for a fake `edit_file` tool; the tests answer the 
 
 from __future__ import annotations
 
+import re
 from types import SimpleNamespace
 
 import pytest
@@ -210,4 +211,7 @@ async def test_interrupted_at_the_prompt_then_resumed_asks_again(wired, edit_fil
 
 def test_cli_has_a_yes_flag():
     result = CliRunner().invoke(app, ["run", "--help"])
-    assert "--yes" in result.output and "-y" in result.output
+    # Typer forces coloured help when GITHUB_ACTIONS is set and splices escape codes into the
+    # option names, so compare the plain text.
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
+    assert "--yes" in plain and "-y" in plain
