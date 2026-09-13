@@ -117,7 +117,7 @@ points, not a step count, so finishing a big step moves the bar more than a smal
 
 ### 7. Multi-server and model comparison
 - [x] Second MCP server: GitHub (read issue, open PR) so `coder fix-issue <url>` works end to end (4pt)
-- [ ] Ollama local model as a third provider; model comparison figure (3pt)
+- [x] Ollama local model as a third provider; model comparison figure (3pt)
 - [x] Reranker (cross-encoder) as an optional retrieval stage; measured (2pt)
 
 ### 8. Presentation

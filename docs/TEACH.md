@@ -2085,3 +2085,108 @@ budget and `agg` with `--idle-time-limit`, which is what `--max-gap` is here.
 the current model); `uv run python scripts/demo.py render $env:TEMP\coder-demo\fix-bug-duration-units.cast out.gif`
 re-renders the kept cast without spending a token; `uv run pytest tests/test_demo.py -q` runs
 the eleven recorder, screen-model and CLI-colour tests.
+
+---
+
+## Step 7.2 — A local model as the third provider, and repairing tool calls it writes as text
+
+**What we built.** An `ollama:` provider path so the same graph runs against a model served on
+this machine, a model-comparison figure that draws itself once a second model has run the suite,
+and `graph/repair.py`, the step that turns a tool call a small model wrote as prose into a real
+one.
+
+- *The provider.* `init_chat_model("ollama:qwen2.5-coder:7b")` and the `ollama` extra are the
+  whole integration; `--model ollama:<tag>` on `coder run` and `run_evals.py` picks it per run.
+  Two settings are new, `CODER_OLLAMA_BASE_URL` and `CODER_OLLAMA_NUM_CTX`, because a local
+  daemon needs an address and a context size where a hosted API needs neither.
+- *`model_kwargs(model)` in `llm.py`* is the one place the providers differ. Hosted SDKs take
+  `max_retries`; Ollama's client has no such knob (nothing is rate-limiting you on your own
+  laptop) and instead wants `base_url` and `num_ctx`. Everything else — the retry wrapper, the
+  fallback, the ledger, the tools — is provider-blind.
+- *`ollama.ResponseError` joins the retried exceptions*, `ollama.RequestError` deliberately does
+  not: the first means the daemon answered badly (model still loading, out of memory for the
+  requested context) and a second attempt usually works; the second means nothing is listening
+  on the port, and retrying that only delays the fallback.
+- *`label_for_model`* splits `provider:model` on the *first* colon, so `ollama:qwen2.5-coder:7b`
+  labels its results file `qwen2.5-coder-7b`. Splitting on the last one would have called the
+  run "7b".
+- *`draw_model_comparison`* puts pass rate, tokens per task and seconds per task side by side
+  for every model that has run the in-house suite, and `render_all` only emits it once two
+  models have, so a single-model results directory does not produce a one-bar chart.
+- *`repair_tool_calls`* sits between `model.invoke(...)` and the router in the `act` node. If the
+  reply already has structured tool calls it is returned unchanged — hosted providers never
+  touch this code. Otherwise the text is scanned for JSON objects that name a bound tool and
+  carry an arguments object; those become real tool calls, and the prose around them stays as
+  the message content.
+
+**Key concepts.**
+- *Why a local model at all.* It is the honest control in the model comparison: no key, no quota,
+  no network, and a hard ceiling on what a 7B model can do with a repository. It also proves the
+  provider seam is real. Swapping Groq for a process on localhost changed one function,
+  `model_kwargs`, and nothing in the graph.
+- *`num_ctx` is the setting that silently ruins a local run.* Ollama allocates the context per
+  request and its default is 2,048 tokens — less than this agent's tool schemas plus one file
+  read. Over that, the daemon drops the oldest messages instead of erroring, so the model loses
+  the task description and starts answering a question nobody asked. We allocate 16k and lower
+  `CODER_CONTEXT_BUDGET_TOKENS` to 12k to match, because a 7B model on a laptop CPU has no room
+  for the 60k the hosted models get. Fitting the budget to the window is the same job
+  `manage_context` already does; only the number changes.
+- *Tool calling is a format, and small models know the intent but not the format.* Hosted
+  providers return calls in a structured field because the server parses them out of the raw
+  text using a grammar or the model's chat template. `qwen2.5-coder:7b` knows perfectly well
+  that it wants `read_file("durations.py")` — it writes
+  `{"name": "read_file", "arguments": {...}}` into the message body, sometimes after a paragraph
+  of explanation, sometimes in a ```json fence, and usually without the `<tool_call>` tags its
+  template needs for Ollama to recognise it. The graph then sees a reply with no tool calls,
+  concludes the model is finished, runs the tests, and every iteration ends identically.
+- *Why repair rather than prompt harder.* You cannot prompt a 7B model into reliable format
+  compliance; you can only reduce the failure rate, and the failures that remain cost a full
+  iteration each. Parsing is cheap, deterministic, and testable. The repair is also conservative
+  by construction: it fires only when there are no structured calls, it only accepts objects
+  naming a tool that is actually bound, and it requires an arguments object — so a model that
+  merely prints a JSON config in its answer is left alone. The tests pin exactly that.
+- *Accepting more than one spelling.* `arguments`, `args`, `parameters` and `input` are all
+  accepted as the argument key, and an OpenAI-shaped `{"function": {...}}` wrapper with
+  double-serialised arguments is unwrapped, because models imitate whichever API they saw most
+  of in training. Scanning with `json.JSONDecoder().raw_decode` rather than a regex means nested
+  braces and escaped quotes inside argument strings parse correctly.
+- *Keeping the message identity.* The repaired message is a `model_copy` of the original, so its
+  id, `usage_metadata` and `response_metadata` survive. The ledger's token accounting and the
+  "which model actually answered" bookkeeping from step 6.5 see exactly what they would have
+  seen without the repair.
+- *What the 7B actually does, measured twice.* Asked one direct question with one tool bound
+  ("read the file durations.py, use the tool, do not explain"), `qwen2.5-coder:7b` returns an
+  empty `tool_calls` list and the body
+  `{"name": "read_file", "arguments": {"path": "durations.py"}}` — the exact case this module
+  exists for, and after repair it is a real call with the usage metadata intact. Given the
+  agent's full prompt, though, it fails a *second* way that no parser can fix: it writes a
+  markdown tutorial, complete with a ```sh block containing `git commit`, and closes with "I
+  then ran the tests and confirmed that all tests passed" — having called nothing and changed
+  no file. `run_tests` is the ground truth precisely because a model's account of its own work
+  is not: on `fix-bug-duration-units` the run spent 8 model calls, 13,124 in / 2,341 out tokens
+  and 744 seconds over all four iterations and finished red, with `durations.py` byte for byte
+  as it started. So the honest summary of a 7B on a laptop: repair fixes the format failure, and
+  the format failure was never the whole gap. The local provider earns its place as the
+  no-quota control in the comparison, not as a model that closes tasks.
+
+**How the real tools do it.** This is a server-side job everywhere it can be: vLLM ships
+`--tool-call-parser hermes|llama3_json|mistral`, one hand-written parser per model family, and
+Ollama parses calls using the template shipped with each model. Both exist because the model
+emits text and something has to turn it into a call — we are doing the same thing one layer up,
+where we can see which tools were bound. Aider takes the other route and changes what it asks
+for by model strength (its `--edit-format` picks whole-file rewrites for weak models, unified
+diffs for strong ones), which is the same principle: meet the model where its reliability is.
+Claude Code and Codex can skip all of this because they only ever talk to providers that return
+tool calls structurally.
+
+**Check it.**
+```bash
+ollama pull qwen2.5-coder:7b                   # then: uv sync --extra ollama
+uv run pytest tests/test_repair.py -q          # six tests, no daemon needed
+# the failure mode itself, against the daemon: empty tool_calls, the call in the body
+uv run python -c "import os; os.environ['CODER_MODEL']='ollama:qwen2.5-coder:7b'; os.environ['CODER_FALLBACK_MODEL']=''; from langchain_core.tools import tool; from coder_agent.llm import get_llm; t=tool(lambda path: '...', name='read_file', description='Read a file.'); m=get_llm().bind_tools([t]).invoke('Read durations.py with the tool; do not explain.'); print(m.tool_calls, m.content)"
+CODER_FALLBACK_MODEL= CODER_CONTEXT_BUDGET_TOKENS=12000 \
+  uv run coder run evals/suite/fix-bug-duration-units "make the tests pass" \
+  --model ollama:qwen2.5-coder:7b --yes -v
+uv run python evals/run_evals.py --model ollama:qwen2.5-coder:7b   # then figures.py
+```

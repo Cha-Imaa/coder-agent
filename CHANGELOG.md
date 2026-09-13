@@ -10,9 +10,12 @@ The first release, `0.1.0`, is tagged once the acceptance walkthrough in `docs/P
 (milestone 9) has been run on a fresh clone and every rough edge it finds is fixed.
 
 ### Added
-- **Ollama as a third provider** (2026-09-11): `--model ollama:<tag>` runs the same graph
-  against a model served locally, with the daemon's address and context size as settings
-  (`uv sync --extra ollama`). `evals/figures.py` draws `model_comparison.png` (pass rate, tokens
+- **Ollama as a third provider** (2026-09-11 to 2026-09-14): `--model ollama:<tag>` runs the
+  same graph against a model served locally, with the daemon's address and context size as
+  settings (`uv sync --extra ollama`). Tool calls that a small local model writes as JSON in the
+  message text, instead of as a structured call, are parsed back into real calls before the
+  router sees the reply, so a 7B model can drive the loop; replies that already carry structured
+  calls are untouched. `evals/figures.py` draws `model_comparison.png` (pass rate, tokens
   and seconds per task per model) once two models have run the in-house suite, and no longer
   trips over the retrieval eval's JSON in the same results directory.
 - **Demo recorder** (2026-09-11): `scripts/demo.py` records a `coder run` through a pipe to an
