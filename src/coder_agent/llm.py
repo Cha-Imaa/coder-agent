@@ -17,6 +17,8 @@ Three layers stand between a node's `llm.invoke(...)` and the network, innermost
    succeeds on the next attempt.
 3. `with_fallbacks`: when the primary has exhausted its attempts, the same call goes to the
    fallback model (a different provider, so a quota exhausted on one does not block the other).
+   A fallback whose provider is not configured on this machine is dropped with a warning rather
+   than raised: `--model ollama:<tag>` has to work with no cloud keys at all.
 
 Which model actually answered is visible in each message's `response_metadata` and lands in the
 ledger through `usage_from_message`; failed attempts are counted by `telemetry.ProviderEvents`.
@@ -24,6 +26,8 @@ ledger through `usage_from_message`; failed attempts are counted by `telemetry.P
 
 from __future__ import annotations
 
+import logging
+import os
 from typing import Any
 
 from dotenv import load_dotenv
@@ -34,6 +38,36 @@ from langchain_core.runnables.retry import RunnableRetry
 from coder_agent.config import settings
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
+
+# Either spelling of the key is accepted by the langsmith SDK, so either one counts as "configured".
+_TRACING_KEYS = ("LANGSMITH_API_KEY", "LANGCHAIN_API_KEY")
+_TRUTHY = {"1", "true", "yes", "on"}
+
+
+def mute_tracing_without_a_key() -> bool:
+    """Switch LangSmith tracing off when no key is set. True if it was switched off.
+
+    `.env.example` ships `LANGSMITH_TRACING=true` so that tracing starts working the moment a key
+    is pasted in. Until then the copied file has an empty key, and LangChain still tries to ship
+    every run, printing a 401 traceback per batch: on a first run that is most of what scrolls
+    past. Tracing without a key is not a degraded mode, it is only noise, so turn it off and say
+    so once.
+    """
+    if os.environ.get("LANGSMITH_TRACING", "").strip().lower() not in _TRUTHY:
+        return False
+    if any(os.environ.get(name, "").strip() for name in _TRACING_KEYS):
+        return False
+    os.environ["LANGSMITH_TRACING"] = "false"
+    logger.warning(
+        "LANGSMITH_TRACING is on but no LANGSMITH_API_KEY is set; tracing disabled for this run."
+    )
+    return True
+
+
+# Runs at import, before anything builds a tracer: every entry point imports this module.
+mute_tracing_without_a_key()
 
 
 def _provider_errors() -> tuple[type[BaseException], ...]:
@@ -125,7 +159,20 @@ def get_llm(temperature: float = 0.0) -> Runnable:
         )
     if not settings.fallback_model:
         return primary
-    fallback = init_chat_model(
-        settings.fallback_model, temperature=temperature, **model_kwargs(settings.fallback_model)
-    )
+    try:
+        fallback = init_chat_model(
+            settings.fallback_model, temperature=temperature, **model_kwargs(settings.fallback_model)
+        )
+    except Exception as exc:
+        # Caught broadly on purpose: "this provider is not configured here" has no common base
+        # class (pydantic raises ValidationError, groq raises GroqError, a missing extra raises
+        # ImportError), and any of them mean the same thing here. Only the *name* is logged,
+        # because the provider's own message is a multi-line dump that would take over a
+        # terminal UI laid out by hand; the full traceback goes to the debug record.
+        logger.warning(
+            "Fallback model %s is not configured here (%s); running without a fallback.",
+            settings.fallback_model, type(exc).__name__,
+        )
+        logger.debug("Fallback model %s failed to build", settings.fallback_model, exc_info=exc)
+        return primary
     return primary.with_fallbacks([fallback])
