@@ -186,7 +186,7 @@ does one fix cost".
 
 ## 7. Evaluation: how do we know it works?
 
-We build a tiny benchmark: `evals/tasks/` holds small repos, each with a failing test and a
+We build a tiny benchmark: `evals/suite/` holds small repos, each with a failing test and a
 `task.md` describing the job. `run_evals.py` runs the agent on each and reports:
 
 - pass rate

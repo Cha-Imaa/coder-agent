@@ -146,7 +146,9 @@ points, not a step count, so finishing a big step moves the bar more than a smal
 - `uv run pytest`: sandbox, MCP tools, graph routing, chunker, retriever, eval runner
 - `uv run python scripts/list_tools.py .` prints six tools with schemas; `--github` adds `get_issue`
 - `uv run coder fix-issue OWNER/REPO#N --repo path/to/clone` leaves the fix on `coder/issue-N`; `--pr` opens the pull request
-- `coder run evals/tasks/fix_bug_01 "make the tests pass"` succeeds with a full LangSmith trace
+- `coder run evals/suite/fix-bug-duration-units/repo "make the failing tests pass"` succeeds with
+  a full LangSmith trace (point it at the task's `repo/`, not the task directory, which also
+  holds the hidden tests)
 - `uv run python evals/run_evals.py` writes `evals/results/*.json` and prints the pass-rate table
 - `uv run python evals/figures.py` regenerates every PNG in `docs/figures/`
 - CI is green on `main` and the badge in the README says so

@@ -20,6 +20,8 @@ through a sandbox jail.
 
 ## How to read this site
 
+- **[Try it](try-it.md)** is the walkthrough: empty directory to an agent-opened pull request,
+  with the quota limits and the platform gotchas called out where you would hit them.
 - **[Results](results.md)** is the numbers page: pass rate on the in-house suite, where the tokens
   go, retrieval quality with and without the reranker, and what is still being measured.
 - **[Learning log](TEACH.md)** has one entry per finished step: what was built, why that way, how
