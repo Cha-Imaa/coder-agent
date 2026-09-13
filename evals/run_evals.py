@@ -27,7 +27,7 @@ from rich.console import Console
 from rich.table import Table
 
 from coder_agent.config import settings
-from coder_agent.evals import load_suites
+from coder_agent.evals import load_suites, quick_subset
 from coder_agent.evals.runner import (
     RESULTS_DIR,
     SuiteResult,
@@ -52,6 +52,13 @@ app = typer.Typer(add_completion=False)
 @app.command()
 def main(
     suite: Annotated[str, typer.Option(help="inhouse | humaneval | all")] = "inhouse",
+    full: Annotated[
+        bool,
+        typer.Option(
+            "--full",
+            help="Every task in the suite. Without it, only the four-task quick subset runs.",
+        ),
+    ] = False,
     category: Annotated[str | None, typer.Option(help="Only tasks in this category.")] = None,
     task: Annotated[list[str] | None, typer.Option(help="Only these task ids (repeatable).")] = None,
     agent: Annotated[str, typer.Option(help="graph | solution | noop")] = "graph",
@@ -93,6 +100,14 @@ def main(
     except ValueError as exc:
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(code=2) from None
+    # The quick subset is the default so that an experiment costs a fraction of the day's free
+    # tier rather than all of it. An explicit `--task` or `--category` is a narrower request
+    # already, so it is left alone; `--full` and `--rerun-errors` both mean "all of them".
+    explicit_selection = bool(task) or category is not None
+    use_quick = not full and not explicit_selection and rerun_errors is None
+    if use_quick:
+        tasks = quick_subset(tasks)
+
     previous = load_result(rerun_errors) if rerun_errors else None
     if previous is not None:
         errored = {r.task_id for r in previous.results if r.error}
@@ -128,11 +143,20 @@ def main(
         label = f"{label}-retrieval-{retrieval}"  # one results label per ablation arm
     if suite != "inhouse":
         label = f"{suite}-{label}"
+    if use_quick:
+        # Part of the label, not just the metadata: a four-task pass rate must never sit in a
+        # results directory looking like the twelve-task number the README quotes.
+        label = f"{label}-quick"
     console.print(
         f"[bold]{len(tasks)} task(s)[/bold] · agent={agent} · model={model_name} · "
         f"max_iterations={settings.max_iterations} · retrieval={settings.retrieval_mode} · "
         f"sandbox={settings.sandbox_mode}"
     )
+    if use_quick:
+        console.print(
+            "[dim]Quick subset: the cheapest task in each of four categories, about 57k tokens. "
+            "Pass --full for all of them (~356k, most of a day's free tier).[/dim]"
+        )
 
     def on_result(r: TaskResult) -> None:
         colour = "green" if r.passed else "red"
@@ -155,6 +179,7 @@ def main(
         )
     )
     suite.meta["suite"] = suite_name  # figures compare models on the same suite only
+    suite.meta["subset"] = "quick" if use_quick else "full"  # figures ignore anything but full
     if previous is not None:
         suite = previous.merged_with(suite)
     path = suite.write(results_dir)

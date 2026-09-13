@@ -32,6 +32,17 @@ ABLATION_MODES: tuple[str, ...] = ("off", "bm25", "dense", "hybrid")
 COMPARISON_SUITE = "inhouse"
 COMPARISON_RETRIEVAL = "hybrid"
 
+
+def is_full_suite(suite: SuiteResult) -> bool:
+    """False for a `run_evals.py` run that only did the quick subset.
+
+    The quick subset exists so an experiment costs a fraction of the daily free tier, which makes
+    it the wrong thing to draw: four tasks and twelve tasks produce pass rates that look alike and
+    mean different things. Results written before the flag existed carry no `subset` and were all
+    full runs.
+    """
+    return suite.meta.get("subset", "full") == "full"
+
 # One light palette, applied by role. Categorical hues are used in this fixed order; the lighter
 # blue is a step of the same ramp and marks the share of a bar that was never graded.
 SURFACE = "#fcfcfb"
@@ -60,7 +71,7 @@ def latest_results(results_dir: Path = RESULTS_DIR) -> list[SuiteResult]:
         if not is_suite_file(path):
             continue  # the retrieval eval writes its own JSON into the same directory
         suite = load_result(path)
-        if suite.model in SELF_CHECK_MODELS:
+        if suite.model in SELF_CHECK_MODELS or not is_full_suite(suite):
             continue
         if suite.label not in newest or suite.started_at >= newest[suite.label].started_at:
             newest[suite.label] = suite
@@ -86,7 +97,7 @@ def ablation_suites(suites: list[SuiteResult]) -> list[SuiteResult]:
     newest: dict[str, SuiteResult] = {}
     for suite in suites:
         mode = suite.meta.get("retrieval_mode")
-        if mode not in ABLATION_MODES:
+        if mode not in ABLATION_MODES or not is_full_suite(suite):
             continue
         if mode not in newest or suite.started_at >= newest[mode].started_at:
             newest[mode] = suite
@@ -122,7 +133,7 @@ def comparison_suites(suites: list[SuiteResult]) -> list[SuiteResult]:
     """
     newest: dict[str, SuiteResult] = {}
     for suite in suites:
-        if suite.model in SELF_CHECK_MODELS:
+        if suite.model in SELF_CHECK_MODELS or not is_full_suite(suite):
             continue
         if suite.meta.get("suite", COMPARISON_SUITE) != COMPARISON_SUITE:
             continue

@@ -53,9 +53,9 @@ script under `evals/` or `scripts/` so it can be regenerated after any change.
 
 | Artefact | Source | Shows |
 |---|---|---|
-| Pass-rate table | `evals/run_evals.py` | pass@1 on the in-house suite, per task category |
+| Pass-rate table | `evals/run_evals.py --full` | pass@1 on the in-house suite, per task category |
 | Public slice | `evals/run_evals.py --suite humaneval` | pass@1 on 30 HumanEval problems run as repo tasks, comparable to published numbers |
-| Retrieval ablation | `evals/run_evals.py --retrieval <mode>`, then `evals/figures.py` | pass rate and tokens with no retrieval / BM25 / dense / hybrid |
+| Retrieval ablation | `evals/run_evals.py --retrieval <mode> --full`, then `evals/figures.py` | pass rate and tokens with no retrieval / BM25 / dense / hybrid |
 | Model comparison | `evals/run_evals.py --model <provider:model>`, then `evals/figures.py` | Groq gpt-oss-120b vs Gemini 2.5 Flash vs a local Ollama model: pass rate, tokens, seconds |
 | Iteration curve | `evals/figures.py` | share of tasks solved after 1, 2, 3, 4 iterations |
 | Cost profile | `evals/figures.py` | tokens per node per run, where the context budget goes |
@@ -149,6 +149,8 @@ points, not a step count, so finishing a big step moves the bar more than a smal
 - `coder run evals/suite/fix-bug-duration-units/repo "make the failing tests pass"` succeeds with
   a full LangSmith trace (point it at the task's `repo/`, not the task directory, which also
   holds the hidden tests)
-- `uv run python evals/run_evals.py` writes `evals/results/*.json` and prints the pass-rate table
+- `uv run python evals/run_evals.py` runs the four-task quick subset (~57k tokens) and writes
+  `evals/results/*.json`; `--full` runs all twelve (~356k, about a day of the Groq free tier)
+  and is what the headline numbers and every figure come from
 - `uv run python evals/figures.py` regenerates every PNG in `docs/figures/`
 - CI is green on `main` and the badge in the README says so
