@@ -57,6 +57,14 @@ The first release, `0.1.0`, is tagged once the acceptance walkthrough in `docs/P
   architecture diagrams and results; MIT licence, contributing guide, issue and PR templates.
 
 ### Fixed
+- A local run no longer needs cloud keys: `--model ollama:<tag>` on a machine with no
+  `GOOGLE_API_KEY` died before the first token, because the fallback model is constructed
+  eagerly while it is only ever used after the primary fails. A fallback whose provider is not
+  configured is now dropped with a warning instead of raising (2026-09-14).
+- LangSmith tracing switches itself off when no API key is set, instead of printing a 401
+  traceback for every batch of runs. `.env.example` ships `LANGSMITH_TRACING=true` so tracing
+  starts the moment a key is pasted in, which meant a first run on the copied file scrolled past
+  mostly authentication errors (2026-09-14).
 - `coder run` survives a stdout that cannot encode the interface: redirecting the output to
   a file on a Western Windows install gave the process a cp1252 stdout, and the first
   re-planning arrow ended the run with `UnicodeEncodeError` from inside Rich (2026-09-14).

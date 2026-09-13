@@ -8,6 +8,8 @@
 from __future__ import annotations
 
 import json
+import logging
+import os
 import sqlite3
 
 import pytest
@@ -19,7 +21,13 @@ from coder_agent import llm as llm_mod
 from coder_agent.agent import run_agent
 from coder_agent.cli import app
 from coder_agent.config import settings
-from coder_agent.llm import ChatModelRetry, get_llm, model_kwargs, provider_of
+from coder_agent.llm import (
+    ChatModelRetry,
+    get_llm,
+    model_kwargs,
+    mute_tracing_without_a_key,
+    provider_of,
+)
 from coder_agent.telemetry import Ledger, RunRecord
 from coder_agent.telemetry.events import ProviderEvents
 from coder_agent.telemetry.ledger import fallback_calls
@@ -79,11 +87,60 @@ def test_bind_tools_survives_retry_and_fallback_wrapping(providers):
     assert bound.invoke([HumanMessage("hi")]).content == "from primary"
 
 
+def test_unbuildable_fallback_is_dropped_instead_of_failing_the_run(providers, monkeypatch, caplog):
+    """A local run on a machine with no cloud keys must still start.
+
+    `init_chat_model` validates credentials when the model is constructed, not when it is called,
+    so an unusable fallback used to raise before the primary was ever asked anything.
+    """
+    primary = providers[0]
+
+    def build(name, **kw):
+        if name == "google_genai:fallback":
+            raise ValueError("API key required for Gemini Developer API")
+        return primary
+
+    monkeypatch.setattr(llm_mod, "init_chat_model", build)
+    with caplog.at_level(logging.WARNING, logger="coder_agent.llm"):
+        llm = get_llm()
+    assert isinstance(llm, ChatModelRetry)  # retried, but with nothing behind it
+    assert llm.invoke([HumanMessage("hi")]).content == "from primary"
+    assert "running without a fallback" in caplog.text
+
+
 def test_without_fallback_the_retry_wrapper_is_returned(providers, monkeypatch):
     monkeypatch.setattr(settings, "fallback_model", None)
     assert isinstance(get_llm(), ChatModelRetry)
     monkeypatch.setattr(settings, "llm_attempts", 1)
     assert get_llm() is providers[0]  # one attempt means no wrapper at all
+
+
+# --- tracing ---------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("key_name", ["LANGSMITH_API_KEY", "LANGCHAIN_API_KEY"])
+def test_tracing_stays_on_when_a_key_is_configured(monkeypatch, key_name):
+    monkeypatch.setenv("LANGSMITH_TRACING", "true")
+    for name in ("LANGSMITH_API_KEY", "LANGCHAIN_API_KEY"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv(key_name, "ls-something")
+    assert mute_tracing_without_a_key() is False
+    assert os.environ["LANGSMITH_TRACING"] == "true"
+
+
+def test_tracing_is_muted_when_the_key_is_empty(monkeypatch):
+    """The copied `.env.example` state: tracing requested, key not filled in yet."""
+    monkeypatch.setenv("LANGSMITH_TRACING", "true")
+    monkeypatch.setenv("LANGSMITH_API_KEY", "   ")
+    monkeypatch.delenv("LANGCHAIN_API_KEY", raising=False)
+    assert mute_tracing_without_a_key() is True
+    assert os.environ["LANGSMITH_TRACING"] == "false"
+
+
+def test_tracing_already_off_is_left_alone(monkeypatch):
+    monkeypatch.setenv("LANGSMITH_TRACING", "false")
+    monkeypatch.delenv("LANGSMITH_API_KEY", raising=False)
+    assert mute_tracing_without_a_key() is False
 
 
 # --- metrics ------------------------------------------------------------------------------
