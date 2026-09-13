@@ -17,6 +17,12 @@ Python 3.11 or 3.12, managed by [uv](https://docs.astral.sh/uv/). `uv.lock` is t
 truth for versions: CI installs with `--frozen`, so run `uv lock` and commit the lock when you
 change `pyproject.toml`.
 
+On Windows, clone into a short path or enable long paths once with
+`git config --global core.longpaths true`. The longest tracked path is about 110 characters (a
+HumanEval task's hidden test), so a deep checkout can cross the 260-character `MAX_PATH` limit and
+the clone fails with `Filename too long`. Keep new eval task and file names short for the same
+reason.
+
 ## Before you open a pull request
 
 ```bash
