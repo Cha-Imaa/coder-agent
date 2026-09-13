@@ -15,6 +15,7 @@ from coder_agent.evals.figures import (
     ablation_rows,
     ablation_suites,
     comparison_suites,
+    is_full_suite,
     iteration_curve,
     latest_results,
     max_iterations,
@@ -205,3 +206,27 @@ def test_render_all_adds_the_model_comparison_when_two_models_exist(tmp_path: Pa
     pytest.importorskip("matplotlib")
     paths = render_all([_model_run("groq:big", 1.0, 3), _model_run("ollama:small:7b", 2.0, 1)], tmp_path)
     assert paths[-1].name == "model_comparison.png" and paths[-1].stat().st_size > 1000
+
+
+# --- quick subset -----------------------------------------------------------------------------
+
+
+def test_quick_runs_are_kept_out_of_every_figure():
+    """A four-task pass rate must not be drawn next to a twelve-task one.
+
+    The quick subset is the default so an experiment costs a fraction of the daily free tier,
+    which means quick results files are the common case in `evals/results/` and the figures have
+    to ignore them on purpose.
+    """
+    full = _model_run("groq:big", 1.0, 2)
+    quick = _model_run("groq:big", 2.0, 5, subset="quick")
+    arm = _model_run("groq:big", 3.0, 4, retrieval_mode="off", subset="quick")
+
+    assert is_full_suite(full) and not is_full_suite(quick)
+    assert comparison_suites([full, quick]) == [full]
+    assert ablation_suites([arm]) == []
+
+
+def test_results_without_a_subset_key_count_as_full_runs():
+    """Files written before the flag existed were all full runs."""
+    assert is_full_suite(_model_run("groq:big", 1.0, 2))

@@ -31,7 +31,7 @@ cp .env.example .env      # then fill in GROQ_API_KEY and GOOGLE_API_KEY
 Check the install without spending a single token:
 
 ```bash
-uv run pytest             # 386 passed, 4 skipped - no API key needed
+uv run pytest             # the whole suite, no API key needed
 uv run ruff check .
 ```
 
@@ -115,7 +115,7 @@ first time, which takes a minute.
 ## 7. Reproduce the numbers
 
 ```bash
-uv run python evals/run_evals.py --task fix-bug-duration-units --task add-test-mathx
+uv run python evals/run_evals.py
 uv run python evals/figures.py
 ```
 
@@ -123,11 +123,20 @@ uv run python evals/figures.py
 and grades. Results go to `evals/results/` as JSON; `figures.py` redraws every PNG in
 `docs/figures/` from those files.
 
-!!! warning "Mind the daily quota"
-    Groq's free tier allows 200,000 tokens per day, and the full twelve-task suite spends
-    essentially all of it (one measured run: 199,198 tokens for eight tasks before the 429s
-    started). Run a few tasks at a time, or pass `--rerun-errors <previous.json>` the next day to
-    top up the tasks that hit the limit and merge them into the same results file.
+By default it runs the **quick subset**: the cheapest task in each of four categories, about
+57,000 tokens and five minutes. That is deliberately not the headline number, so its results file
+is labelled `-quick` and the figures skip it.
+
+!!! warning "The full suite is a day's quota"
+    Groq's free tier allows 200,000 tokens per day. All twelve tasks cost about 356,000, so
+    `--full` does not fit in one day: a measured run spent 199,198 tokens on eight tasks and the
+    last four died on 429s. When that happens, pass `--rerun-errors <previous.json>` the next day
+    to top up the tasks that hit the limit and merge them into the same results file.
+
+    ```bash
+    uv run python evals/run_evals.py --full
+    uv run python evals/run_evals.py --rerun-errors evals/results/<the-file>.json   # next day
+    ```
 
 ## Using no quota at all
 
