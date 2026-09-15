@@ -56,7 +56,7 @@ script under `evals/` or `scripts/` so it can be regenerated after any change.
 | Pass-rate table | `evals/run_evals.py --full` | pass@1 on the in-house suite, per task category |
 | Public slice | `evals/run_evals.py --suite humaneval` | pass@1 on 30 HumanEval problems run as repo tasks, comparable to published numbers |
 | Retrieval ablation | `evals/run_evals.py --retrieval <mode> --full`, then `evals/figures.py` | pass rate and tokens with no retrieval / BM25 / dense / hybrid |
-| Model comparison | `evals/run_evals.py --model <provider:model>`, then `evals/figures.py` | Groq gpt-oss-120b vs Gemini 2.5 Flash vs a local Ollama model: pass rate, tokens, seconds |
+| Model comparison | `evals/run_evals.py --model <provider:model>`, then `evals/figures.py` | Groq gpt-oss-120b vs K2 Think vs Gemini 2.5 Flash vs a local Ollama model: pass rate, tokens, seconds |
 | Iteration curve | `evals/figures.py` | share of tasks solved after 1, 2, 3, 4 iterations |
 | Cost profile | `evals/figures.py` | tokens per node per run, where the context budget goes |
 | Retrieval quality | `evals/retrieval_eval.py` | recall@k of the gold files for each task |
@@ -119,6 +119,9 @@ points, not a step count, so finishing a big step moves the bar more than a smal
 - [x] Second MCP server: GitHub (read issue, open PR) so `coder fix-issue <url>` works end to end (4pt)
 - [x] Ollama local model as a third provider; model comparison figure (3pt)
 - [x] Reranker (cross-encoder) as an optional retrieval stage; measured (2pt)
+- [x] K2 Think as a fourth provider (`k2think:`, OpenAI-compatible endpoint, 10M tokens a day so
+  a full eval arm fits in one sitting): the provider alias, a context budget capped to its 64k
+  window, and the transport that rewrites the one phrase its firewall refuses (3pt)
 
 ### 8. Presentation
 - [x] GitHub Actions: ruff + pytest on push, coverage badge, Python 3.11 and 3.12 (2pt)

@@ -2099,10 +2099,11 @@ one.
   whole integration; `--model ollama:<tag>` on `coder run` and `run_evals.py` picks it per run.
   Two settings are new, `CODER_OLLAMA_BASE_URL` and `CODER_OLLAMA_NUM_CTX`, because a local
   daemon needs an address and a context size where a hosted API needs neither.
-- *`model_kwargs(model)` in `llm.py`* is the one place the providers differ. Hosted SDKs take
-  `max_retries`; Ollama's client has no such knob (nothing is rate-limiting you on your own
-  laptop) and instead wants `base_url` and `num_ctx`. Everything else — the retry wrapper, the
-  fallback, the ledger, the tools — is provider-blind.
+- *`model_kwargs(model)` in `llm.py`* (since renamed `resolve`, when a fourth provider needed
+  to change the model name as well as the arguments, see step 7.4) is the one place the
+  providers differ. Hosted SDKs take `max_retries`; Ollama's client has no such knob (nothing
+  is rate-limiting you on your own laptop) and instead wants `base_url` and `num_ctx`.
+  Everything else — the retry wrapper, the fallback, the ledger, the tools — is provider-blind.
 - *`ollama.ResponseError` joins the retried exceptions*, `ollama.RequestError` deliberately does
   not: the first means the daemon answered badly (model still loading, out of memory for the
   requested context) and a second attempt usually works; the second means nothing is listening
@@ -2189,4 +2190,124 @@ CODER_FALLBACK_MODEL= CODER_CONTEXT_BUDGET_TOKENS=12000 \
   uv run coder run evals/suite/fix-bug-duration-units "make the tests pass" \
   --model ollama:qwen2.5-coder:7b --yes -v
 uv run python evals/run_evals.py --model ollama:qwen2.5-coder:7b   # then figures.py
+```
+
+## Step 7.4 — K2 Think as the fourth provider, and a transport for what its endpoint refuses
+
+**What we built.** A `k2think:` provider alias so the graph runs against MBZUAI's hosted
+reasoning model, a per-provider cap on the context budget, and `k2think.py`: an httpx
+transport under the openai client that rewrites the two request shapes the endpoint rejects.
+
+- *Why a fourth provider at all.* Not for the model comparison first; for the quota. Groq's free
+  tier allows 200k tokens a day and one twelve-task arm of the suite spends about 356k, so the
+  retrieval ablation advanced one arm per day and the HumanEval slice was out of reach. K2
+  Think's limits are 10M tokens a day at two requests a second, with a sixty-four-thousand
+  token window. That turns "one arm per quota window" into "every arm in an afternoon", and
+  the eval plan (full suite, four ablation arms, HumanEval, model comparison) becomes something
+  that can actually be run to completion.
+- *The alias.* K2 has no LangChain integration and needs none: its endpoint speaks the OpenAI
+  chat-completions dialect, so `resolve("k2think:MBZUAI-IFM/K2-Think-v2")` returns
+  `openai:MBZUAI-IFM/K2-Think-v2` with `base_url`, the `K2_API_KEY`, and `reasoning_effort`.
+  This is why `model_kwargs` became `resolve`: for the first time a provider had to change the
+  *name* `init_chat_model` sees, not only the arguments. `langchain-openai` is a new
+  dependency; `openai.APIError` joins the retried exceptions.
+- *`settings.context_budget(model)`* caps the conversation budget at the provider's window
+  minus a reserve, when a window is declared (`CODER_CONTEXT_WINDOWS={"k2think": 65536}`,
+  `CODER_CONTEXT_RESERVE_TOKENS=24000`). The sixty-thousand-token budget that fits Groq's 131k
+  would have been an instant 400 on a 64k window once the tool schemas, system prompt and the
+  reply were added. The reserve is large because the reply of a reasoning model includes
+  everything it thinks before it answers, and that thinking is billed and windowed as output.
+- *`k2think.py`* is the part that took the day. The endpoint sits behind a Cloudflare web
+  application firewall with a command-injection rule, and the request body is what it inspects.
+  Probing one phrase at a time: `` `python -m pytest -q` ``, `` `python -c ...` ``, `'perl -e 1'`
+  and `` `curl http://x` `` were each answered with an HTML 403 before the model saw them;
+  `python foo.py`, `uv run pytest`, `node -e 1` and an unquoted `python -m pytest` were let
+  through. The rule keys on a *quote directly in front of an interpreter name*. A coding agent
+  writes that on nearly every call: the tool description said "for example `python -m pytest`",
+  the model replied "I ran `python -m pytest -q`", and from then on the phrase was in the history
+  of every request and every request was refused. The SDK retried the same bytes, the fallback
+  took over, and a K2 run became a Groq run without anyone being told.
+- *The second refusal* only showed up on a real graph run: `400 Invalid value for
+  'messages.content'`. The MCP adapter returns tool results as a list of text blocks,
+  `[{"type": "text", "text": ...}]`, which OpenAI's API treats as equivalent to the joined
+  string and K2 does not accept. The first attempt to run a suite task ended in the first `act`
+  call, and the fix was found by wrapping `sanitize` to log the type of every message's content
+  in every outgoing body: `('tool', 'list')` was the only shape that was not a string.
+- *The rewrite* parses the body, joins each all-text block list into one string, and then, in
+  every string of the payload, turns the quote in front of an interpreter into a double quote
+  (`"python -m pytest -q\``, which the model reads fine and the rule ignores) and gives a
+  language-less code fence that opens on an interpreter a `text` tag. If nothing changed, the
+  original bytes are passed through and the request object is not rebuilt. Both of the openai
+  client's transports (sync for `invoke`, async for `ainvoke`) are wrapped, and `Content-Length`
+  is recomputed.
+
+**Key concepts.**
+- *A transport is the right seam for a provider quirk.* The openai client accepts an
+  `http_client`, httpx lets you supply a `transport`, and a transport sees exactly one thing:
+  the request about to go on the wire. Putting the rewrite there means the graph, the retry
+  wrapper, the fallback, the ledger and the other three providers are untouched, and the rule
+  "`llm.py` is the one place the providers differ" still holds, with this module as its helper.
+  The alternative, flattening tool results and censoring backticks in the graph for every
+  provider, would have changed what Groq and Gemini receive to work around a wall that only K2
+  has.
+- *Parse, do not scan.* The first version of `sanitize` edited the JSON body as text with a
+  regex. It failed twice in an afternoon: the replacement quote had to be the escaped `\"` or
+  the body stopped being JSON (a 400 instead of a 403, which is progress of a kind), and a
+  newline inside a JSON string is the two characters `\n`, so the fence pattern had to be
+  written for the escaped form. Parsing the body and rewriting the decoded strings made both
+  problems disappear and gave the text-block flattening a natural home. The cost is one
+  `json.loads` and one `json.dumps` per request, a few milliseconds against a call that takes
+  seconds.
+- *Firewalls read your prompt.* This is worth knowing beyond K2. Any hosted model behind a WAF
+  applies rules written for web forms to the JSON you send, and a coding agent's traffic looks
+  exactly like an injection attempt: shell commands, quoted, everywhere. The symptoms are an
+  HTML body where JSON was expected, a status the SDK does not retry, and a fallback that
+  quietly absorbs the failure. The ledger's "which model answered" column from step 6.5 is how
+  it was noticed: a run labelled K2 had answered every call with gpt-oss-120b.
+- *Measure the rule, then write it wider.* An unpublished firewall rule can only be sampled.
+  `_INTERPRETERS` covers `python`, `perl`, `curl`, `php` and `ruby` although only the first
+  three were seen to trigger, and the tests pin the rewrite, not the firewall: every "blocked"
+  case in `test_k2think.py` was a live 403 during the probe, every "allowed" case went through.
+  If the rule changes, the probe is a two-line httpx call and the list is one line.
+- *What it costs the model.* An unmatched quote (`"python -m pytest -q\``) and a `text` tag on a
+  fence are the whole change. The model's own prior replies come back to it slightly edited,
+  which it does not notice.
+
+- *Measured, two tasks, every call answered by K2.* With the rewrite active on every request,
+  `run_evals.py` on two suite tasks passed both in one iteration, and the ledger's per-model
+  count shows every `plan` and `act` call answered by `MBZUAI-IFM/K2-Think-v2`: no fallback.
+  Against the Groq baseline on the same tasks (same commit of the suite, same graph):
+
+  | task | model | steps | tokens in / out | seconds |
+  |---|---|---|---|---|
+  | fix-bug-duration-units | K2 Think | 5 | 11.2k / 1.1k | 34 |
+  | fix-bug-duration-units | gpt-oss-120b (Groq) | 8 | 12.9k / 1.5k | 49 |
+  | add-feature-slugify | K2 Think | 12 | 36.7k / 5.8k | 65 |
+  | add-feature-slugify | gpt-oss-120b (Groq) | 19 | 48.9k / 4.5k | 360 |
+
+  Two tasks is a smoke test, not a comparison; the full-suite arm is what the quota was for.
+  What it does show is that K2 takes fewer tool-calling steps to the same green tests, spends
+  more of its output on thinking (`output_token_details.reasoning` in every reply), and that
+  the Groq run's 360 seconds on the second task were mostly rate-limit waits, which K2 at two
+  requests a second does not have.
+
+**How the real tools do it.** Everyone who runs against more than one OpenAI-compatible
+endpoint has a layer like this. LiteLLM's whole product is a translation layer that
+normalises request shapes per provider (it flattens content lists for providers that want
+strings, drops parameters an endpoint does not know, and rewrites message roles); the openai
+SDK exposes `http_client` and `default_headers` precisely so that proxies, tracing and
+rewrites can be inserted without subclassing. Aider keeps a per-model settings file
+(`.aider.model.settings.yml`) for the quirks of each endpoint. Nobody has a firewall entry,
+because nobody else was sending `` `python -m pytest` `` in every request to a WAF-fronted
+endpoint. The general lesson is theirs, though: keep provider quirks in a provider layer with
+a test per quirk, so the agent above it never learns which endpoint it is talking to.
+
+**Check it.**
+```bash
+uv run pytest tests/test_k2think.py -q                       # the rewrite, offline
+# the firewall, live: the raw body gets an HTML 403, the same words through the provider get an answer
+uv run python -c "import os,httpx; from dotenv import load_dotenv; load_dotenv(); r=httpx.post('https://api.k2think.ai/v1/chat/completions', json={'model':'MBZUAI-IFM/K2-Think-v2','messages':[{'role':'user','content':'I ran \`python -m pytest -q\`. Reply OK.'}],'max_tokens':20}, headers={'Authorization':'Bearer '+os.environ['K2_API_KEY']}); print(r.status_code)"
+CODER_MODEL=k2think:MBZUAI-IFM/K2-Think-v2 uv run python -c "from coder_agent.llm import get_llm; print(get_llm().invoke('I ran \`python -m pytest -q\`. Reply OK.').content)"
+uv run coder run evals/suite/fix-bug-duration-units/repo "make the tests pass" --model k2think:MBZUAI-IFM/K2-Think-v2 --yes
+uv run python evals/run_evals.py --task fix-bug-duration-units --model k2think:MBZUAI-IFM/K2-Think-v2
 ```

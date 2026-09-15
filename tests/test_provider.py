@@ -21,12 +21,15 @@ from coder_agent import llm as llm_mod
 from coder_agent.agent import run_agent
 from coder_agent.cli import app
 from coder_agent.config import settings
+from coder_agent.evals.runner import label_for_model
+from coder_agent.k2think import AsyncSanitizingTransport, SanitizingTransport
 from coder_agent.llm import (
+    K2_KEY_ENV,
     ChatModelRetry,
     get_llm,
-    model_kwargs,
     mute_tracing_without_a_key,
     provider_of,
+    resolve,
 )
 from coder_agent.telemetry import Ledger, RunRecord
 from coder_agent.telemetry.events import ProviderEvents
@@ -246,8 +249,83 @@ def test_ollama_gets_context_size_and_address_instead_of_sdk_retries(monkeypatch
     monkeypatch.setattr(settings, "ollama_num_ctx", 4096)
     monkeypatch.setattr(settings, "ollama_base_url", "http://box:11434")
     assert provider_of("ollama:qwen2.5-coder:7b") == "ollama"
-    assert model_kwargs("ollama:qwen2.5-coder:7b") == {"base_url": "http://box:11434", "num_ctx": 4096}
-    assert model_kwargs("groq:openai/gpt-oss-120b") == {"max_retries": settings.llm_sdk_retries}
+    assert resolve("ollama:qwen2.5-coder:7b") == (
+        "ollama:qwen2.5-coder:7b", {"base_url": "http://box:11434", "num_ctx": 4096}
+    )
+    assert resolve("groq:openai/gpt-oss-120b") == (
+        "groq:openai/gpt-oss-120b", {"max_retries": settings.llm_sdk_retries}
+    )
+
+
+# --- K2 Think: an OpenAI-compatible endpoint behind a provider alias ------------------------
+
+
+def test_k2think_resolves_to_the_openai_integration_at_the_k2_endpoint(monkeypatch):
+    monkeypatch.setenv(K2_KEY_ENV, " k2-secret ")
+    monkeypatch.setattr(settings, "k2_reasoning_effort", "low")
+
+    name, kwargs = resolve("k2think:MBZUAI-IFM/K2-Think-v2")
+
+    assert name == "openai:MBZUAI-IFM/K2-Think-v2"  # the model name after the alias, untouched
+    clients = {k: kwargs.pop(k) for k in ("http_client", "http_async_client")}
+    assert kwargs == {
+        "base_url": settings.k2_base_url,
+        "api_key": "k2-secret",  # stripped: a trailing space in .env must not become a 401
+        "reasoning_effort": "low",
+        "max_retries": settings.llm_sdk_retries,
+    }
+    # Both of the openai client's paths go through the firewall rewrite (see k2think.py).
+    assert isinstance(clients["http_client"]._transport, SanitizingTransport)
+    assert isinstance(clients["http_async_client"]._transport, AsyncSanitizingTransport)
+
+
+def test_k2think_without_a_key_says_which_variable_to_set(monkeypatch):
+    monkeypatch.delenv(K2_KEY_ENV, raising=False)
+    with pytest.raises(ValueError, match=K2_KEY_ENV):
+        resolve("k2think:MBZUAI-IFM/K2-Think-v2")
+
+
+def test_k2think_as_an_unconfigured_fallback_is_dropped_like_any_other(providers, monkeypatch, caplog):
+    monkeypatch.delenv(K2_KEY_ENV, raising=False)
+    monkeypatch.setattr(settings, "fallback_model", "k2think:MBZUAI-IFM/K2-Think-v2")
+    with caplog.at_level(logging.WARNING, logger="coder_agent.llm"):
+        llm = get_llm()
+    assert isinstance(llm, ChatModelRetry)
+    assert "running without a fallback" in caplog.text
+
+
+def test_k2think_model_builds_offline_with_the_key_and_the_effort_in_place(monkeypatch):
+    """Constructing the client is offline; only `invoke` talks to the endpoint."""
+    pytest.importorskip("langchain_openai")
+    monkeypatch.setenv(K2_KEY_ENV, "k2-secret")
+    monkeypatch.setattr(settings, "model", "k2think:MBZUAI-IFM/K2-Think-v2")
+    monkeypatch.setattr(settings, "fallback_model", None)
+    llm = get_llm()
+    assert isinstance(llm, ChatModelRetry)
+    assert llm.bound.model_name == "MBZUAI-IFM/K2-Think-v2"
+    assert str(llm.bound.openai_api_base).rstrip("/") == settings.k2_base_url.rstrip("/")
+    assert llm.bound.reasoning_effort == settings.k2_reasoning_effort
+    assert isinstance(llm.bound.http_client._transport, SanitizingTransport)  # it reached the model
+    import openai
+
+    assert openai.APIError in llm_mod.TRANSIENT_ERRORS
+
+
+def test_context_budget_is_capped_by_the_provider_window(monkeypatch):
+    """K2 rejects prompt plus completion over 64k; Groq's window is twice the budget."""
+    monkeypatch.setattr(settings, "context_budget_tokens", 60_000)
+    monkeypatch.setattr(settings, "context_windows", {"k2think": 65_536})
+    monkeypatch.setattr(settings, "context_reserve_tokens", 24_000)
+    assert settings.context_budget("groq:openai/gpt-oss-120b") == 60_000
+    assert settings.context_budget("k2think:MBZUAI-IFM/K2-Think-v2") == 65_536 - 24_000
+    monkeypatch.setattr(settings, "model", "k2think:MBZUAI-IFM/K2-Think-v2")
+    assert settings.context_budget() == 65_536 - 24_000  # the primary by default
+    monkeypatch.setattr(settings, "context_budget_tokens", 12_000)
+    assert settings.context_budget() == 12_000  # an explicit lower budget still wins
+
+
+def test_k2think_results_label_drops_the_alias_and_the_slash():
+    assert label_for_model("k2think:MBZUAI-IFM/K2-Think-v2") == "MBZUAI-IFM-K2-Think-v2"
 
 
 def test_ollama_model_builds_without_a_daemon_and_keeps_its_tag(monkeypatch):
