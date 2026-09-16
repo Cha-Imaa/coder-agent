@@ -51,6 +51,10 @@ class TaskResult:
     # Per-node token counters in the ledger's shape, so the cost profile can be drawn from the
     # committed results file alone. Files written before this field existed load with `{}`.
     usage: dict[str, dict[str, Any]] = field(default_factory=dict)
+    # Failed model attempts by exception type (`{"RateLimitError": 2}`), from the run's
+    # `ProviderEvents`. This is how a parallel run shows whether it was too wide for the
+    # provider: the pass rate would not, because the retry and fallback layers absorb 429s.
+    provider_errors: dict[str, int] = field(default_factory=dict)
 
     @property
     def total_tokens(self) -> int:
@@ -167,7 +171,11 @@ async def graph_agent(repo: Path, prompt: str) -> dict[str, Any]:
     from coder_agent.agent import run_agent
 
     outcome = await run_agent(repo, prompt, tags={"suite": "in-house", "task_id": repo.name})
-    return {**outcome.final, "usage": outcome.record.usage}
+    return {
+        **outcome.final,
+        "usage": outcome.record.usage,
+        "provider_errors": outcome.record.provider_errors,
+    }
 
 
 def solution_agent(task: EvalTask) -> Agent:
@@ -206,9 +214,11 @@ async def run_task(
         error = traceback.format_exc()
     agent_seconds = time.time() - started
 
-    # Install hidden tests only after the agent is done: it must never have seen them.
+    # Install hidden tests only after the agent is done: it must never have seen them. Grading
+    # is a blocking subprocess, so it runs in a thread: with several tasks in flight, one
+    # task's pytest must not stall another task's model call.
     task.install_hidden_tests(repo)
-    verdict = grade(repo, timeout=grade_timeout)
+    verdict = await asyncio.to_thread(grade, repo, timeout=grade_timeout)
 
     usage = final.get("usage") or {}
     inp = sum(v.get("input_tokens", 0) for v in usage.values())
@@ -227,6 +237,7 @@ async def run_task(
         grade_output=verdict.output[-2000:],
         error=_scrub(error),
         usage=usage,
+        provider_errors=dict(final.get("provider_errors") or {}),
     )
 
 
@@ -239,6 +250,19 @@ def _scrub(text: str | None) -> str | None:
     return re.sub(r"~[^\s\"']*?site-packages", "<site-packages>", text)
 
 
+# What a provider's "slow down" looks like from here: the exception names the SDKs raise on a
+# 429 (groq and openai: `RateLimitError`; Google: `ResourceExhausted`), or the status itself in
+# a traceback when the run died on it.
+_RATE_LIMIT_MARKERS = ("RateLimitError", "ResourceExhausted", "429")
+
+
+def rate_limited(result: TaskResult) -> bool:
+    """True if the provider pushed back on this task at least once."""
+    if any(m in name for name in result.provider_errors for m in _RATE_LIMIT_MARKERS):
+        return True
+    return bool(result.error) and any(m in result.error for m in _RATE_LIMIT_MARKERS)
+
+
 async def run_suite(
     tasks: Iterable[EvalTask],
     agent_for: Callable[[EvalTask], Agent],
@@ -249,28 +273,68 @@ async def run_suite(
     keep_workdirs: bool = False,
     on_result: Callable[[TaskResult], None] | None = None,
     pause_seconds: float = 0.0,
+    parallel: int = 1,
 ) -> SuiteResult:
-    """Run every task sequentially and collect a `SuiteResult`.
+    """Run every task and collect a `SuiteResult`, in the order the tasks were given.
 
-    Sequential on purpose: free-tier rate limits are per minute, and a parallel runner would
-    spend its budget on 429s. `pause_seconds` between tasks is the crude way to stay under them.
+    `parallel` is how many tasks run at once. Each task already has its own repository,
+    checkpoint file and tool-server process, so the only thing the workers share is the
+    provider's rate limit, and that is what the scheduler watches: a worker whose task came
+    back with rate-limit errors retires, as long as one worker is left, so a run that started
+    too wide narrows itself instead of spending the rest of the suite on 429s and fallback
+    calls. `pause_seconds` is the minimum gap between two task starts.
+
+    Results are appended as they finish (that is when `on_result` fires) and sorted back into
+    task order at the end, so a results file reads the same whatever the timing was.
     """
+    tasks = list(tasks)
+    workers = max(1, min(parallel, len(tasks) or 1))
     suite = SuiteResult(label=label, model=model, started_at=time.time(), meta=_meta())
+    suite.meta["parallel"] = workers
     root = workdir or Path(tempfile.mkdtemp(prefix="coder-evals-"))
     root.mkdir(parents=True, exist_ok=True)
-    try:
-        for i, task in enumerate(tasks):
-            if i and pause_seconds:
-                await asyncio.sleep(pause_seconds)
+
+    queue: asyncio.Queue[EvalTask] = asyncio.Queue()
+    for task in tasks:
+        queue.put_nowait(task)
+    pool = {"active": workers, "retired": 0}
+    starts_lock = asyncio.Lock()
+    last_start = -float("inf")
+    collected: list[TaskResult] = []
+
+    async def worker() -> None:
+        nonlocal last_start
+        while True:
+            try:
+                task = queue.get_nowait()
+            except asyncio.QueueEmpty:
+                return
+            if pause_seconds:
+                async with starts_lock:
+                    wait = last_start + pause_seconds - time.monotonic()
+                    if wait > 0:
+                        await asyncio.sleep(wait)
+                    last_start = time.monotonic()
             result = await run_task(task, agent_for(task), root)
-            suite.results.append(result)
+            collected.append(result)
             if on_result is not None:
                 on_result(result)
+            if rate_limited(result) and pool["active"] > 1:
+                pool["active"] -= 1
+                pool["retired"] += 1
+                return
+
+    try:
+        await asyncio.gather(*(worker() for _ in range(workers)))
     finally:
         if not keep_workdirs:
             shutil.rmtree(root, ignore_errors=True)
         else:
             suite.meta["workdir"] = str(root)
+    order = {task.id: i for i, task in enumerate(tasks)}
+    suite.results = sorted(collected, key=lambda r: order[r.task_id])
+    if pool["retired"]:
+        suite.meta["workers_retired"] = pool["retired"]
     return suite
 
 

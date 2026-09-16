@@ -7,6 +7,7 @@ tests that matter most. The rest covers isolation, crash handling and the result
 
 from __future__ import annotations
 
+import asyncio
 import json
 import sys
 from pathlib import Path
@@ -24,7 +25,7 @@ from coder_agent.evals import (
     run_task,
     solution_agent,
 )
-from coder_agent.evals.runner import label_for_model
+from coder_agent.evals.runner import label_for_model, rate_limited
 from coder_agent.evals.tasks import QUICK_TASK_IDS
 
 SUITE = load_suite()
@@ -183,6 +184,54 @@ def test_label_for_model_drops_the_provider_and_keeps_ollama_tags_whole():
     assert label_for_model("ollama:qwen2.5-coder:7b") == "qwen2.5-coder-7b"
 
 
+# --- the parallel scheduler -------------------------------------------------------------------
+
+FOUR = SUITE[:4]
+
+
+def _agent_that(provider_errors: dict[str, int], delay: float = 0.0):
+    """An agent that reports `provider_errors` the way `graph_agent` does, after `delay`."""
+
+    async def agent(repo: Path, prompt: str) -> dict[str, Any]:
+        await asyncio.sleep(delay)
+        return {"status": "failed", "iteration": 1, "steps": 1, "provider_errors": provider_errors}
+
+    return agent
+
+
+async def test_parallel_results_come_back_in_task_order(tmp_path: Path):
+    """Workers finish in whatever order the timing gives; the file must not depend on it."""
+    delays = {t.id: d for t, d in zip(FOUR, (0.3, 0.0, 0.2, 0.1), strict=True)}
+    seen: list[str] = []
+    suite = await run_suite(
+        FOUR, lambda t: _agent_that({}, delays[t.id]), label="p", model="m",
+        workdir=tmp_path / "w", parallel=4, on_result=lambda r: seen.append(r.task_id),
+    )
+    assert [r.task_id for r in suite.results] == [t.id for t in FOUR]
+    assert seen != [t.id for t in FOUR]  # completion order really was different
+    assert suite.meta["parallel"] == 4 and "workers_retired" not in suite.meta
+
+
+async def test_a_worker_retires_after_a_rate_limit_but_the_last_one_never_does(tmp_path: Path):
+    """Every task hits a 429: the pool narrows to one worker and still finishes the suite."""
+    suite = await run_suite(
+        FOUR, lambda t: _agent_that({"RateLimitError": 2}), label="p", model="m",
+        workdir=tmp_path / "w", parallel=2,
+    )
+    assert len(suite.results) == len(FOUR)
+    assert suite.meta["workers_retired"] == 1
+    assert all(r.provider_errors == {"RateLimitError": 2} for r in suite.results)
+
+
+async def test_a_run_that_dies_on_a_429_counts_as_rate_limited(tmp_path: Path):
+    async def boom(repo: Path, prompt: str) -> dict[str, Any]:
+        raise RuntimeError("Error code: 429 - rate limit reached")
+
+    result = await run_task(SAMPLE[0], boom, tmp_path)
+    assert rate_limited(result)
+    assert not rate_limited(await run_task(SAMPLE[0], noop_agent, tmp_path / "b"))
+
+
 # --- the run_evals CLI ------------------------------------------------------------------------
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "evals"))
@@ -201,28 +250,37 @@ def _run_evals(tmp_path: Path, *args: str):
     return result, json.loads(written[0].read_text(encoding="utf-8"))
 
 
-def test_the_default_run_is_the_quick_subset(tmp_path: Path):
-    """The expensive thing has to be the one you ask for.
-
-    A full pass over the in-house suite costs roughly a day of the Groq free tier, so running it
-    by accident is the failure this guards against.
-    """
-    result, data = _run_evals(tmp_path)
-    assert [r["task_id"] for r in data["results"]] == list(QUICK_TASK_IDS)
-    assert data["meta"]["subset"] == "quick"
-    assert data["label"].endswith("-quick")  # cannot be mistaken for the headline number
-    assert "--full" in result.output
-
-
-def test_full_runs_the_whole_suite_and_is_marked_as_such(tmp_path: Path):
-    _, data = _run_evals(tmp_path, "--full")
+def test_the_default_run_is_the_whole_suite(tmp_path: Path):
+    """The headline number is the default."""
+    _, data = _run_evals(tmp_path)
     assert len(data["results"]) == len(load_suite())
     assert data["meta"]["subset"] == "full"
     assert not data["label"].endswith("-quick")
+    assert data["meta"]["parallel"] == 1
 
 
-def test_naming_tasks_explicitly_overrides_the_quick_default(tmp_path: Path):
+def test_full_is_still_accepted_for_older_commands(tmp_path: Path):
+    _, data = _run_evals(tmp_path, "--full", "--task", "fix-bug-duration-units")
+    assert data["meta"]["subset"] == "full"
+
+
+def test_quick_runs_the_subset_and_is_marked_as_such(tmp_path: Path):
+    """A four-task pass rate must never sit in the results directory looking like a twelve-task one."""
+    result, data = _run_evals(tmp_path, "--quick")
+    assert [r["task_id"] for r in data["results"]] == list(QUICK_TASK_IDS)
+    assert data["meta"]["subset"] == "quick"
+    assert data["label"].endswith("-quick")
+    assert "not the headline number" in result.output
+
+
+def test_parallel_is_recorded_in_the_results_file(tmp_path: Path):
+    _, data = _run_evals(tmp_path, "--parallel", "3", "--task", "fix-bug-duration-units",
+                         "--task", "add-feature-stack-peek")
+    assert data["meta"]["parallel"] == 2  # capped at the number of tasks
+
+
+def test_naming_tasks_explicitly_overrides_quick(tmp_path: Path):
     """`--task` is already a narrower request; the subset must not narrow it further."""
-    _, data = _run_evals(tmp_path, "--task", "multi-file-cart-discount")
+    _, data = _run_evals(tmp_path, "--quick", "--task", "multi-file-cart-discount")
     assert [r["task_id"] for r in data["results"]] == ["multi-file-cart-discount"]
     assert data["meta"]["subset"] == "full"

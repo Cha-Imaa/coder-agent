@@ -125,20 +125,30 @@ uv run python evals/figures.py
 and grades. Results go to `evals/results/` as JSON; `figures.py` redraws every PNG in
 `docs/figures/` from those files.
 
-By default it runs the **quick subset**: the cheapest task in each of four categories, about
-57,000 tokens and five minutes. That is deliberately not the headline number, so its results file
-is labelled `-quick` and the figures skip it.
+By default it runs all twelve tasks, which is what the headline numbers come from. `--quick`
+runs the cheapest task in each of four categories instead, about 57,000 tokens and five minutes;
+that is deliberately not the headline number, so its results file is labelled `-quick` and the
+figures skip it.
 
-!!! warning "The full suite is a day's quota"
-    Groq's free tier allows 200,000 tokens per day. All twelve tasks cost about 356,000, so
-    `--full` does not fit in one day: a measured run spent 199,198 tokens on eight tasks and the
+!!! warning "On Groq, the full suite is a day's quota"
+    Groq's free tier allows 200,000 tokens per day. All twelve tasks cost about 356,000, so a
+    full run does not fit in one day: a measured run spent 199,198 tokens on eight tasks and the
     last four died on 429s. When that happens, pass `--rerun-errors <previous.json>` the next day
     to top up the tasks that hit the limit and merge them into the same results file.
 
     ```bash
-    uv run python evals/run_evals.py --full
     uv run python evals/run_evals.py --rerun-errors evals/results/<the-file>.json   # next day
     ```
+
+    Or run it on K2 Think, whose quota is 10M tokens a day, with four tasks in flight:
+
+    ```bash
+    uv run python evals/run_evals.py --model k2think:MBZUAI-IFM/K2-Think-v2 --parallel 4
+    ```
+
+    Every task has its own repository copy, checkpoint file and tool-server process, so the only
+    thing the four share is the provider's rate limit. A worker that hits one retires, so a run
+    that starts too wide narrows itself.
 
 ## Using no quota at all
 

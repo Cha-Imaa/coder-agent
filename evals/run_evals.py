@@ -1,6 +1,8 @@
 """Run the in-house eval suite and print the pass-rate table.
 
     uv run python evals/run_evals.py                      # all 12 in-house tasks with the real agent
+    uv run python evals/run_evals.py --quick              # the cheapest task in each of four categories
+    uv run python evals/run_evals.py --parallel 4         # four tasks in flight (see run_suite)
     uv run python evals/run_evals.py --suite humaneval    # the 30-problem HumanEval slice
     uv run python evals/run_evals.py --suite all
     uv run python evals/run_evals.py --category fix-bug   # one category
@@ -52,13 +54,25 @@ app = typer.Typer(add_completion=False)
 @app.command()
 def main(
     suite: Annotated[str, typer.Option(help="inhouse | humaneval | all")] = "inhouse",
-    full: Annotated[
+    quick: Annotated[
         bool,
         typer.Option(
-            "--full",
-            help="Every task in the suite. Without it, only the four-task quick subset runs.",
+            "--quick",
+            help="Only the four-task quick subset, for a cheap experiment; the results file is "
+            "labelled -quick and no figure draws it.",
         ),
     ] = False,
+    full: Annotated[
+        bool, typer.Option("--full", hidden=True, help="Accepted for older commands; the default.")
+    ] = False,
+    parallel: Annotated[
+        int,
+        typer.Option(
+            help="Tasks in flight at once. A worker retires when its task hit a rate limit, so "
+            "start wide and let the run narrow itself. 1 is the safe value for Groq's tier; "
+            "K2 Think allows two requests a second and takes 4 comfortably."
+        ),
+    ] = 1,
     category: Annotated[str | None, typer.Option(help="Only tasks in this category.")] = None,
     task: Annotated[list[str] | None, typer.Option(help="Only these task ids (repeatable).")] = None,
     agent: Annotated[str, typer.Option(help="graph | solution | noop")] = "graph",
@@ -72,7 +86,7 @@ def main(
     sandbox: Annotated[
         str | None, typer.Option(help="Where the agent's commands run: local or docker.")
     ] = None,
-    pause: Annotated[float, typer.Option(help="Seconds to wait between tasks (rate limits).")] = 0.0,
+    pause: Annotated[float, typer.Option(help="Minimum seconds between task starts.")] = 0.0,
     keep_workdirs: Annotated[bool, typer.Option(help="Leave the materialised repos on disk.")] = False,
     results_dir: Annotated[Path, typer.Option(help="Where to write the JSON.")] = RESULTS_DIR,
     rerun_errors: Annotated[
@@ -100,11 +114,12 @@ def main(
     except ValueError as exc:
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(code=2) from None
-    # The quick subset is the default so that an experiment costs a fraction of the day's free
-    # tier rather than all of it. An explicit `--task` or `--category` is a narrower request
-    # already, so it is left alone; `--full` and `--rerun-errors` both mean "all of them".
+    # The full suite is the default: the headline numbers and every figure come from it, and
+    # with K2 Think's quota one arm is minutes, not a day of the free tier. `--quick` opts into
+    # the four-task subset for an experiment. An explicit `--task` or `--category` is a narrower
+    # request already, so it is left alone, and `--rerun-errors` means "the ones that errored".
     explicit_selection = bool(task) or category is not None
-    use_quick = not full and not explicit_selection and rerun_errors is None
+    use_quick = quick and not explicit_selection and rerun_errors is None
     if use_quick:
         tasks = quick_subset(tasks)
 
@@ -150,12 +165,12 @@ def main(
     console.print(
         f"[bold]{len(tasks)} task(s)[/bold] · agent={agent} · model={model_name} · "
         f"max_iterations={settings.max_iterations} · retrieval={settings.retrieval_mode} · "
-        f"sandbox={settings.sandbox_mode}"
+        f"sandbox={settings.sandbox_mode} · parallel={parallel}"
     )
     if use_quick:
         console.print(
-            "[dim]Quick subset: the cheapest task in each of four categories, about 57k tokens. "
-            "Pass --full for all of them (~356k, most of a day's free tier).[/dim]"
+            "[dim]Quick subset: the cheapest task in each of four categories, about 57k tokens; "
+            "not the headline number, and no figure draws it.[/dim]"
         )
 
     def on_result(r: TaskResult) -> None:
@@ -165,6 +180,9 @@ def main(
             f"  [{colour}]{'PASS' if r.passed else 'FAIL'}[/{colour}] {r.task_id:<34} "
             f"{r.iterations} iter · {r.total_tokens:>7,} tok · {r.agent_seconds:5.0f}s{note}"
         )
+        if r.provider_errors:
+            failed = ", ".join(f"{n} {name}" for name, n in sorted(r.provider_errors.items()))
+            console.print(f"       [yellow]provider errors:[/yellow] {failed}")
 
     suite_name = suite
     suite = asyncio.run(
@@ -176,6 +194,7 @@ def main(
             keep_workdirs=keep_workdirs,
             on_result=on_result,
             pause_seconds=pause,
+            parallel=parallel,
         )
     )
     suite.meta["suite"] = suite_name  # figures compare models on the same suite only
@@ -185,6 +204,11 @@ def main(
     path = suite.write(results_dir)
     _print_table(suite)
     console.print(f"\n[dim]Results written to {path}[/dim]")
+    if suite.meta.get("workers_retired"):
+        console.print(
+            f"[yellow]{suite.meta['workers_retired']} worker(s) retired after rate limits;[/yellow] "
+            f"the run finished {suite.meta['parallel'] - suite.meta['workers_retired']} wide."
+        )
     console.print("\n" + suite.markdown_table())
     if suite.meta.get("workdir"):
         console.print(f"[dim]Work directories kept under {suite.meta['workdir']}[/dim]")
