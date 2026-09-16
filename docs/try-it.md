@@ -86,7 +86,7 @@ uv run coder chat /tmp/duration-demo
 ```
 
 The same graph, kept open. Ask for a change, let it finish, then ask for another in the same
-session; the second turn still has the first one's context. `/exit` leaves.
+session; the second turn still has the first one's context. `/quit` (or `/exit`) leaves.
 
 ## 5. An issue in, a pull request out
 
@@ -100,7 +100,12 @@ uv run coder fix-issue https://github.com/OWNER/REPO/issues/1 --repo path/to/you
 ```
 
 The fix lands on a `coder/issue-1` branch. With `--pr` it is committed, pushed and opened as a
-pull request, but only once the tests pass.
+pull request, but only once the tests pass. Running the first command, reviewing the diff, then
+running the second is the intended order: the second run finds the reviewed edits on the branch,
+runs the tests on them and opens the pull request without running the agent again.
+
+If the throwaway repository is private, the first command needs the token too; the message says
+so (`404 ... a token may be needed`).
 
 ## 6. Run the agent's commands in a container
 

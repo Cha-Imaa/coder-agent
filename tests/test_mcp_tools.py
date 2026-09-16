@@ -112,9 +112,23 @@ async def test_sandbox_errors_are_returned_not_raised(tools: dict) -> None:
 
 
 async def test_unknown_argument_names_are_rejected_with_hint(tools: dict) -> None:
-    out = text(await tools["read_file"].ainvoke({"path": "pkg/math_utils.py", "line_start": 5}))
-    assert out.startswith("ERROR: unknown argument(s) ['line_start']")
+    out = text(await tools["read_file"].ainvoke({"path": "pkg/math_utils.py", "lines_from": 5}))
+    assert out.startswith("ERROR: unknown argument(s) ['lines_from']")
     assert "start_line" in out
+
+
+async def test_predictable_argument_aliases_are_renamed_and_run(tools: dict) -> None:
+    # The name the model guesses first in practice; the call must do what it meant, not error.
+    out = text(await tools["read_file"].ainvoke({"path": "pkg/math_utils.py", "line_start": 5}))
+    assert out.startswith("# pkg/math_utils.py (lines 5-")
+    # An alias whose target is not on this tool is still unknown here.
+    out = text(await tools["read_file"].ainvoke({"path": "pkg/math_utils.py", "depth": 1}))
+    assert out.startswith("ERROR: unknown argument(s) ['depth']")
+    # Both spellings at once is a contradiction, not a rename.
+    out = text(await tools["read_file"].ainvoke(
+        {"path": "pkg/math_utils.py", "line_start": 5, "start_line": 1}
+    ))
+    assert out.startswith("ERROR: unknown argument(s) ['line_start']")
 
 
 async def test_edit_file_returns_unified_diff(tools: dict) -> None:
