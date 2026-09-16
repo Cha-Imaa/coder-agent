@@ -234,7 +234,7 @@ async def run_task(
         output_tokens=outp,
         agent_seconds=agent_seconds,
         grade_exit_code=verdict.exit_code,
-        grade_output=verdict.output[-2000:],
+        grade_output=_scrub(verdict.output[-2000:]) or "",
         error=_scrub(error),
         usage=usage,
         provider_errors=dict(final.get("provider_errors") or {}),
@@ -242,7 +242,8 @@ async def run_task(
 
 
 def _scrub(text: str | None) -> str | None:
-    """Results files are committed; tracebacks must not leak the machine's home directory."""
+    """Results files are committed; tracebacks and pytest output must not leak the machine's
+    home directory (a failing hidden test prints the absolute path of every frame)."""
     if not text:
         return text
     home = str(Path.home())

@@ -20,7 +20,13 @@ import typer
 from rich.console import Console
 
 from coder_agent.config import settings
-from coder_agent.evals.figures import FIGURES_DIR, latest_results, node_costs, render_all
+from coder_agent.evals.figures import (
+    FIGURES_DIR,
+    latest_results,
+    node_costs,
+    profiled_suite,
+    render_all,
+)
 from coder_agent.evals.runner import load_result
 from coder_agent.telemetry.ledger import Ledger
 
@@ -45,9 +51,10 @@ def main(
         )
     for path in render_all(suites, out, book):
         console.print(f"[green]wrote[/green] {path}")
-    rows = node_costs(suites[-1], book)
+    profiled = profiled_suite(suites)
+    rows = node_costs(profiled, book)
     if rows:
-        console.print(f"\nTokens per run by node, {suites[-1].label} ({rows[0]['runs']} runs):")
+        console.print(f"\nTokens per run by node, {profiled.label} ({rows[0]['runs']} runs):")
         for r in rows:
             console.print(
                 f"  {r['node']:<12} {r['input_tokens']:>9,.0f} in  {r['output_tokens']:>7,.0f} out"

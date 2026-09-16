@@ -1,0 +1,1034 @@
+{
+  "label": "humaneval-MBZUAI-IFM-K2-Think-v2",
+  "model": "k2think:MBZUAI-IFM/K2-Think-v2",
+  "started_at": 1789539014.7203844,
+  "meta": {
+    "commit": "ab4b597",
+    "python": "3.11.7",
+    "platform": "Windows-10-10.0.26200-SP0",
+    "max_iterations": 4,
+    "max_steps": 40,
+    "fallback_model": "google_genai:gemini-2.5-flash",
+    "retrieval_mode": "hybrid",
+    "embedding_model": "snowflake/snowflake-arctic-embed-xs",
+    "parallel": 3,
+    "suite": "humaneval",
+    "subset": "full"
+  },
+  "pass_rate": 1.0,
+  "errors": 0,
+  "by_category": [
+    {
+      "category": "humaneval",
+      "tasks": 30,
+      "passed": 30,
+      "errors": 0,
+      "pass_rate": 1.0,
+      "avg_tokens": 13174.3,
+      "avg_iterations": 1.0,
+      "avg_seconds": 56.674785693486534
+    },
+    {
+      "category": "total",
+      "tasks": 30,
+      "passed": 30,
+      "errors": 0,
+      "pass_rate": 1.0,
+      "avg_tokens": 13174.3,
+      "avg_iterations": 1.0,
+      "avg_seconds": 56.674785693486534
+    }
+  ],
+  "results": [
+    {
+      "task_id": "humaneval-000-has-close-elements",
+      "category": "humaneval",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 4,
+      "input_tokens": 8807,
+      "output_tokens": 802,
+      "agent_seconds": 49.20448637008667,
+      "grade_exit_code": 0,
+      "grade_output": "..                                                                       [100%]\n2 passed in 0.03s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 509,
+          "output_tokens": 285,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 4,
+          "input_tokens": 8298,
+          "output_tokens": 517,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 4
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "humaneval-001-separate-paren-groups",
+      "category": "humaneval",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 4,
+      "input_tokens": 9194,
+      "output_tokens": 3117,
+      "agent_seconds": 49.26233100891113,
+      "grade_exit_code": 0,
+      "grade_output": "..                                                                       [100%]\n2 passed in 0.02s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 516,
+          "output_tokens": 2021,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 4,
+          "input_tokens": 8678,
+          "output_tokens": 1096,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 4
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "humaneval-002-truncate-number",
+      "category": "humaneval",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 6,
+      "input_tokens": 12536,
+      "output_tokens": 765,
+      "agent_seconds": 64.84192562103271,
+      "grade_exit_code": 0,
+      "grade_output": "..                                                                       [100%]\n2 passed in 0.02s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 452,
+          "output_tokens": 313,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 6,
+          "input_tokens": 12084,
+          "output_tokens": 452,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 6
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "humaneval-003-below-zero",
+      "category": "humaneval",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 4,
+      "input_tokens": 8544,
+      "output_tokens": 770,
+      "agent_seconds": 55.023704528808594,
+      "grade_exit_code": 0,
+      "grade_output": "..                                                                       [100%]\n2 passed in 0.03s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 496,
+          "output_tokens": 300,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 4,
+          "input_tokens": 8048,
+          "output_tokens": 470,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 4
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "humaneval-004-mean-absolute-deviation",
+      "category": "humaneval",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 4,
+      "input_tokens": 8655,
+      "output_tokens": 935,
+      "agent_seconds": 55.02504253387451,
+      "grade_exit_code": 0,
+      "grade_output": "..                                                                       [100%]\n2 passed in 0.03s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 515,
+          "output_tokens": 518,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 4,
+          "input_tokens": 8140,
+          "output_tokens": 417,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 4
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "humaneval-005-intersperse",
+      "category": "humaneval",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 5,
+      "input_tokens": 10761,
+      "output_tokens": 1046,
+      "agent_seconds": 55.85904288291931,
+      "grade_exit_code": 0,
+      "grade_output": "..                                                                       [100%]\n2 passed in 0.03s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 478,
+          "output_tokens": 194,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 5,
+          "input_tokens": 10283,
+          "output_tokens": 852,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 5
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "humaneval-006-parse-nested-parens",
+      "category": "humaneval",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 4,
+      "input_tokens": 9206,
+      "output_tokens": 1417,
+      "agent_seconds": 50.09944486618042,
+      "grade_exit_code": 0,
+      "grade_output": "..                                                                       [100%]\n2 passed in 0.02s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 517,
+          "output_tokens": 402,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 4,
+          "input_tokens": 8689,
+          "output_tokens": 1015,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 4
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "humaneval-007-filter-by-substring",
+      "category": "humaneval",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 4,
+      "input_tokens": 8361,
+      "output_tokens": 625,
+      "agent_seconds": 57.11986827850342,
+      "grade_exit_code": 0,
+      "grade_output": "..                                                                       [100%]\n2 passed in 0.03s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 487,
+          "output_tokens": 304,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 4,
+          "input_tokens": 7874,
+          "output_tokens": 321,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 4
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "humaneval-008-sum-product",
+      "category": "humaneval",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 6,
+      "input_tokens": 13754,
+      "output_tokens": 937,
+      "agent_seconds": 59.07947325706482,
+      "grade_exit_code": 0,
+      "grade_output": "..                                                                       [100%]\n2 passed in 0.03s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 483,
+          "output_tokens": 282,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 6,
+          "input_tokens": 13271,
+          "output_tokens": 655,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 6
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "humaneval-009-rolling-max",
+      "category": "humaneval",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 7,
+      "input_tokens": 16298,
+      "output_tokens": 1301,
+      "agent_seconds": 61.19344615936279,
+      "grade_exit_code": 0,
+      "grade_output": "..                                                                       [100%]\n2 passed in 0.03s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 475,
+          "output_tokens": 277,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 7,
+          "input_tokens": 15823,
+          "output_tokens": 1024,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 7
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "humaneval-010-make-palindrome",
+      "category": "humaneval",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 4,
+      "input_tokens": 9370,
+      "output_tokens": 1490,
+      "agent_seconds": 50.289751291275024,
+      "grade_exit_code": 0,
+      "grade_output": "..                                                                       [100%]\n2 passed in 0.03s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 552,
+          "output_tokens": 727,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 4,
+          "input_tokens": 8818,
+          "output_tokens": 763,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 4
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "humaneval-011-string-xor",
+      "category": "humaneval",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 6,
+      "input_tokens": 13786,
+      "output_tokens": 1274,
+      "agent_seconds": 57.38362145423889,
+      "grade_exit_code": 0,
+      "grade_output": "..                                                                       [100%]\n2 passed in 0.02s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 458,
+          "output_tokens": 285,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 6,
+          "input_tokens": 13328,
+          "output_tokens": 989,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 6
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "humaneval-012-longest",
+      "category": "humaneval",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 9,
+      "input_tokens": 20691,
+      "output_tokens": 1504,
+      "agent_seconds": 78.61845684051514,
+      "grade_exit_code": 0,
+      "grade_output": "..                                                                       [100%]\n2 passed in 0.02s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 472,
+          "output_tokens": 215,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 9,
+          "input_tokens": 20219,
+          "output_tokens": 1289,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 9
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "humaneval-013-greatest-common-divisor",
+      "category": "humaneval",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 6,
+      "input_tokens": 12590,
+      "output_tokens": 1047,
+      "agent_seconds": 57.929356813430786,
+      "grade_exit_code": 0,
+      "grade_output": "..                                                                       [100%]\n2 passed in 0.03s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 456,
+          "output_tokens": 228,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 6,
+          "input_tokens": 12134,
+          "output_tokens": 819,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 6
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "humaneval-014-all-prefixes",
+      "category": "humaneval",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 4,
+      "input_tokens": 7994,
+      "output_tokens": 863,
+      "agent_seconds": 49.96770453453064,
+      "grade_exit_code": 0,
+      "grade_output": "..                                                                       [100%]\n2 passed in 0.03s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 438,
+          "output_tokens": 360,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 4,
+          "input_tokens": 7556,
+          "output_tokens": 503,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 4
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "humaneval-015-string-sequence",
+      "category": "humaneval",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 4,
+      "input_tokens": 7951,
+      "output_tokens": 686,
+      "agent_seconds": 29.95226550102234,
+      "grade_exit_code": 0,
+      "grade_output": "..                                                                       [100%]\n2 passed in 0.03s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 425,
+          "output_tokens": 333,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 4,
+          "input_tokens": 7526,
+          "output_tokens": 353,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 4
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "humaneval-016-count-distinct-characters",
+      "category": "humaneval",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 7,
+      "input_tokens": 15120,
+      "output_tokens": 973,
+      "agent_seconds": 63.14525628089905,
+      "grade_exit_code": 0,
+      "grade_output": "..                                                                       [100%]\n2 passed in 0.03s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 459,
+          "output_tokens": 224,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 7,
+          "input_tokens": 14661,
+          "output_tokens": 749,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 7
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "humaneval-017-parse-music",
+      "category": "humaneval",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 4,
+      "input_tokens": 9672,
+      "output_tokens": 1473,
+      "agent_seconds": 43.842727184295654,
+      "grade_exit_code": 0,
+      "grade_output": "..                                                                       [100%]\n2 passed in 0.03s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 559,
+          "output_tokens": 781,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 4,
+          "input_tokens": 9113,
+          "output_tokens": 692,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 4
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "humaneval-018-how-many-times",
+      "category": "humaneval",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 5,
+      "input_tokens": 11097,
+      "output_tokens": 1062,
+      "agent_seconds": 40.410417556762695,
+      "grade_exit_code": 0,
+      "grade_output": "..                                                                       [100%]\n2 passed in 0.03s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 461,
+          "output_tokens": 237,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 5,
+          "input_tokens": 10636,
+          "output_tokens": 825,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 5
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "humaneval-019-sort-numbers",
+      "category": "humaneval",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 6,
+      "input_tokens": 14286,
+      "output_tokens": 1338,
+      "agent_seconds": 62.23599720001221,
+      "grade_exit_code": 0,
+      "grade_output": "..                                                                       [100%]\n2 passed in 0.03s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 478,
+          "output_tokens": 225,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 6,
+          "input_tokens": 13808,
+          "output_tokens": 1113,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 6
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "humaneval-020-find-closest-elements",
+      "category": "humaneval",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 4,
+      "input_tokens": 9619,
+      "output_tokens": 1700,
+      "agent_seconds": 49.11660695075989,
+      "grade_exit_code": 0,
+      "grade_output": "..                                                                       [100%]\n2 passed in 0.03s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 564,
+          "output_tokens": 640,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 4,
+          "input_tokens": 9055,
+          "output_tokens": 1060,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 4
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "humaneval-021-rescale-to-unit",
+      "category": "humaneval",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 4,
+      "input_tokens": 8809,
+      "output_tokens": 956,
+      "agent_seconds": 52.3633930683136,
+      "grade_exit_code": 0,
+      "grade_output": "..                                                                       [100%]\n2 passed in 0.02s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 517,
+          "output_tokens": 375,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 4,
+          "input_tokens": 8292,
+          "output_tokens": 581,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 4
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "humaneval-022-filter-integers",
+      "category": "humaneval",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 4,
+      "input_tokens": 8387,
+      "output_tokens": 678,
+      "agent_seconds": 54.571125984191895,
+      "grade_exit_code": 0,
+      "grade_output": "..                                                                       [100%]\n2 passed in 0.03s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 487,
+          "output_tokens": 343,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 4,
+          "input_tokens": 7900,
+          "output_tokens": 335,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 4
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "humaneval-023-strlen",
+      "category": "humaneval",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 7,
+      "input_tokens": 14534,
+      "output_tokens": 1377,
+      "agent_seconds": 57.350778102874756,
+      "grade_exit_code": 0,
+      "grade_output": "..                                                                       [100%]\n2 passed in 0.03s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 396,
+          "output_tokens": 269,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 7,
+          "input_tokens": 14138,
+          "output_tokens": 1108,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 7
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "humaneval-024-largest-divisor",
+      "category": "humaneval",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 7,
+      "input_tokens": 15449,
+      "output_tokens": 1713,
+      "agent_seconds": 58.60232973098755,
+      "grade_exit_code": 0,
+      "grade_output": "..                                                                       [100%]\n2 passed in 0.03s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 424,
+          "output_tokens": 271,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 7,
+          "input_tokens": 15025,
+          "output_tokens": 1442,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 7
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "humaneval-025-factorize",
+      "category": "humaneval",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 8,
+      "input_tokens": 18574,
+      "output_tokens": 1774,
+      "agent_seconds": 121.08563828468323,
+      "grade_exit_code": 0,
+      "grade_output": "..                                                                       [100%]\n2 passed in 0.03s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 500,
+          "output_tokens": 333,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 8,
+          "input_tokens": 18074,
+          "output_tokens": 1441,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 8
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "humaneval-026-remove-duplicates",
+      "category": "humaneval",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 8,
+      "input_tokens": 18563,
+      "output_tokens": 1985,
+      "agent_seconds": 110.1384973526001,
+      "grade_exit_code": 0,
+      "grade_output": "..                                                                       [100%]\n2 passed in 0.02s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 469,
+          "output_tokens": 280,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 8,
+          "input_tokens": 18094,
+          "output_tokens": 1705,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 8
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "humaneval-027-flip-case",
+      "category": "humaneval",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 8,
+      "input_tokens": 15355,
+      "output_tokens": 909,
+      "agent_seconds": 53.58579659461975,
+      "grade_exit_code": 0,
+      "grade_output": "..                                                                       [100%]\n2 passed in 0.01s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 405,
+          "output_tokens": 289,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 8,
+          "input_tokens": 14950,
+          "output_tokens": 620,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 8
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "humaneval-028-concatenate",
+      "category": "humaneval",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 4,
+      "input_tokens": 8002,
+      "output_tokens": 629,
+      "agent_seconds": 13.791007995605469,
+      "grade_exit_code": 0,
+      "grade_output": "..                                                                       [100%]\n2 passed in 0.02s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 431,
+          "output_tokens": 210,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 4,
+          "input_tokens": 7571,
+          "output_tokens": 419,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 4
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "humaneval-029-filter-by-prefix",
+      "category": "humaneval",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 6,
+      "input_tokens": 13308,
+      "output_tokens": 810,
+      "agent_seconds": 39.15407657623291,
+      "grade_exit_code": 0,
+      "grade_output": "..                                                                       [100%]\n2 passed in 0.02s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 470,
+          "output_tokens": 302,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 6,
+          "input_tokens": 12838,
+          "output_tokens": 508,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 6
+          }
+        }
+      },
+      "provider_errors": {}
+    }
+  ]
+}

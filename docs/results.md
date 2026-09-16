@@ -67,31 +67,90 @@ fallback answered at least one call in 12 of 17 runs, and 25 of 191 calls overal
 Gemini, most of them a single Groq `tool_use_failed` glitch handed straight to the fallback.
 `coder stats` prints the current numbers.
 
-## Still being measured
+## Model comparison
 
-- **Retrieval ablation** (pass rate and tokens with retrieval off, BM25, dense, hybrid). The
-  cost of an arm is now measured: twelve tasks with retrieval off spent 199,198 of the free
-  tier's 200,000 daily tokens and the last four tasks died on 429s, with the Gemini fallback
-  exhausted the same day. So the ablation advances one arm per quota window, and a full run of
-  four arms is roughly five of them.
+The same twelve tasks, the same graph and retrieval, a second model. Both runs are single
+passes; K2 Think ran three tasks at a time (`run_evals.py --parallel 3`), which its rate limit
+allows once the pool narrows itself from three workers to two.
 
-  The `off` arm stands at eight of twelve tasks graded at commit `23650e6`, eight passed. On the
-  eight tasks also graded in the hybrid baseline, retrieval off used 23% more tokens per task
-  (25.0k against 20.3k) for the same 8/8 pass rate:
+| model | passed | pass@1 | mean tokens / task | mean seconds / task | steps / task |
+|---|---|---|---|---|---|
+| `groq:openai/gpt-oss-120b` | 12/12 | 100% | 29,663 | 174 | 10.8 |
+| `k2think:MBZUAI-IFM/K2-Think-v2` | 11/12 | 92% | 69,818 | 111 | 15.2 |
 
-  | | mean tokens / task | passed |
-  |---|---|---|
-  | retrieval off | 24,967 | 8/8 |
-  | hybrid (baseline) | 20,341 | 8/8 |
+![pass@1, tokens and seconds per task by model](figures/model_comparison.png)
 
-  Read this as a direction, not a number: eight tasks, one run each, and the two runs are at
-  different commits. It does match what the cost profile predicts, since the tokens retrieval
-  saves are `act` tokens spent locating the file. The figure is drawn automatically once two or
-  more arms are complete.
-- **HumanEval slice** (thirty problems packaged as repository tasks): needs a full quota window.
-- **Model comparison** (Groq, Gemini, a local Ollama model): the Ollama provider is wired
-  (`run_evals.py --model ollama:qwen2.5-coder:7b`); `figures.py` draws pass rate, tokens and
-  seconds per task side by side once a second model has run the in-house suite. A first local
-  run is a useful warning about what a 7B on a laptop CPU is: `fix-bug-duration-units` failed
-  after 8 model calls, 15.5k tokens and 744 seconds, because the model narrates the edit in
-  markdown and claims success instead of calling the tools (see step 7.2 in TEACH).
+K2 Think is a reasoning model: it is faster per task, because K2's endpoint has no per-minute
+token cap to wait on, and spends more than twice the tokens, because it takes more tool-calling
+steps (15 against 11) and each step resends the conversation. Its output share is small, about
+6k of 70k, so the cost is the number of round trips, not the thinking. Its one failure is
+`multi-file-notes-delete`, where it hit the forty-step cap with the edits half done; gpt-oss-120b
+solved the same task in 25 steps.
+
+A local 7B model through Ollama (`--model ollama:qwen2.5-coder:7b`) is wired but not in the
+figure: a first run is a useful warning about what a 7B on a laptop CPU is. `fix-bug-duration-units`
+failed after 8 model calls, 15.5k tokens and 744 seconds, because the model narrates the edit in
+markdown and claims success instead of calling the tools (see step 7.2 in TEACH).
+
+## Retrieval ablation
+
+Four runs of the twelve-task suite on K2 Think, one per retrieval mode, all at commit `ab4b597`
+in one afternoon. `off` sends the planner no retrieved context at all; `bm25` and `dense` are
+the two halves of the default `hybrid`.
+
+| mode | passed | pass@1 | mean tokens / task | median | mean steps | mean seconds |
+|---|---|---|---|---|---|---|
+| off | 12/12 | 100% | 60,534 | 40.0k | 14.9 | 72 |
+| bm25 | 9/12 | 75% | 66,654 | 31.9k | 12.4 | 90 |
+| dense | 10/12 | 83% | 69,958 | 33.6k | 15.2 | 111 |
+| hybrid (default) | 11/12 | 92% | 69,818 | 40.0k | 15.2 | 111 |
+
+![pass@1 and tokens per task by retrieval mode](figures/retrieval_ablation.png)
+
+**Retrieval mode makes no measurable difference on this suite.** Three readings support that:
+
+- The pass rates sit within three tasks of each other on twelve, and the token means within
+  15%. The order (off best, bm25 worst) is not the one any theory predicts, which is what a
+  null result looks like when the arms are ranked by noise.
+- The same task varies far more between arms than the arms do between themselves.
+  `add-test-mathx` cost 20k tokens in three arms and 160k in the fourth; `multi-file-notes-delete`
+  ranged from 67k to 256k; `add-feature-slugify` from 33k to 392k. With one run per arm that
+  spread is the noise floor, and every difference between arms is under it.
+- The retrieval eval predicted it. The benchmark repositories have three to five files,
+  recall@3 is 0.99 for every mode, and the planner is shown the right file whichever way it
+  is found. Retrieval is built for repositories where finding the file is the problem; on
+  ones this small the model finds it in one `list_dir`.
+
+An earlier partial `off` arm on Groq (eight tasks, a different commit) had suggested 23% more
+tokens without retrieval. Twelve tasks on one model at one commit do not reproduce it, and the
+earlier number is withdrawn: it was inside the same noise.
+
+### What failed, and how
+
+Six failures across 48 task runs, in two shapes:
+
+| shape | failures | what happened |
+|---|---|---|
+| hit the 40-step cap | 2 | `multi-file-notes-delete` (hybrid, 256k tokens), `add-feature-slugify` (bm25, 392k over two iterations). A third run, `multi-file-cart-discount` (dense), also hit the cap but with the edits complete, and the hidden tests passed |
+| passed its own tests, failed a hidden one | 4 | `fix-bug-shared-default-list` twice (bm25, dense), `multi-file-notes-delete` (bm25), `add-test-mathx` (dense) |
+
+The first shape is a budget question: a multi-file task on K2 takes 30 to 40 tool calls and
+`CODER_MAX_STEPS=40` sits right at that edge. The second is the reason the suite has hidden
+tests. In all four of those runs the agent's own verdict was "passed", after one iteration and
+fewer than twelve steps: it made the visible tests green and stopped, and the hidden test it
+never saw (the callers' list must not be mutated; two explicit lists must stay separate; the
+new test must catch a `gcd` sign mutant) is what the task was actually about.
+
+## HumanEval slice
+
+Thirty HumanEval problems packaged as repository tasks (a stub module, a visible smoke test, the
+official tests hidden), run on K2 Think three at a time.
+
+| Tasks | Passed | pass@1 | mean tokens / task | median | mean steps | mean seconds |
+|---|---|---|---|---|---|---|
+| 30 | 30 | 100% | 13,174 | 12.2k | 5.4 | 57 |
+
+Every problem was solved in one plan/act/test cycle and about five tool calls: read the stub,
+write the function, run the tests, finish. These are single-function problems that current hosted models solve on their own, so the
+number says the harness does not get in the model's way; the in-house suite, with its multi-file tasks and hidden tests that differ from the visible
+ones, is where the agent is actually measured.

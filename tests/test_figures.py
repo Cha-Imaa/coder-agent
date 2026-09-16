@@ -15,6 +15,7 @@ from coder_agent.evals.figures import (
     ablation_rows,
     ablation_suites,
     comparison_suites,
+    headline_suites,
     is_full_suite,
     iteration_curve,
     latest_results,
@@ -22,6 +23,7 @@ from coder_agent.evals.figures import (
     model_rows,
     node_costs,
     render_all,
+    short_model_name,
 )
 from coder_agent.evals.runner import SuiteResult, TaskResult, load_result
 from coder_agent.telemetry.ledger import Ledger, RunRecord
@@ -130,8 +132,8 @@ def test_results_files_round_trip_usage_and_load_without_it(tmp_path: Path):
     assert load_result(old).results[0].usage == {}
 
 
-def _ablation(mode: str, started_at: float, passed: int) -> SuiteResult:
-    suite = _suite(f"m-retrieval-{mode}", started_at=started_at)
+def _ablation(mode: str, started_at: float, passed: int, model: str = "groq:m") -> SuiteResult:
+    suite = _suite(f"m-retrieval-{mode}", model=model, started_at=started_at)
     suite.meta["retrieval_mode"] = mode
     for i, r in enumerate(suite.results):
         r.passed = i < passed
@@ -148,6 +150,30 @@ def test_ablation_suites_take_newest_per_mode_in_fixed_order():
     chosen = ablation_suites(suites)
     assert [s.meta["retrieval_mode"] for s in chosen] == ["off", "hybrid"]
     assert chosen[0].started_at == 2.0
+
+
+def test_ablation_arms_all_come_from_the_model_with_the_most_of_them():
+    """Two providers each ran some arms; the figure must not mix them.
+
+    The Groq baseline ran the `off` arm one day at a time while K2 Think ran all four in one
+    sitting, so a per-mode "newest" rule would have drawn three K2 arms next to a Groq one.
+    """
+    suites = [
+        _ablation("off", 9.0, 2),  # groq, newest of all, but groq has one arm
+        _ablation("off", 1.0, 1, model="k2think:k2"),
+        _ablation("dense", 2.0, 3, model="k2think:k2"),
+        _ablation("hybrid", 3.0, 4, model="k2think:k2"),
+    ]
+    chosen = ablation_suites(suites)
+    assert {s.model for s in chosen} == {"k2think:k2"}
+    assert [s.meta["retrieval_mode"] for s in chosen] == ["off", "dense", "hybrid"]
+    # A HumanEval run in hybrid mode is newer than the in-house hybrid arm and must not replace it.
+    other = _ablation("hybrid", 8.0, 4, model="k2think:k2")
+    other.meta["suite"] = "humaneval"
+    assert ablation_suites([*suites, other])[-1].started_at == 3.0
+    # A tie in arm count goes to the model whose arms are newer.
+    tied = [_ablation("off", 1.0, 1), _ablation("off", 5.0, 1, model="k2think:k2")]
+    assert ablation_suites(tied)[0].model == "k2think:k2"
 
 
 def test_ablation_rows_report_pass_rate_and_tokens_over_graded_tasks():
@@ -178,6 +204,25 @@ def _model_run(model: str, started_at: float, passed: int, **meta) -> SuiteResul
         r.passed = i < passed
         r.agent_seconds = 10.0
     return suite
+
+
+def test_short_model_names_drop_provider_and_organisation():
+    assert short_model_name("groq:openai/gpt-oss-120b") == "gpt-oss-120b"
+    assert short_model_name("k2think:MBZUAI-IFM/K2-Think-v2") == "K2-Think-v2"
+    assert short_model_name("ollama:qwen2.5-coder:7b") == "qwen2.5-coder:7b"
+
+
+def test_headline_suites_keep_the_default_retrieval_mode_only():
+    """Ablation arms have their own chart; the pass-rate chart must not draw them as agents."""
+    suites = [
+        _model_run("groq:big", 1.0, 2),  # no retrieval_mode in meta: a default-mode run
+        _model_run("groq:big", 2.0, 5, retrieval_mode="off"),
+        _model_run("k2think:k2", 3.0, 4, retrieval_mode="hybrid", suite="inhouse"),
+        _model_run("k2think:k2", 4.0, 4, retrieval_mode="hybrid", suite="humaneval"),
+        _model_run("k2think:k2", 5.0, 4, retrieval_mode="hybrid", subset="quick"),
+        _model_run("noop", 6.0, 0),
+    ]
+    assert [s.started_at for s in headline_suites(suites)] == [1.0, 3.0, 4.0]
 
 
 def test_comparison_suites_keep_one_baseline_run_per_model():

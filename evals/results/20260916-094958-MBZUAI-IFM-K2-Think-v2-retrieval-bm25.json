@@ -1,0 +1,485 @@
+{
+  "label": "MBZUAI-IFM-K2-Think-v2-retrieval-bm25",
+  "model": "k2think:MBZUAI-IFM/K2-Think-v2",
+  "started_at": 1789537798.2665188,
+  "meta": {
+    "commit": "ab4b597",
+    "python": "3.11.7",
+    "platform": "Windows-10-10.0.26200-SP0",
+    "max_iterations": 4,
+    "max_steps": 40,
+    "fallback_model": "google_genai:gemini-2.5-flash",
+    "retrieval_mode": "bm25",
+    "embedding_model": "snowflake/snowflake-arctic-embed-xs",
+    "parallel": 3,
+    "workers_retired": 2,
+    "suite": "inhouse",
+    "subset": "full"
+  },
+  "pass_rate": 0.75,
+  "errors": 0,
+  "by_category": [
+    {
+      "category": "fix-bug",
+      "tasks": 3,
+      "passed": 2,
+      "errors": 0,
+      "pass_rate": 0.6666666666666666,
+      "avg_tokens": 12322.0,
+      "avg_iterations": 1.0,
+      "avg_seconds": 34.02440166473389
+    },
+    {
+      "category": "add-feature",
+      "tasks": 3,
+      "passed": 2,
+      "errors": 0,
+      "pass_rate": 0.6666666666666666,
+      "avg_tokens": 151874.0,
+      "avg_iterations": 1.3333333333333333,
+      "avg_seconds": 197.68683822949728
+    },
+    {
+      "category": "refactor",
+      "tasks": 2,
+      "passed": 2,
+      "errors": 0,
+      "pass_rate": 1.0,
+      "avg_tokens": 44740.0,
+      "avg_iterations": 1.0,
+      "avg_seconds": 46.46625030040741
+    },
+    {
+      "category": "add-test",
+      "tasks": 2,
+      "passed": 2,
+      "errors": 0,
+      "pass_rate": 1.0,
+      "avg_tokens": 18524.5,
+      "avg_iterations": 1.0,
+      "avg_seconds": 56.182183384895325
+    },
+    {
+      "category": "multi-file",
+      "tasks": 2,
+      "passed": 1,
+      "errors": 0,
+      "pass_rate": 0.5,
+      "avg_tokens": 90363.5,
+      "avg_iterations": 1.0,
+      "avg_seconds": 88.50017428398132
+    },
+    {
+      "category": "total",
+      "tasks": 12,
+      "passed": 9,
+      "errors": 0,
+      "pass_rate": 0.75,
+      "avg_tokens": 66653.66666666667,
+      "avg_iterations": 1.0833333333333333,
+      "avg_seconds": 89.7859113017718
+    }
+  ],
+  "results": [
+    {
+      "task_id": "add-feature-inventory-remove",
+      "category": "add-feature",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 10,
+      "input_tokens": 33053,
+      "output_tokens": 4096,
+      "agent_seconds": 117.3105525970459,
+      "grade_exit_code": 0,
+      "grade_output": ".........                                                                [100%]\n9 passed in 0.02s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 584,
+          "output_tokens": 367,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 10,
+          "input_tokens": 32469,
+          "output_tokens": 3729,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 10
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "add-feature-slugify",
+      "category": "add-feature",
+      "passed": false,
+      "agent_status": "gave_up",
+      "iterations": 2,
+      "steps": 40,
+      "input_tokens": 281249,
+      "output_tokens": 110476,
+      "agent_seconds": 367.0629060268402,
+      "grade_exit_code": 1,
+      "grade_output": "............F                                                            [100%]\n================================== FAILURES ===================================\n____________________________ test_slugify_unicode _____________________________\n\n    def test_slugify_unicode():\n        assert slugify(\"Caf\ufffd au lait\") == \"caf\ufffd-au-lait\"\n>       assert slugify(\"na\ufffdve fa\ufffdade\") == \"na\ufffdve-facade\"\nE       AssertionError: assert 'na\ufffdve-fa\ufffdade' == 'na\ufffdve-facade'\nE         \nE         - na\ufffdve-facade\nE         ?         ^\nE         + na\ufffdve-fa\ufffdade\nE         ?         ^\n\ntests\\test_textutils.py:32: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_textutils.py::test_slugify_unicode - AssertionError: assert...\n1 failed, 12 passed in 0.34s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 2,
+          "input_tokens": 1143,
+          "output_tokens": 2335,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 2
+          }
+        },
+        "act": {
+          "calls": 40,
+          "input_tokens": 280106,
+          "output_tokens": 108141,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 40
+          }
+        }
+      },
+      "provider_errors": {
+        "OpenAIRateLimitError": 1
+      }
+    },
+    {
+      "task_id": "add-feature-stack-peek",
+      "category": "add-feature",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 9,
+      "input_tokens": 24364,
+      "output_tokens": 2384,
+      "agent_seconds": 108.68705606460571,
+      "grade_exit_code": 0,
+      "grade_output": ".....                                                                    [100%]\n5 passed in 0.03s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 517,
+          "output_tokens": 348,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 9,
+          "input_tokens": 23847,
+          "output_tokens": 2036,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 9
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "add-test-bounded-queue",
+      "category": "add-test",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 6,
+      "input_tokens": 14968,
+      "output_tokens": 1477,
+      "agent_seconds": 55.46558117866516,
+      "grade_exit_code": 0,
+      "grade_output": "..........                                                               [100%]\n10 passed in 10.33s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 510,
+          "output_tokens": 335,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 6,
+          "input_tokens": 14458,
+          "output_tokens": 1142,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 6
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "add-test-mathx",
+      "category": "add-test",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 7,
+      "input_tokens": 18896,
+      "output_tokens": 1708,
+      "agent_seconds": 56.89878559112549,
+      "grade_exit_code": 0,
+      "grade_output": "................................                                         [100%]\n32 passed in 7.92s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 558,
+          "output_tokens": 619,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 7,
+          "input_tokens": 18338,
+          "output_tokens": 1089,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 7
+          }
+        }
+      },
+      "provider_errors": {
+        "OpenAIRateLimitError": 1
+      }
+    },
+    {
+      "task_id": "fix-bug-chunk-drops-tail",
+      "category": "fix-bug",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 5,
+      "input_tokens": 10401,
+      "output_tokens": 880,
+      "agent_seconds": 44.292990922927856,
+      "grade_exit_code": 0,
+      "grade_output": ".......                                                                  [100%]\n7 passed in 0.03s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 494,
+          "output_tokens": 235,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 5,
+          "input_tokens": 9907,
+          "output_tokens": 645,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 5
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "fix-bug-duration-units",
+      "category": "fix-bug",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 5,
+      "input_tokens": 11402,
+      "output_tokens": 1043,
+      "agent_seconds": 22.604828596115112,
+      "grade_exit_code": 0,
+      "grade_output": "..........                                                               [100%]\n10 passed in 0.04s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 516,
+          "output_tokens": 492,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 5,
+          "input_tokens": 10886,
+          "output_tokens": 551,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 5
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "fix-bug-shared-default-list",
+      "category": "fix-bug",
+      "passed": false,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 5,
+      "input_tokens": 11764,
+      "output_tokens": 1476,
+      "agent_seconds": 35.17538547515869,
+      "grade_exit_code": 1,
+      "grade_output": "....F.                                                                   [100%]\n================================== FAILURES ===================================\n______________________ test_callers_list_is_not_mutated _______________________\n\n    def test_callers_list_is_not_mutated():\n        mine = [\"blue\"]\n        r = Registry()\n        r.add(\"x\", mine)\n>       assert mine == [\"blue\"]\nE       AssertionError: assert ['blue', 'registered'] == ['blue']\nE         \nE         Left contains one more item: 'registered'\nE         Use -v to get more diff\n\ntests\\test_registry_hidden.py:23: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_registry_hidden.py::test_callers_list_is_not_mutated - Asse...\n1 failed, 5 passed in 0.33s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 553,
+          "output_tokens": 463,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 5,
+          "input_tokens": 11211,
+          "output_tokens": 1013,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 5
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "multi-file-cart-discount",
+      "category": "multi-file",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 25,
+      "input_tokens": 102360,
+      "output_tokens": 10941,
+      "agent_seconds": 121.4145758152008,
+      "grade_exit_code": 0,
+      "grade_output": "..............                                                           [100%]\n14 passed in 0.06s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 668,
+          "output_tokens": 353,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 25,
+          "input_tokens": 101692,
+          "output_tokens": 10588,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 25
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "multi-file-notes-delete",
+      "category": "multi-file",
+      "passed": false,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 16,
+      "input_tokens": 62199,
+      "output_tokens": 5227,
+      "agent_seconds": 55.58577275276184,
+      "grade_exit_code": 1,
+      "grade_output": "....F                                                                    [100%]\n================================== FAILURES ===================================\n__________________________ test_cli_delete_messages ___________________________\n\n    def test_cli_delete_messages():\n        svc = NoteService()\n        main([\"add\", \"hello\"], svc)\n>       assert main([\"delete\", \"1\"], svc) == \"deleted 1\"\nE       AssertionError: assert 'unknown command: delete' == 'deleted 1'\nE         \nE         - deleted 1\nE         + unknown command: delete\n\ntests\\test_notes_delete_hidden.py:28: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_notes_delete_hidden.py::test_cli_delete_messages - Assertio...\n1 failed, 4 passed in 0.32s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 919,
+          "output_tokens": 395,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 16,
+          "input_tokens": 61280,
+          "output_tokens": 4832,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 16
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "refactor-config-dataclass",
+      "category": "refactor",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 10,
+      "input_tokens": 41630,
+      "output_tokens": 6796,
+      "agent_seconds": 44.531670808792114,
+      "grade_exit_code": 0,
+      "grade_output": "....                                                                     [100%]\n4 passed in 0.04s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 692,
+          "output_tokens": 377,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 10,
+          "input_tokens": 40938,
+          "output_tokens": 6419,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 10
+          }
+        }
+      },
+      "provider_errors": {}
+    },
+    {
+      "task_id": "refactor-extract-format-row",
+      "category": "refactor",
+      "passed": true,
+      "agent_status": "passed",
+      "iterations": 1,
+      "steps": 11,
+      "input_tokens": 37039,
+      "output_tokens": 4015,
+      "agent_seconds": 48.400829792022705,
+      "grade_exit_code": 0,
+      "grade_output": ".....                                                                    [100%]\n5 passed in 0.05s",
+      "error": null,
+      "usage": {
+        "plan": {
+          "calls": 1,
+          "input_tokens": 756,
+          "output_tokens": 278,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 1
+          }
+        },
+        "act": {
+          "calls": 11,
+          "input_tokens": 36283,
+          "output_tokens": 3737,
+          "models": {
+            "MBZUAI-IFM/K2-Think-v2": 11
+          }
+        }
+      },
+      "provider_errors": {}
+    }
+  ]
+}

@@ -10,6 +10,14 @@ The first release, `0.1.0`, is tagged once the acceptance walkthrough in `docs/P
 (milestone 9) has been run on a fresh clone and every rough edge it finds is fixed.
 
 ### Added
+- **Retrieval ablation, model comparison and HumanEval results** (2026-09-16): four arms of the
+  in-house suite on K2 Think (off, BM25, dense, hybrid), the K2 baseline next to the Groq one,
+  and the thirty-problem HumanEval slice at 30/30, all run in one afternoon with `--parallel 3`.
+  `docs/figures/retrieval_ablation.png` and `model_comparison.png` are drawn from them; the
+  README and the results page carry the tables and the reading (retrieval mode has no
+  measurable effect on three-to-five-file repositories). `figures.py` now holds the ablation
+  to one model and the in-house suite, keeps ablation arms out of the pass-rate and iteration
+  charts, profiles the newest in-house baseline, and labels models by their short name.
 - **Parallel eval runner** (2026-09-16): `evals/run_evals.py --parallel N` runs N tasks at
   once, each in its own repository copy, checkpoint file and tool-server process. A worker
   whose task hit a rate limit retires, so a run that starts too wide narrows itself instead of
@@ -82,6 +90,10 @@ The first release, `0.1.0`, is tagged once the acceptance walkthrough in `docs/P
   `--task`, `--category` and `--rerun-errors` are unaffected (2026-09-14).
 
 ### Fixed
+- Results files no longer carry this machine's home directory: pytest output from a failing
+  hidden test prints absolute paths, and only tracebacks were being scrubbed. `grade_output`
+  is scrubbed the same way now, and the three committed files that carried a path were
+  rewritten (2026-09-16).
 - A local run no longer needs cloud keys: `--model ollama:<tag>` on a machine with no
   `GOOGLE_API_KEY` died before the first token, because the fallback model is constructed
   eagerly while it is only ever used after the primary fails. A fallback whose provider is not
