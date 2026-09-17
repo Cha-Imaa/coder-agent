@@ -41,10 +41,10 @@ sandbox jail.
 | Observability | LangSmith tracing and a local SQLite ledger of tokens per node |
 | Interface | Typer + Rich CLI: `coder run`, `coder chat`, `coder fix-issue`, `coder index`, `coder stats` |
 
-The [docs site](https://cha-imaa.github.io/coder-agent/) has the learning log (one entry per
-step: what was built, why, how production agents do it), the system design and the results.
-[Try it](https://cha-imaa.github.io/coder-agent/try-it/) walks from an empty directory to the
-agent opening a pull request.
+The [docs site](https://cha-imaa.github.io/coder-agent/) has the system design (what an agent
+is, why a state graph rather than a `while` loop, tools as a protocol, sandboxing, retrieval)
+and the results. [Try it](https://cha-imaa.github.io/coder-agent/try-it/) walks from an empty
+directory to the agent opening a pull request.
 
 ## Quick start
 
@@ -252,18 +252,18 @@ src/coder_agent/
   evals/            task suites, isolated runner, retrieval eval, figures
 evals/              the 12-task suite, the HumanEval slice, results and entry-point scripts
 scripts/            demo recorder and GIF renderer (demo.py, record_demo.ps1)
-docs/               learning log (TEACH.md), roadmap (PLAN.md), system design, results, figures
+docs/               system design, results, the try-it walkthrough, figures
 tests/              pytest, no network and no API key needed
 ```
 
-## Learning log and roadmap
+## Further reading
 
-- [`docs/TEACH.md`](docs/TEACH.md): one entry per finished step, written for someone learning the
-  stack. Each entry says what was built, why that way, how production coding agents do the same
-  thing, and gives a command to check it.
-- [`docs/PLAN.md`](docs/PLAN.md): the weighted roadmap; checked boxes are finished steps.
 - [`docs/system_design_coding_agent.md`](docs/system_design_coding_agent.md): the concept-first
   walkthrough of agents, LangGraph, MCP, sandboxing, retrieval and evaluation.
+- [`docs/try-it.md`](docs/try-it.md): the walkthrough from an empty directory to an agent-opened
+  pull request, with the quota limits and platform gotchas called out.
+- [`docs/results.md`](docs/results.md): the numbers - pass rate, token spend and retrieval
+  quality - and how to reproduce them.
 
 ## Contributing and licence
 

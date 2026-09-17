@@ -26,9 +26,8 @@ All notable changes to this project are recorded here. The format follows
 
 ## [0.1.0] - 2026-09-16
 
-The first release. Tagged after the acceptance walkthrough in `docs/try-it.md` (milestone 9 of
-`docs/PLAN.md`) was run end to end on a fresh clone, every step passed, and the two rough edges
-it turned up were fixed. What that run measured is written up in `docs/TEACH.md`, step 9.
+The first release. Tagged after the acceptance walkthrough in `docs/try-it.md` was run end to
+end on a fresh clone, every step passed, and the two rough edges it turned up were fixed.
 
 ### Added
 - **Retrieval ablation, model comparison and HumanEval results** (2026-09-16): four arms of the

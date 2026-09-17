@@ -10,13 +10,17 @@ copyright: MIT licence
 
 docs_dir: docs
 
+# Private working notes are not part of the published site, so they are excluded here as well
+# as ignored by git: a local checkout that has them still builds the same public pages.
+exclude_docs: |
+  PLAN.md
+  TEACH.md
+
 nav:
   - Home: index.md
   - Try it: try-it.md
   - Results: results.md
-  - Learning log: TEACH.md
   - System design: system_design_coding_agent.md
-  - Roadmap: PLAN.md
 
 theme:
   name: material

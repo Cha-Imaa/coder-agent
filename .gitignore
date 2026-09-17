@@ -25,3 +25,7 @@ htmlcov/
 assets/
 # local before/after comparison of the restyled figures
 docs/figures/preview/
+
+# personal roadmap and learning log, kept out of the public repo
+docs/PLAN.md
+docs/TEACH.md

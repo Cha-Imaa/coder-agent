@@ -8,12 +8,23 @@ environment.
 from __future__ import annotations
 
 import re
+import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MKDOCS = ROOT / "mkdocs.yml"
 DOCS = ROOT / "docs"
 WORKFLOW = ROOT / ".github" / "workflows" / "docs.yml"
+
+
+def _excluded_pages() -> set[str]:
+    """`exclude_docs` keeps local-only notes out of the build, so the nav must not list them."""
+    text = MKDOCS.read_text(encoding="utf-8")
+    marker = "\nexclude_docs: |\n"
+    if marker not in text:
+        return set()
+    block = text.split(marker, 1)[1].split("\n\n", 1)[0]
+    return {line.strip() for line in block.splitlines() if line.strip()}
 
 
 def _nav_pages() -> list[str]:
@@ -30,9 +41,22 @@ def test_every_nav_entry_is_a_file() -> None:
 
 
 def test_every_doc_page_is_in_the_nav() -> None:
-    on_disk = {path.name for path in DOCS.glob("*.md")}
+    on_disk = {path.name for path in DOCS.glob("*.md")} - _excluded_pages()
     missing = on_disk - set(_nav_pages())
     assert not missing, f"pages missing from nav: {missing}"
+
+
+def test_excluded_pages_are_untracked() -> None:
+    """An excluded page is a private note: publishing it by committing it is the real mistake."""
+    tracked = subprocess.run(
+        ["git", "ls-files", "--", "docs"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.split()
+    leaked = [name for name in _excluded_pages() if f"docs/{name}" in tracked]
+    assert not leaked, f"excluded from the site but committed to the repository: {leaked}"
 
 
 def test_workflow_builds_strict_from_the_lock() -> None:
