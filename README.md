@@ -1,15 +1,30 @@
 # coder-agent
 
+Turn issues into working code. In your terminal.
+
 [![ci](https://github.com/Cha-Imaa/coder-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Cha-Imaa/coder-agent/actions/workflows/ci.yml)
 [![coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Cha-Imaa/coder-agent/badges/coverage.json)](https://github.com/Cha-Imaa/coder-agent/actions/workflows/ci.yml)
 ![python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
 [![docs](https://github.com/Cha-Imaa/coder-agent/actions/workflows/docs.yml/badge.svg)](https://cha-imaa.github.io/coder-agent/)
 
-![coder run fixing a bug: plan, file read, approved edit, tests passing](docs/figures/demo.gif)
+<p align="center">
+  <img
+    src="docs/figures/demo.png"
+    alt="One coder run on a bug: the command, the retrieved context, the plan, an approved two-line edit, and pytest passing"
+    width="850"
+  />
+</p>
 
 A terminal coding agent that takes a task in plain English, reads a target repository, plans a
 change, edits files, runs the tests, and iterates on failures until they pass. Point it at an
 issue URL and it opens the pull request.
+
+<details>
+<summary>The same run as the terminal actually printed it: 28 rows, scrolling, with the approval prompt</summary>
+
+![coder run fixing a bug: plan, file read, approved edit, tests passing](docs/figures/demo.gif)
+
+</details>
 
 Built to learn the agentic-AI stack end to end, on a zero-cost setup: every model call goes to a
 free tier, every embedding is computed locally, and every file or shell action goes through a
@@ -69,21 +84,7 @@ One run is one pass through a LangGraph state graph. The model never touches the
 itself: every read, edit and command is a tool call served by an MCP server, and every tool call
 that writes or executes stops at the `approve` node first unless `--yes` was given.
 
-```mermaid
-flowchart LR
-    S([start]) --> prepare --> retrieve_context --> plan --> act
-    act -- "tool calls" --> approve{"risky?"}
-    approve -- "edit / write / run" --> H["human: approve or reject"]
-    H -- yes --> tools
-    H -- no --> act
-    approve -- "read only" --> tools
-    tools --> act
-    act -- "model stopped" --> run_tests
-    run_tests -- "red, iterations left" --> reflect --> plan
-    run_tests -- "green, or out of iterations" --> finish
-    act -- "step budget spent" --> finish
-    finish --> E([end])
-```
+![The agent run loop: prepare, retrieve, plan, act with the approval gate, run_tests, reflect, finish](docs/figures/run_loop.png)
 
 | Node | What it does |
 |---|---|
@@ -99,31 +100,7 @@ flowchart LR
 
 Around the graph:
 
-```mermaid
-flowchart TB
-    CLI["coder CLI<br/>run · chat · fix-issue · index · stats"]
-    subgraph Graph["LangGraph (SQLite checkpointer)"]
-        G["prepare → retrieve → plan → act ⇄ tools → run_tests → reflect"]
-    end
-    subgraph MCP["MCP servers (stdio)"]
-        FS["files + shell<br/>read_file · edit_file · write_file<br/>list_dir · search_code · run_command"]
-        GH["GitHub<br/>get_issue · open_pull_request"]
-    end
-    subgraph Sandbox["Sandbox"]
-        L["local: path jail, denylist, timeout"]
-        D["docker: fresh container, no network"]
-    end
-    subgraph RAG["Retrieval (local, CPU)"]
-        R["tree-sitter chunks → fastembed + Chroma<br/>BM25 + dense, RRF · optional reranker"]
-    end
-    LLM["Groq gpt-oss-120b<br/>retry → Gemini 2.5 Flash fallback"]
-    CLI --> Graph
-    Graph --> LLM
-    Graph --> MCP
-    FS --> Sandbox
-    Graph --> RAG
-    Graph --> Ledger["telemetry ledger (SQLite)<br/>+ LangSmith traces"]
-```
+![System map: the CLI, the LangGraph state graph, the MCP servers, the sandbox, local retrieval, the telemetry ledger and the one external model call](docs/figures/system_map.png)
 
 The MCP servers are separate processes talking JSON-RPC over stdio. The file server resolves
 every path inside the repository and hands `run_command` to the sandbox, which is either the

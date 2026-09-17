@@ -6,6 +6,24 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- **One visual language for the figures and the diagrams** (2026-09-18): `figures.py` redraws
+  every chart on a white card with a hairline border, a serif title, a dashed grid, rounded
+  bars and one palette applied by role (navy for the Groq baseline, royal blue for K2 Think,
+  teal for HumanEval), so the five PNGs read as one set. The two README architecture diagrams
+  are images now, `docs/figures/run_loop.png` and `system_map.png`, drawn in the same palette:
+  the run loop shows the inner tool-calling loop, the outer plan/test/reflect loop and the
+  three ways a run can finish; the system map shows which parts run locally and that the model
+  call is the only thing leaving the machine. `tests/test_readme.py` checks both images are
+  shown instead of counting Mermaid fences.
+- **A drawn README hero** (2026-09-18): the demo at the top of the README is now
+  `docs/figures/demo.png`, a 900px terminal window rendered from `scripts/demo_card.html`
+  by `scripts/render_demo_card.ps1`, showing one `coder run` end to end - command, context,
+  plan, the two-line diff, `2 passed in 0.07s` - in about half the height of the old
+  capture. Every line in it comes from the recording, which is kept underneath behind a
+  `<details>` fold. `tests/test_readme.py` now also resolves HTML `<img>` sources, since
+  centring on GitHub needs HTML.
+
 ## [0.1.0] - 2026-09-16
 
 The first release. Tagged after the acceptance walkthrough in `docs/try-it.md` (milestone 9 of
