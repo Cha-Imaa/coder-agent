@@ -88,11 +88,29 @@ def test_render_writes_an_animated_gif(tmp_path: Path) -> None:
     cast = demo.Cast.load(_cast(tmp_path, [[0.0, "o", f"{BOLD}ok{RESET} \x1b[42m bg \x1b[0m\r\n"]]))
     frames = demo.frames_from_cast(cast, rows=4, typing_delay=0.2)
     out = demo.render_gif(frames, tmp_path / "out" / "demo.gif", cols=40, font_size=12)
-    ascent, descent = ImageFont.truetype(str(demo.find_font()), 12).getmetrics()
+    lh = sum(ImageFont.truetype(str(demo.find_font()), 12).getmetrics())
     with Image.open(out) as img:
         assert img.format == "GIF"
         assert img.n_frames == len(frames) > 2
-        assert img.size[1] == 4 * (ascent + descent) + 2 * demo.PADDING
+        assert img.size[1] == (lh + 18) + 4 * lh + 2 * demo.PADDING, "title bar plus four rows"
+
+
+def test_rendered_corners_are_transparent_so_either_readme_theme_shows_through(
+    tmp_path: Path,
+) -> None:
+    """A square dark block is the look the window frame exists to avoid."""
+    from PIL import Image
+
+    cast = demo.Cast.load(_cast(tmp_path, [[0.0, "o", "ok\r\n"]]))
+    frames = demo.frames_from_cast(cast, rows=3, typing_delay=0.2)
+    out = demo.render_gif(frames, tmp_path / "demo.gif", cols=20, font_size=12)
+    with Image.open(out) as img:
+        # Pillow renumbers the palette when it optimises, so the index itself is not the contract.
+        assert "transparency" in img.info
+        corner = img.convert("RGBA").getpixel((0, 0))
+        middle = img.convert("RGBA").getpixel((img.size[0] // 2, 2))
+    assert corner[3] == 0, "the rounded corner is not painted"
+    assert middle[3] == 255, "the title bar between the corners is"
 
 
 CHILD = """

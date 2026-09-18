@@ -16,13 +16,15 @@ All notable changes to this project are recorded here. The format follows
   three ways a run can finish; the system map shows which parts run locally and that the model
   call is the only thing leaving the machine. `tests/test_readme.py` checks both images are
   shown instead of counting Mermaid fences.
-- **A drawn README hero** (2026-09-18): the demo at the top of the README is now
-  `docs/figures/demo.png`, a 900px terminal window rendered from `scripts/demo_card.html`
-  by `scripts/render_demo_card.ps1`, showing one `coder run` end to end - command, context,
-  plan, the two-line diff, `2 passed in 0.07s` - in about half the height of the old
-  capture. Every line in it comes from the recording, which is kept underneath behind a
-  `<details>` fold. `tests/test_readme.py` now also resolves HTML `<img>` sources, since
-  centring on GitHub needs HTML.
+- **The README hero is the recording again, restyled** (2026-09-18): rather than draw a second
+  picture of the run, `scripts/demo.py` now renders the cast into a window - a title bar with
+  `coder-agent` and the shell, rounded corners left transparent so the hero sits on a light or a
+  dark README alike, a charcoal-navy background and an ANSI palette desaturated a step, so the
+  success green reads as success instead of as neon. The hero is framed to the last 24 rows of
+  the 28-row recording and the command is typed a word at a time, which took the GIF from 540 to
+  512 pixels tall and from 27 to 21 seconds, most of the saving out of the five seconds that
+  used to be spent typing the task into an empty screen. `tests/test_readme.py` now also
+  resolves HTML `<img>` sources, since centring on GitHub needs HTML.
 
 ## [0.1.0] - 2026-09-16
 
