@@ -31,9 +31,10 @@ logging.getLogger("google_genai").setLevel(logging.ERROR)
 app = typer.Typer(no_args_is_help=True, add_completion=False, rich_markup_mode="rich")
 
 
-# One character from each family the UI prints: the re-planning arrow, a box-drawing border and
-# a status tick. If the stream can encode these it can encode the rest of the interface.
-_UI_GLYPHS = "↻├✓"
+# One character from each family the UI prints: the re-planning arrow, the stage icons, a
+# box-drawing border and a status tick. If the stream can encode these it can encode the rest
+# of the interface.
+_UI_GLYPHS = "↻├✓✗◆◇≡▸→·…"
 
 
 def _encodable(stream: object) -> None:
@@ -137,6 +138,9 @@ def run(
         typer.Option(help="Where commands run: local (host, denylist) or docker (container)."),
     ] = None,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Show full tool output.")] = False,
+    tokens: Annotated[
+        bool, typer.Option("--tokens", help="Print the run's model calls, tokens and wall time.")
+    ] = False,
 ) -> None:
     """Plan a change, edit files with tools, run the tests, iterate.
 
@@ -162,7 +166,7 @@ def run(
 
     thread = resume or new_thread_id()
     try:
-        code = asyncio.run(_run(repo, task, verbose, test_cmd, resume, thread, yes))
+        code = asyncio.run(_run(repo, task, verbose, test_cmd, resume, thread, yes, tokens))
     except KeyboardInterrupt:
         # Ctrl+C cancels the event loop, not the coroutine, so the hint is printed here. The
         # checkpoint of the last finished node is already on disk.
@@ -180,13 +184,14 @@ async def _run(
     resume: str | None,
     thread: str,
     yes: bool,
+    tokens: bool,
 ) -> int:
     # Imports here so `coder --version` stays fast and does not need provider packages.
     from coder_agent.agent import UnknownThread, resume_agent, run_agent
     from coder_agent.ui.render import Renderer
 
-    renderer = Renderer(console, verbose=verbose)
-    renderer.header(str(repo), task or f"resume thread {thread}", settings.model, thread=thread)
+    renderer = Renderer(console, verbose=verbose, repo=repo)
+    renderer.header(str(repo), task, settings.model, thread=thread)
     approve = None if yes else renderer.ask_approval
 
     try:
@@ -212,8 +217,8 @@ async def _run(
         console.print(
             f"[yellow]Thread {thread} already finished[/yellow] with status {outcome.status}."
         )
-    else:
-        console.print(f"[dim]{outcome.record.footer()} · thread {thread}[/dim]")
+    elif tokens:
+        renderer.footer(f"{outcome.record.footer()} · thread {thread}")
     return 0 if outcome.status == "passed" else 1
 
 
@@ -234,6 +239,9 @@ def chat(
         typer.Option(help="Where commands run: local (host, denylist) or docker (container)."),
     ] = None,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Show full tool output.")] = False,
+    tokens: Annotated[
+        bool, typer.Option("--tokens", help="Print each turn's model calls, tokens and wall time.")
+    ] = False,
 ) -> None:
     """Multi-turn session: every message is a task run on one thread, so the agent remembers.
 
@@ -255,7 +263,7 @@ def chat(
 
     thread = thread or new_thread_id()
     try:
-        code = asyncio.run(_chat(repo, thread, yes, verbose))
+        code = asyncio.run(_chat(repo, thread, yes, verbose, tokens))
     except KeyboardInterrupt:
         console.print()
         console.print(
@@ -266,24 +274,21 @@ def chat(
     raise typer.Exit(code=code)
 
 
-async def _chat(repo: Path, thread: str, yes: bool, verbose: bool) -> int:
-    from rich.panel import Panel
+async def _chat(repo: Path, thread: str, yes: bool, verbose: bool, tokens: bool) -> int:
     from rich.prompt import Prompt
 
     from coder_agent.agent import ThreadInProgress, UnknownThread, resume_agent, run_agent
     from coder_agent.ui.render import Renderer
 
-    renderer = Renderer(console, verbose=verbose)
+    renderer = Renderer(console, verbose=verbose, repo=repo)
     approve = None if yes else renderer.ask_approval
-    console.print(Panel(
-        f"thread [bold]{thread}[/bold] · /resume continues an interrupted turn · /quit leaves\n"
-        f"[dim]reopen later with: coder chat \"{repo}\" --thread {thread}[/dim]",
-        title=f"coder chat · {settings.model}", subtitle=str(repo), border_style="cyan",
-    ))
+    renderer.header(str(repo), None, settings.model, thread=thread)
+    renderer.note("chat", "/resume continues an interrupted turn · /quit leaves")
 
     while True:
         try:
-            text = Prompt.ask("[bold cyan]you[/bold cyan]", console=console).strip()
+            console.print()
+            text = Prompt.ask("  [bold cyan]you[/bold cyan]", console=console).strip()
         except EOFError:
             return 0
         if not text:
@@ -308,8 +313,8 @@ async def _chat(repo: Path, thread: str, yes: bool, verbose: bool) -> int:
             _print_failed_record(exc)
             console.print("[dim]Type /resume to continue it, or give a new task.[/dim]")
             continue
-        if outcome.ran:
-            console.print(f"[dim]{outcome.record.footer()}[/dim]")
+        if outcome.ran and tokens:
+            renderer.footer(outcome.record.footer())
 
 
 @app.command(name="fix-issue")
@@ -335,6 +340,9 @@ def fix_issue(
         typer.Option(help="Where commands run: local (host, denylist) or docker (container)."),
     ] = None,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Show full tool output.")] = False,
+    tokens: Annotated[
+        bool, typer.Option("--tokens", help="Print the run's model calls, tokens and wall time.")
+    ] = False,
 ) -> None:
     """Fix a GitHub issue: read it, branch, run the agent, and with --pr open the pull request.
 
@@ -351,7 +359,7 @@ def fix_issue(
     if max_iterations is not None:
         settings.max_iterations = max_iterations
     try:
-        code = asyncio.run(_fix_issue(url, repo, pr, base, yes, verbose))
+        code = asyncio.run(_fix_issue(url, repo, pr, base, yes, verbose, tokens))
     except KeyboardInterrupt:
         console.print()
         console.print("[dim]Interrupted. The clone keeps the branch; rerun the same command.[/dim]")
@@ -360,25 +368,36 @@ def fix_issue(
 
 
 async def _fix_issue(
-    url: str, repo: Path | None, pr: bool, base: str | None, yes: bool, verbose: bool
+    url: str, repo: Path | None, pr: bool, base: str | None, yes: bool, verbose: bool, tokens: bool
 ) -> int:
     from coder_agent.fix_issue import FixIssueError, fix_issue, parse_issue_url
     from coder_agent.mcp_server.github import GitHubAPI, GitHubError
     from coder_agent.ui.render import Renderer
 
-    renderer = Renderer(console, verbose=verbose)
+    renderer = Renderer(console, verbose=verbose, repo=repo)
     api = GitHubAPI.from_env()
     if pr and not api.authenticated:
         console.print("[red]--pr needs GITHUB_TOKEN in the environment[/red] (push and open the PR).")
         return 2
 
     def stage(name: str, detail: str) -> None:
+        # Short labels: they share the stage grid's label column with `Plan` and `Executing`,
+        # so the sentence goes in the content column where there is room for it.
         labels = {
-            "issue": "Reading issue", "checkout": "Checkout", "agent": "Running the agent on branch",
-            "verify": "Running the tests on the reviewed edits of branch",
-            "commit": "Committing", "push": "Pushing", "pull-request": "Opening pull request",
+            "issue": ("Issue", "reading"),
+            "checkout": ("Checkout", "working in"),
+            "agent": ("Branch", "running the agent on"),
+            "verify": ("Verify", "the tests on the reviewed edits of"),
+            "commit": ("Commit", ""),
+            "push": ("Push", ""),
+            "pull-request": ("Pull request", ""),
         }
-        console.print(f"[bold cyan]{labels.get(name, name)}[/bold cyan] · {detail}")
+        if name == "checkout":
+            # Only now is the clone's path known, and it is the prefix worth stripping from
+            # every path the agent then prints.
+            renderer.repo = Path(detail)
+        label, verb = labels.get(name, (name, ""))
+        renderer.note(label, f"{verb} {detail.splitlines()[0]}".strip())
 
     try:
         ref = parse_issue_url(url)
@@ -395,10 +414,11 @@ async def _fix_issue(
         _print_failed_record(exc)
         return 1
 
-    footer = result.outcome.record.footer()
-    if result.outcome.ran:
-        footer += f" · thread {result.outcome.thread_id}"
-    console.print(f"[dim]{footer}[/dim]")
+    if tokens:
+        footer = result.outcome.record.footer()
+        if result.outcome.ran:
+            footer += f" · thread {result.outcome.thread_id}"
+        renderer.footer(footer)
     if not result.passed:
         console.print(
             f"[yellow]Tests did not pass[/yellow] (status {result.outcome.status}). "

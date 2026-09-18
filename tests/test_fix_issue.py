@@ -19,7 +19,10 @@ from coder_agent.cli import app
 from coder_agent.config import settings
 from coder_agent.mcp_server.github import GitHubAPI
 from coder_agent.telemetry import RunRecord
+from coder_agent.ui.render import GUTTER, ICON_WIDTH, LABEL_WIDTH
 from tests.fake_github import FakeGitHub
+
+LABEL = slice(GUTTER + ICON_WIDTH, GUTTER + ICON_WIDTH + LABEL_WIDTH)
 
 runner = CliRunner()
 
@@ -296,7 +299,9 @@ def test_cli_fix_issue_reports_the_pull_request(
         app, ["fix-issue", "octo/widgets#7", "--repo", str(work), "--pr", "--yes"]
     )
     assert result.exit_code == 0, result.output
-    assert "Reading issue" in result.output and "Opening pull request" in result.output
+    # The pipeline's own steps share the run's stage grid, so they are pinned by column too.
+    labels = [line[LABEL].strip() for line in result.output.splitlines()]
+    assert "Issue" in labels and "Pull request" in labels
     assert "https://github.com/octo/widgets/pull/100" in result.output
 
 
