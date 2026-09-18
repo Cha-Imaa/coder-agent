@@ -205,6 +205,37 @@ def test_prepare_copies_a_suite_task_and_returns_its_prompt(tmp_path: Path) -> N
         demo.prepare("fix-bug-duration-units", tmp_path / "repo")
 
 
+def test_the_recorder_drops_no_color_from_the_child_environment(monkeypatch) -> None:
+    # A shell that exports NO_COLOR would otherwise hand the agent a console that keeps bold and
+    # dim and drops every colour, and the recording comes out grey without saying why.
+    monkeypatch.setenv("NO_COLOR", "1")
+    env = demo._child_env(88, 28)
+    assert "NO_COLOR" not in env
+    assert env["FORCE_COLOR"] == "1" and env["COLUMNS"] == "88"
+
+
+def test_a_recorded_run_keeps_its_colours(tmp_path: Path, monkeypatch) -> None:
+    """End to end: the cast of a coloured child carries colour, not only bold and dim.
+
+    `NO_COLOR` is set here on purpose. It is what a recording made from this project's own shell
+    inherits, and Rich gives it precedence over `FORCE_COLOR`, so this is the case that produced
+    a grey hero and the one worth pinning.
+    """
+    monkeypatch.setenv("NO_COLOR", "1")
+    child = tmp_path / "child.py"
+    child.write_text(
+        '''from coder_agent.cli import console
+from rich.text import Text
+console.print(Text("green", style="green"))
+''',
+        encoding="utf-8",
+    )
+    cast = tmp_path / "out.cast"
+    assert demo.record([sys.executable, str(child)], cast, cols=40, rows=6) == 0
+    text = "".join(json.loads(line)[2] for line in cast.read_text(encoding="utf-8").splitlines()[1:])
+    assert re.search(r"\x1b\[3[12]m|\x1b\[38;", text), "the child's colour reached the cast"
+
+
 @pytest.mark.parametrize("forced", [True, False])
 def test_cli_colours_a_pipe_only_when_force_color_is_set(forced: bool) -> None:
     env = {k: v for k, v in os.environ.items() if k not in ("FORCE_COLOR", "NO_COLOR")}
