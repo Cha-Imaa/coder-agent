@@ -21,6 +21,7 @@ from coder_agent.ui.render import (
     ICON_WIDTH,
     LABEL_WIDTH,
     Renderer,
+    _one_line,
     context_files,
     describe_call,
     format_tool_call,
@@ -130,6 +131,18 @@ def test_summarise_pytest_caps_the_failure_list():
 def test_summarise_pytest_gives_up_without_a_verdict():
     # A pytest that died before collecting has no counts line, and every word of it matters.
     assert summarise_pytest("ImportError while loading conftest") is None
+
+
+def test_one_line_cuts_at_a_sentence_when_one_ends_late_enough():
+    text = "I corrected the unit mapping there. Then I ran the whole suite twice."
+    assert _one_line(text, 40) == "I corrected the unit mapping there. …"
+
+
+def test_one_line_prefers_a_word_to_an_early_sentence():
+    # The full stop here sits at a quarter of the budget; cutting there would throw away the part
+    # that says what happened, which in a recording is the frame the GIF rests on.
+    text = "It failed. I corrected the mapping and then ran the suite again to confirm the fix."
+    assert _one_line(text, 40) == "It failed. I corrected the mapping and…"
 
 
 def test_relative_paths_strips_the_repo_prefix_in_either_slash():

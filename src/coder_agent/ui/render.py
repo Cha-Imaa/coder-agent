@@ -79,8 +79,22 @@ def _short(value: Any, limit: int = ARG_PREVIEW) -> str:
 
 
 def _one_line(text: str, limit: int = 160) -> str:
+    """Collapse to one paragraph and cut it at a sentence if one ends near the limit.
+
+    The run summary is the last thing printed, and in a recording it is the frame the GIF rests
+    on for three seconds. A cut mid-word (`the duration parsing now w\u2026`) reads as a program that
+    ran out of room; a cut at a full stop reads as an answer. Worth giving up to a third of the
+    budget for, and no more, or a summary that opens with one long sentence loses most of itself.
+    """
     collapsed = " ".join(text.split())
-    return collapsed if len(collapsed) <= limit else collapsed[: limit - 1] + "\u2026"
+    if len(collapsed) <= limit:
+        return collapsed
+    window = collapsed[: limit - 1]
+    stop = max(window.rfind(". "), window.rfind("! "), window.rfind("? "))
+    if stop >= (limit * 2) // 3:
+        return window[: stop + 1] + " \u2026"
+    space = window.rfind(" ")
+    return (window[:space] if space > 0 else window) + "\u2026"
 
 
 def format_tool_call(call: dict[str, Any]) -> str:

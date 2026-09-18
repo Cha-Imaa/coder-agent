@@ -13,6 +13,9 @@ Usage:
   python scripts/demo.py prepare TASK_ID DEST                # fresh copy of a suite task, prints its prompt
   python scripts/demo.py record OUT.cast [--title TEXT] -- coder run DEST "prompt"
   python scripts/demo.py render IN.cast OUT.gif [--rows 24] [--max-gap 1.5]
+
+The chosen cast is committed as docs/figures/demo.cast, so restyling the hero is a render
+away and never another paid run.
 """
 
 from __future__ import annotations
@@ -518,6 +521,20 @@ def render_gif(
 # --------------------------------------------------------------------------- commands
 
 
+# Written into the demo copy of the task repository. The agent already runs pytest with `-q
+# --no-header`, but the model reaches for a bare `pytest` through `run_command`, and that prints
+# a platform banner, a plugin list and a rootdir line - three lines of nothing, in a recording
+# that is twenty-four rows tall. Putting the flags in the repository is also what a real project
+# does, so the demo is not a special case of the CLI.
+#
+# No `-q` here, deliberately. `addopts` is prepended to the command line, so a `-q` in both makes
+# `-qq`, and the second one suppresses the `2 passed in 0.01s` line - which is the one line the
+# `Tests` stage is built to show. `--no-header` already removes everything that was noisy.
+PYTEST_INI = """[pytest]
+addopts = --no-header -p no:cacheprovider
+"""
+
+
 def prepare(task_id: str, dest: Path) -> str:
     """Materialise one suite task into `dest` and return its prompt; the demo works on a copy."""
     from coder_agent.evals.tasks import load_suite
@@ -528,6 +545,9 @@ def prepare(task_id: str, dest: Path) -> str:
     if dest.exists():
         raise SystemExit(f"{dest} exists; remove it or pick another directory")
     task.materialise(dest)
+    ini = dest / "pytest.ini"
+    if not ini.exists():
+        ini.write_text(PYTEST_INI, encoding="utf-8")
     return task.prompt.strip()
 
 
