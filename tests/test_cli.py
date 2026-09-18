@@ -44,7 +44,7 @@ exit_code=1
 $ python -m pytest -q -x -p no:cacheprovider
 ============================= test session starts ==============================
 platform win32 -- Python 3.11.9, pytest-8.3.3, pluggy-1.5.0
-rootdir: C:\\Users\\chaim\\demo\\fix-bug-duration-units
+rootdir: C:\\Users\\dev\\demo\\fix-bug-duration-units
 plugins: anyio-4.4.0, cov-5.0.0
 collected 18 items
 
@@ -146,9 +146,9 @@ def test_one_line_prefers_a_word_to_an_early_sentence():
 
 
 def test_relative_paths_strips_the_repo_prefix_in_either_slash():
-    repo = Path("C:/Users/chaim/demo")
-    assert relative_paths("rootdir: C:/Users/chaim/demo", repo) == "rootdir: "
-    assert relative_paths(r"at C:\Users\chaim\demo\durations.py:4", repo) == "at durations.py:4"
+    repo = Path("C:/Users/dev/demo")
+    assert relative_paths("rootdir: C:/Users/dev/demo", repo) == "rootdir: "
+    assert relative_paths(r"at C:\Users\dev\demo\durations.py:4", repo) == "at durations.py:4"
 
 
 def test_relative_paths_is_a_no_op_without_a_repo():
@@ -246,10 +246,10 @@ def test_tests_stage_falls_back_to_the_tail_for_other_runners():
 
 def test_paths_under_the_repo_are_shown_relative_to_it():
     console, renderer = capture()
-    renderer.repo = Path("C:/Users/chaim/demo")
+    renderer.repo = Path("C:/Users/dev/demo")
     renderer.update("run_tests", {"tests_passed": False, "test_output": NOISY_PYTEST})
     text = console.export_text()
-    assert "C:\\Users\\chaim\\demo" not in text
+    assert "C:\\Users\\dev\\demo" not in text
 
 
 def test_replanning_counts_the_next_attempt():
