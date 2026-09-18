@@ -21,6 +21,7 @@ from coder_agent.mcp_server.github import GitHubAPI
 from coder_agent.telemetry import RunRecord
 from coder_agent.ui.render import GUTTER, ICON_WIDTH, LABEL_WIDTH
 from tests.fake_github import FakeGitHub
+from tests.fakes import plain
 
 LABEL = slice(GUTTER + ICON_WIDTH, GUTTER + ICON_WIDTH + LABEL_WIDTH)
 
@@ -329,8 +330,6 @@ def test_cli_fix_issue_bad_url_and_missing_token_exit_early(
 def test_cli_fix_issue_help_lists_the_flags() -> None:
     result = runner.invoke(app, ["fix-issue", "--help"])
     assert result.exit_code == 0
-    import re
-
-    plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
+    help_text = plain(result.output)
     for flag in ("--repo", "--pr", "--base", "--yes", "--sandbox"):
-        assert flag in plain
+        assert flag in help_text

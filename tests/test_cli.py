@@ -30,7 +30,7 @@ from coder_agent.ui.render import (
     relative_paths,
     summarise_pytest,
 )
-from tests.fakes import echo, scripted, tool_call
+from tests.fakes import echo, plain, scripted, tool_call
 
 runner = CliRunner()
 
@@ -301,4 +301,4 @@ def test_cli_rejects_missing_repo(tmp_path):
 def test_the_token_ledger_is_behind_a_flag():
     for command in ("run", "chat", "fix-issue"):
         result = runner.invoke(app, [command, "--help"])
-        assert "--tokens" in result.output, command
+        assert "--tokens" in plain(result.output), command
