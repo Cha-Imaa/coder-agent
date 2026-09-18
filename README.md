@@ -255,18 +255,3 @@ scripts/            demo recorder and GIF renderer (demo.py, record_demo.ps1)
 docs/               system design, results, the try-it walkthrough, figures
 tests/              pytest, no network and no API key needed
 ```
-
-## Further reading
-
-- [`docs/system_design_coding_agent.md`](docs/system_design_coding_agent.md): the concept-first
-  walkthrough of agents, LangGraph, MCP, sandboxing, retrieval and evaluation.
-- [`docs/try-it.md`](docs/try-it.md): the walkthrough from an empty directory to an agent-opened
-  pull request, with the quota limits and platform gotchas called out.
-- [`docs/results.md`](docs/results.md): the numbers - pass rate, token spend and retrieval
-  quality - and how to reproduce them.
-
-## Contributing and licence
-
-Issues and pull requests are welcome; [`CONTRIBUTING.md`](CONTRIBUTING.md) has the setup, the
-checks CI runs and the commit conventions, and [`CHANGELOG.md`](CHANGELOG.md) tracks what a user
-would notice. MIT licence, see [`LICENSE`](LICENSE).
