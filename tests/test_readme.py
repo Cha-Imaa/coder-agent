@@ -1,8 +1,9 @@
 """The README is the first thing a visitor reads; a broken image or link there is a bug.
 
 GitHub renders relative links and images against the repository root, so every relative target
-must exist on disk. The two architecture diagrams are images now, so they are checked the same
-way as the result figures; code fences are checked for the one mistake a renderer will not flag
+must exist on disk. The README stays short for a skimming reader, so the result charts live on
+the results page and only the two architecture diagrams and the headline chart are checked to be
+in the README itself; code fences are checked for the one mistake a renderer will not flag
 loudly: an unclosed fence, which swallows the rest of the page.
 """
 
@@ -34,10 +35,17 @@ def test_relative_links_and_images_exist() -> None:
 
 
 def test_every_figure_is_shown() -> None:
-    shown = {Path(t).name for t in _relative_targets() if t.startswith("docs/figures/")}
+    """A figure nobody links to is a figure nobody checks, so each one is on a page a reader reaches."""
+    pages = [README, ROOT / "docs" / "results.md"]
+    shown = {
+        Path(m).name
+        for page in pages
+        for m in _LINK.findall(page.read_text(encoding="utf-8"))
+        + _IMG.findall(page.read_text(encoding="utf-8"))
+        if "figures/" in m
+    }
     on_disk = {p.name for p in (ROOT / "docs" / "figures").glob("*.png")}
-    # The ablation figure is only drawn once two arms are complete, so it is allowed to be absent.
-    assert on_disk - {"retrieval_ablation.png"} <= shown, f"figures not in README: {on_disk - shown}"
+    assert on_disk <= shown, f"figures shown on no page: {on_disk - shown}"
 
 
 def test_code_fences_are_balanced() -> None:
