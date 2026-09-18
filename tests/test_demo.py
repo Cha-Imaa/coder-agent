@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 from itertools import pairwise
@@ -121,6 +122,57 @@ sys.stdout.flush()
 answer = input()
 sys.stdout.write(f"got {answer}\\n")
 """
+
+
+def test_row_spans_collapse_a_line_that_does_not_change(tmp_path: Path) -> None:
+    # Three writes, so three frames, but the first line is written once and then stays: it must
+    # cost one span, not one per frame. This is the whole reason the SVG is a tenth of the GIF.
+    cast = demo.Cast.load(_cast(tmp_path, [
+        [0.0, "o", "first\r\n"], [1.0, "o", "second\r\n"], [2.0, "o", "third\r\n"],
+    ]))
+    frames = demo.frames_from_cast(cast, rows=6, typing_delay=0.2, hold=1.0)
+    spans = demo._row_spans(frames)
+    first = [s for s in spans if "".join(ch for ch, _ in s[3]) == "first"]
+    assert len(first) == 1, "a line that never changes is one group"
+    assert first[0][2] == len(frames), "and it stays on screen to the end"
+    assert all(any(ch != " " for ch, _ in cells) for _, _, _, cells in spans), "no blank groups"
+
+
+def test_render_writes_an_animated_svg(tmp_path: Path) -> None:
+    import xml.etree.ElementTree as ET
+
+    cast = demo.Cast.load(_cast(tmp_path, [[0.0, "o", f"{BOLD}ok{RESET} \x1b[42m bg \x1b[0m\r\n"]]))
+    frames = demo.frames_from_cast(cast, rows=4, typing_delay=0.2)
+    out = demo.render_svg(frames, tmp_path / "out" / "demo.svg", cols=40, font_size=12)
+    root = ET.parse(out).getroot()  # parses at all, so the text is XML-escaped
+    style = root.find("{http://www.w3.org/2000/svg}style").text
+    assert "@keyframes" in style and "infinite" in style
+    assert "white-space:pre" in style, "without it textLength stretches the surviving glyphs"
+    assert "prefers-reduced-motion" in style, "a still viewer gets the last frame"
+    groups = [g for g in root.iter("{http://www.w3.org/2000/svg}g") if g.get("class")]
+    assert groups, "one group per row per stretch it is unchanged for"
+    assert style.count("@keyframes") <= len(groups), "groups sharing a window share a rule"
+    assert "<script" not in out.read_text(encoding="utf-8"), "an <img> runs no script"
+
+
+def test_svg_runs_are_trimmed_and_measured_in_whole_columns(tmp_path: Path) -> None:
+    from PIL import ImageFont
+
+    cast = demo.Cast.load(_cast(tmp_path, [[0.0, "o", "    indented\r\n"]]))
+    frames = demo.frames_from_cast(cast, rows=3, typing_delay=0.2)
+    out = demo.render_svg(frames, tmp_path / "demo.svg", cols=40, font_size=12)
+    cw = round(ImageFont.truetype(str(demo.find_font()), 12).getlength("M"))
+    match = re.search(r'<text x="(\d+)" y="\d+" textLength="(\d+)"[^>]*>indented<', out.read_text(encoding="utf-8"))
+    assert match, "the run is emitted without its leading spaces"
+    assert int(match.group(1)) == demo.PADDING + 4 * cw, "and starts at its own column"
+    assert int(match.group(2)) == len("indented") * cw
+
+
+def test_render_command_picks_the_renderer_from_the_suffix(tmp_path: Path) -> None:
+    cast = _cast(tmp_path, [[0.0, "o", "hi\r\n"]])
+    for name, head in (("out.svg", "<svg"), ("out.gif", "GIF8")):
+        assert demo.main(["render", str(cast), str(tmp_path / name), "--rows", "3"]) == 0
+        assert (tmp_path / name).read_bytes()[:4].decode("latin-1").startswith(head[:4])
 
 
 def test_record_captures_output_answers_the_prompt_and_logs_input(tmp_path: Path) -> None:

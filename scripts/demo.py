@@ -13,6 +13,7 @@ Usage:
   python scripts/demo.py prepare TASK_ID DEST                # fresh copy of a suite task, prints its prompt
   python scripts/demo.py record OUT.cast [--title TEXT] -- coder run DEST "prompt"
   python scripts/demo.py render IN.cast OUT.gif [--rows 24] [--max-gap 1.5]
+  python scripts/demo.py render IN.cast OUT.svg                # same frames, CSS-animated
 
 The chosen cast is committed as docs/figures/demo.cast, so restyling the hero is a render
 away and never another paid run.
@@ -41,6 +42,8 @@ from rich.style import Style
 from rich.terminal_theme import TerminalTheme
 
 if TYPE_CHECKING:  # Pillow is imported lazily, so the drawing helpers only name its types
+    from collections.abc import Iterator
+
     from PIL.Image import Image as PilImage
     from PIL.ImageFont import FreeTypeFont
 
@@ -518,6 +521,170 @@ def render_gif(
     return out
 
 
+# --------------------------------------------------------------------------- drawing: SVG
+
+# The browser has no DejaVu Sans Mono to hand, so every run also carries the width it is supposed
+# to occupy (`textLength`) and the glyphs are fitted to it. Without that, one reader's Consolas
+# and another's Menlo put the stage grid in two different places.
+SVG_FONTS = '"DejaVu Sans Mono","SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace'
+_XML = {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}
+
+
+def _esc(text: str) -> str:
+    return "".join(_XML.get(c, c) for c in text)
+
+
+def _hex(rgb: tuple[int, int, int]) -> str:
+    return "#{:02x}{:02x}{:02x}".format(*rgb)
+
+
+def _runs(line: list[Cell]) -> Iterator[tuple[int, int, Style, str]]:
+    """Split a row into maximal same-style stretches: (start column, end column, style, text)."""
+    c = 0
+    while c < len(line):
+        style = line[c][1]
+        end = c
+        while end < len(line) and line[end][1] == style:
+            end += 1
+        yield c, end, style, "".join(ch for ch, _ in line[c:end])
+        c = end
+
+
+def _row_spans(frames: list[Frame]) -> list[tuple[int, int, int, list[Cell]]]:
+    """Every stretch of frames over which one row holds one content: (row, first, last+1, cells).
+
+    This is what makes the SVG small. A GIF has to repaint all twenty-four rows on every frame;
+    a terminal transcript mostly appends, so a row drawn once usually stays until it scrolls off.
+    Emitting one group per *change* rather than per frame turns rows x frames repaints into a few
+    hundred groups, most of which live for most of the recording.
+    """
+    spans: list[tuple[int, int, int, list[Cell]]] = []
+    for r in range(len(frames[0].cells)):
+        start, current = 0, frames[0].cells[r]
+        for i in range(1, len(frames) + 1):
+            cells = frames[i].cells[r] if i < len(frames) else None
+            if cells == current:
+                continue
+            if any(ch != " " or style.bgcolor for ch, style in current):
+                spans.append((r, start, i, current))
+            start, current = i, cells  # type: ignore[assignment]
+    return spans
+
+
+def render_svg(
+    frames: list[Frame],
+    out: Path,
+    *,
+    cols: int,
+    font_size: int = 15,
+    font: Path | None = None,
+    theme: TerminalTheme = MUTED_THEME,
+    title: str = "coder-agent",
+    shell: str = "powershell",
+) -> Path:
+    """Write the same recording as one animated SVG: CSS keyframes, no script, no <foreignObject>.
+
+    Scripts do not run inside an `<img>` and GitHub would strip them anyway, so the animation is
+    a CSS window per group: opacity 0, opacity 1 for its stretch of the timeline, opacity 0
+    again. Groups sharing a stretch share the rule, which is most of them - a screenful that
+    appears together disappears together.
+    """
+    from PIL import ImageFont
+
+    regular = ImageFont.truetype(str(font or find_font()), font_size)
+    cw = max(1, round(regular.getlength("M")))
+    ascent, descent = regular.getmetrics()
+    lh = ascent + descent
+    rows = len(frames[0].cells)
+    bar = lh + 18
+    width = cols * cw + 2 * PADDING
+    height = bar + rows * lh + 2 * PADDING
+    small = max(9, font_size - 2)
+
+    total = sum(f.duration for f in frames) or 1.0
+    starts: list[float] = []
+    at = 0.0
+    for frame in frames:
+        starts.append(at)
+        at += frame.duration
+    starts.append(total)
+
+    # One CSS rule per distinct (appears, disappears) pair, keyed on the rounded percentages so
+    # that two groups a thousandth of a percent apart still share it.
+    windows: dict[tuple[str, str], int] = {}
+    body: list[str] = []
+    for row, first, last, cells in _row_spans(frames):
+        key = (f"{starts[first] / total * 100:.3f}", f"{starts[last] / total * 100:.3f}")
+        index = windows.setdefault(key, len(windows))
+        y = bar + PADDING + row * lh + ascent
+        parts: list[str] = []
+        for start, end, style, text in _runs(cells):
+            fg, bg = _rgb(style, theme)
+            x = PADDING + start * cw
+            run = (end - start) * cw
+            if bg:
+                parts.append(f'<rect x="{x}" y="{y - ascent}" width="{run}" height="{lh}" '
+                             f'fill="{_hex(bg)}"/>')
+            # The padding a style run carries on either side is drawn by nothing, so it is
+            # dropped and the run starts where its first glyph does. That keeps `textLength`
+            # honest - it has to describe the glyphs it is given, not the column they sit in.
+            ink = text.strip(" ")
+            if ink:
+                lead = len(text) - len(text.lstrip(" "))
+                weight = ' font-weight="bold"' if style.bold else ""
+                parts.append(f'<text x="{x + lead * cw}" y="{y}" textLength="{len(ink) * cw}" '
+                             f'fill="{_hex(fg)}"{weight}>{_esc(ink)}</text>')
+        if parts:
+            body.append(f'<g class="w{index}">{"".join(parts)}</g>')
+
+    rules: list[str] = []
+    for (appears, disappears), index in windows.items():
+        stops = [] if appears == "0.000" else [f"0%,{appears}%{{opacity:0}}"]
+        stops.append(f"{appears}%,{disappears}%{{opacity:1}}")
+        if disappears != "100.000":
+            stops.append(f"{disappears}%,100%{{opacity:0}}")
+        rules.append(f".w{index}{{animation-name:k{index}}}@keyframes k{index}{{{''.join(stops)}}}")
+    # What a still viewer should see is the finished run, not an empty terminal: a README opened
+    # with reduced motion on, or a preview thumbnail, gets the last frame.
+    final = ",".join(f".w{i}" for (_, gone), i in windows.items() if gone == "100.000")
+
+    css = (
+        # `white-space:pre` is not decoration: without it the browser collapses the runs of
+        # spaces inside a line, and `textLength` then stretches the surviving glyphs across the
+        # width the spaces were supposed to occupy. The whole grid comes apart.
+        f"text{{font-size:{font_size}px;white-space:pre}}"
+        f"g[class]{{opacity:0;animation-duration:{total:.2f}s;animation-iteration-count:infinite;"
+        f"animation-timing-function:step-end}}"
+        + "".join(rules)
+        + f"@media(prefers-reduced-motion:reduce){{g[class]{{animation:none}}{final}{{opacity:1}}}}"
+    )
+
+    dots = "".join(f'<circle cx="{22 + i * 18}" cy="{bar // 2}" r="5" fill="{_hex(DOT)}"/>'
+                   for i in range(3))
+    right = (f'<text x="{width - 20}" y="{bar // 2}" fill="{_hex(DOT)}" text-anchor="end" '
+             f'dominant-baseline="central" font-size="{small}px">{_esc(shell)}</text>') if shell else ""
+    svg = (
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" '
+        f'width="{width}" height="{height}" font-family=\'{SVG_FONTS}\' xml:space="preserve">'
+        f"<title>{_esc(title)}</title><style>{css}</style>"
+        f'<clipPath id="win"><rect width="{width}" height="{height}" rx="{CORNER_RADIUS}"/></clipPath>'
+        f'<g clip-path="url(#win)">'
+        f'<rect width="{width}" height="{height}" fill="{_hex(BACKGROUND)}"/>'
+        f'<rect width="{width}" height="{bar}" fill="{_hex(TITLE_BAR)}"/>'
+        f'<line x1="0" y1="{bar}.5" x2="{width}" y2="{bar}.5" stroke="{_hex(BORDER)}"/>'
+        f'{dots}'
+        f'<text x="{width // 2}" y="{bar // 2}" fill="{_hex(MUTED)}" text-anchor="middle" '
+        f'dominant-baseline="central" font-size="{small}px">{_esc(title)}</text>'
+        f'{right}{"".join(body)}</g>'
+        f'<rect x="0.5" y="0.5" width="{width - 1}" height="{height - 1}" rx="{CORNER_RADIUS}" '
+        f'fill="none" stroke="{_hex(BORDER)}"/></svg>'
+    )
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(svg, encoding="utf-8")
+    return out
+
+
+
 # --------------------------------------------------------------------------- commands
 
 
@@ -570,7 +737,7 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--answer-delay", type=float, default=0.8)
     r.add_argument("--timeout", type=float, default=900.0)
 
-    g = sub.add_parser("render", help="draw a .cast as an animated GIF")
+    g = sub.add_parser("render", help="draw a .cast as an animated GIF or SVG (by out suffix)")
     g.add_argument("cast", type=Path)
     g.add_argument("out", type=Path)
     g.add_argument("--rows", type=int, help="visible rows (default: the cast height)")
@@ -602,9 +769,10 @@ def main(argv: list[str] | None = None) -> int:
         return code
     cast = Cast.load(args.cast)
     frames = frames_from_cast(cast, rows=args.rows, max_gap=args.max_gap, hold=args.hold)
-    render_gif(frames, args.out, cols=int(cast.header.get("width", 100)),
-               font=args.font, font_size=args.font_size, title=args.title, shell=args.shell)
-    print(f"wrote {args.out}: {len(frames)} frames, {args.out.stat().st_size / 1e6:.1f} MB")
+    draw = render_svg if args.out.suffix.lower() == ".svg" else render_gif
+    draw(frames, args.out, cols=int(cast.header.get("width", 100)),
+         font=args.font, font_size=args.font_size, title=args.title, shell=args.shell)
+    print(f"wrote {args.out}: {len(frames)} frames, {args.out.stat().st_size / 1e3:.0f} kB")
     return 0
 
 
