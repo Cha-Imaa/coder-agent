@@ -51,3 +51,10 @@ def test_architecture_diagrams_are_shown() -> None:
     shown = set(_relative_targets())
     for diagram in ("docs/figures/run_loop.png", "docs/figures/system_map.png"):
         assert diagram in shown, f"README no longer shows {diagram}"
+
+
+def test_readme_links_to_the_web_player() -> None:
+    """The hero is a picture of a run; the player is the run, so the README points at it."""
+    text = README.read_text(encoding="utf-8")
+    assert "cha-imaa.github.io/coder-agent/#watch-a-run" in text
+    assert "watch a run" in text

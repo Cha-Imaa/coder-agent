@@ -1,0 +1,117 @@
+/* The window the recording is painted into: the chrome the GIF and the SVG draw, in CSS.
+ *
+ * The colours are not written here twice. `cast-player.js` reads them out of the frames JSON and
+ * sets them as custom properties on `.cast-window`, so they come from the same Python constants
+ * the other two renderings use; the values below are only what a reader sees if the fetch fails.
+ */
+
+.cast-window {
+  --cast-background: #191a28;
+  --cast-foreground: #cdd3e0;
+  --cast-titlebar: #242438;
+  --cast-border: #36394f;
+  --cast-muted: #7c829c;
+  --cast-dot: #4e526c;
+  --cast-radius: 13px;
+  --cast-padding: 22px;
+  --cast-font: 15px;
+
+  max-width: 900px;
+  margin: 1.2rem auto;
+  border: 1px solid var(--cast-border);
+  border-radius: var(--cast-radius);
+  background: var(--cast-background);
+  overflow: hidden;
+}
+
+.cast-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 1rem;
+  border-bottom: 1px solid var(--cast-border);
+  background: var(--cast-titlebar);
+  font-size: 0.75rem;
+}
+
+.cast-dots {
+  display: flex;
+  gap: 8px;
+}
+
+.cast-dots i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--cast-dot);
+}
+
+/* The title is centred in the bar, as it is in the GIF, so the dots on the left and the shell
+   label on the right take equal shares of what is left over. */
+.cast-title {
+  flex: 1;
+  text-align: center;
+  color: var(--cast-muted);
+}
+
+.cast-shell {
+  color: var(--cast-dot);
+}
+
+.cast-toggle {
+  padding: 0 0.35rem;
+  border: 0;
+  background: none;
+  color: var(--cast-muted);
+  font-size: 0.7rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.cast-toggle:hover,
+.cast-toggle:focus-visible {
+  color: var(--cast-foreground);
+}
+
+/* `white-space: pre` and a monospace stack are the whole terminal: a row is one line of text,
+   the columns line up because every glyph is one advance wide, and the padding spaces a run
+   carries are its own. The player measures the reader's font and shrinks the type until the
+   recorded width fits, so on anything wider than a phone there is nothing to scroll to. */
+/* Two classes, not one: the docs theme styles `pre` inside its content area - line height,
+   font, margins - and a single class loses to `.md-typeset pre` on specificity. */
+.cast-player .cast-screen {
+  margin: 0;
+  padding: var(--cast-padding);
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: var(--cast-background);
+  color: var(--cast-foreground);
+  font-family: "DejaVu Sans Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: var(--cast-font);
+  line-height: 1.2;  /* the GIF draws a row as ascent + descent with no leading; this matches */
+  white-space: pre;
+  tab-size: 8;
+}
+
+.cast-player pre {
+  border: 0;
+  box-shadow: none;
+}
+
+.cast-window.is-paused .cast-toggle {
+  color: var(--cast-foreground);
+}
+
+.cast-failed {
+  color: var(--cast-muted);
+  font-style: italic;
+}
+
+/* A phone cannot show eighty-eight columns at a readable size whatever the padding, so it gets
+   the margins back and scrolls the screen sideways. */
+@media (max-width: 30em) {
+  .cast-window {
+    --cast-padding: 10px;
+    border-radius: 8px;
+  }
+}

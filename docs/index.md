@@ -18,6 +18,14 @@ through a sandbox jail.
 | Observability | LangSmith tracing and a local SQLite ledger of tokens per node |
 | Interface | Typer + Rich CLI: `coder run`, `coder chat`, `coder fix-issue`, `coder index`, `coder stats` |
 
+## Watch a run
+
+One task, start to finish: the retrieved context, the plan, an approved edit and the tests going
+green. It is a real recording — `scripts/demo.py` replays the cast of an actual `coder run` and
+this page paints its frames, the same frames the README hero is drawn from.
+
+<div class="cast-player" data-src="figures/demo.frames.json"></div>
+
 ## How to read this site
 
 - **[Try it](try-it.md)** is the walkthrough: empty directory to an agent-opened pull request,

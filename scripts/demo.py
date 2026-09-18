@@ -14,6 +14,7 @@ Usage:
   python scripts/demo.py record OUT.cast [--title TEXT] -- coder run DEST "prompt"
   python scripts/demo.py render IN.cast OUT.gif [--rows 24] [--max-gap 1.5]
   python scripts/demo.py render IN.cast OUT.svg                # same frames, CSS-animated
+  python scripts/demo.py render IN.cast OUT.json --frames      # same frames, for the web player
 
 The chosen cast is committed as docs/figures/demo.cast, so restyling the hero is a render
 away and never another paid run.
@@ -692,6 +693,81 @@ def render_svg(
     return out
 
 
+# --------------------------------------------------------------------------- drawing: JSON
+
+# The web player is handed the screen model, not a picture of it: the same frames the GIF and the
+# SVG are drawn from, as JSON, so a browser can paint them into a `<pre>`. Runs are positional and
+# trailing defaults are dropped - `[text]`, `[text, fg]`, `[text, fg, bg]`, `[text, fg, bg, 1]` -
+# because at four hundred rows of runs the key names would be most of the file.
+
+
+def _row_runs(line: list[Cell], theme: TerminalTheme) -> list[list]:
+    """One row as compact style runs, with the padding no glyph and no background needs dropped."""
+    runs: list[list] = []
+    for _, _, style, text in _runs(line):
+        fg, bg = _rgb(style, theme)
+        run: list = [text, "" if fg == FOREGROUND else _hex(fg), _hex(bg) if bg else "",
+                     1 if style.bold else 0]
+        while len(run) > 1 and not run[-1]:
+            run.pop()
+        runs.append(run)
+    while runs and len(runs[-1]) == 1 and not runs[-1][0].strip():
+        runs.pop()
+    return runs
+
+
+def render_frames(
+    frames: list[Frame],
+    out: Path,
+    *,
+    cols: int,
+    font_size: int = 15,
+    font: Path | None = None,  # the browser draws in whatever monospace the reader has
+    theme: TerminalTheme = MUTED_THEME,
+    title: str = "coder-agent",
+    shell: str = "powershell",
+) -> Path:
+    """Write the frames as JSON: per frame its duration and only the rows that changed.
+
+    The same argument that makes the SVG small makes this small, and for the player it also makes
+    painting cheap: a terminal transcript mostly appends, so a frame touches a row or two and the
+    player rewrites a row or two rather than the whole screen. `fontSize` is a ceiling, not a
+    size - the player measures the reader's monospace font and shrinks until the columns fit.
+    """
+    rows = len(frames[0].cells)
+    previous: list[list[Cell]] = [[] for _ in range(rows)]
+    payload: list[dict] = []
+    for frame in frames:
+        changed = {str(r): _row_runs(line, theme)
+                   for r, line in enumerate(frame.cells) if line != previous[r]}
+        previous = frame.cells
+        payload.append({"d": round(frame.duration, 3), "rows": changed})
+
+    data = {
+        "version": 1,
+        "title": title,
+        "shell": shell,
+        "cols": cols,
+        "rows": rows,
+        "fontSize": font_size,
+        # The chrome is drawn by the stylesheet, but its colours come from here, so the window in
+        # the browser and the window in the GIF cannot drift apart without a re-render.
+        "theme": {
+            "background": _hex(BACKGROUND),
+            "foreground": _hex(FOREGROUND),
+            "titleBar": _hex(TITLE_BAR),
+            "border": _hex(BORDER),
+            "muted": _hex(MUTED),
+            "dot": _hex(DOT),
+            "radius": f"{CORNER_RADIUS}px",
+            "padding": f"{PADDING}px",
+        },
+        "frames": payload,
+    }
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(data, separators=(",", ":")), encoding="utf-8")
+    return out
+
 
 # --------------------------------------------------------------------------- commands
 
@@ -745,7 +821,8 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--answer-delay", type=float, default=0.8)
     r.add_argument("--timeout", type=float, default=900.0)
 
-    g = sub.add_parser("render", help="draw a .cast as an animated GIF or SVG (by out suffix)")
+    g = sub.add_parser("render",
+                       help="draw a .cast as an animated GIF or SVG, or emit its frames as JSON")
     g.add_argument("cast", type=Path)
     g.add_argument("out", type=Path)
     g.add_argument("--rows", type=int, help="visible rows (default: the cast height)")
@@ -755,6 +832,8 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--font-size", type=int, default=15)
     g.add_argument("--title", default="coder-agent", help="what the window title bar says")
     g.add_argument("--shell", default="powershell", help="right-hand label in the title bar")
+    g.add_argument("--frames", action="store_true",
+                   help="write the screen model as JSON for the web player (implied by .json)")
 
     argv = sys.argv[1:] if argv is None else list(argv)
     # argparse's REMAINDER would also swallow the options before it, so split on `--` by hand.
@@ -777,7 +856,11 @@ def main(argv: list[str] | None = None) -> int:
         return code
     cast = Cast.load(args.cast)
     frames = frames_from_cast(cast, rows=args.rows, max_gap=args.max_gap, hold=args.hold)
-    draw = render_svg if args.out.suffix.lower() == ".svg" else render_gif
+    suffix = args.out.suffix.lower()
+    if args.frames or suffix == ".json":
+        draw = render_frames
+    else:
+        draw = render_svg if suffix == ".svg" else render_gif
     draw(frames, args.out, cols=int(cast.header.get("width", 100)),
          font=args.font, font_size=args.font_size, title=args.title, shell=args.shell)
     print(f"wrote {args.out}: {len(frames)} frames, {args.out.stat().st_size / 1e3:.0f} kB")

@@ -21,8 +21,9 @@ CLAUDE.md
 coverage.json
 htmlcov/
 
-# diagram sources and inspiration images (exported PNGs live in docs/figures/)
-assets/
+# diagram sources and inspiration images (exported PNGs live in docs/figures/); anchored,
+# because docs/assets/ is the site's own stylesheet and script and belongs in the repository
+/assets/
 # local before/after comparison of the restyled figures
 docs/figures/preview/
 

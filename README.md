@@ -15,6 +15,10 @@ Turn issues into working code. In your terminal.
   />
 </p>
 
+<p align="center">
+  <a href="https://cha-imaa.github.io/coder-agent/#watch-a-run">watch a run</a>
+</p>
+
 A terminal coding agent that takes a task in plain English, reads a target repository, plans a
 change, edits files, runs the tests, and iterates on failures until they pass. Point it at an
 issue URL and it opens the pull request.
@@ -246,7 +250,7 @@ src/coder_agent/
   telemetry/        SQLite ledger of tokens, latency, iterations, outcome per run
   evals/            task suites, isolated runner, retrieval eval, figures
 evals/              the 12-task suite, the HumanEval slice, results and entry-point scripts
-scripts/            demo recorder and GIF renderer, and the README hero card template
-docs/               system design, results, the try-it walkthrough, figures
+scripts/            demo recorder, and one cast rendered as a GIF, an SVG or the web player's frames
+docs/               system design, results, the try-it walkthrough, figures, the player
 tests/              pytest, no network and no API key needed
 ```
