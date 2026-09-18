@@ -396,6 +396,10 @@ TITLE_BAR = (36, 38, 56)
 BORDER = (54, 57, 80)
 MUTED = (124, 130, 156)
 DOT = (78, 82, 108)
+# The three title-bar dots, close-minimise-zoom from left to right. They are the recording's own
+# red, amber and green - the normal ANSI row of `MUTED_THEME` below - rather than the saturated
+# macOS traffic light, so the only colours in the chrome are colours the terminal itself can draw.
+DOTS = ((214, 130, 130), (212, 182, 130), (140, 186, 146))
 PADDING = 22
 CORNER_RADIUS = 13
 
@@ -449,7 +453,7 @@ def _chrome(size: tuple[int, int], bar: int, font: FreeTypeFont, title: str,
     draw.line([(0, bar), (width, bar)], fill=BORDER)
     for i in range(3):
         cx, cy, r = 22 + i * 18, bar // 2, 5
-        draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=DOT)
+        draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=DOTS[i])
     draw.text((width // 2, bar // 2), title, font=font, fill=MUTED, anchor="mm")
     if shell:
         draw.text((width - 20, bar // 2), shell, font=font, fill=DOT, anchor="rm")
@@ -668,8 +672,8 @@ def render_svg(
         + f"@media(prefers-reduced-motion:reduce){{g[class]{{animation:none}}{final}{{opacity:1}}}}"
     )
 
-    dots = "".join(f'<circle cx="{22 + i * 18}" cy="{bar // 2}" r="5" fill="{_hex(DOT)}"/>'
-                   for i in range(3))
+    dots = "".join(f'<circle cx="{22 + i * 18}" cy="{bar // 2}" r="5" fill="{_hex(dot)}"/>'
+                   for i, dot in enumerate(DOTS))
     right = (f'<text x="{width - 20}" y="{bar // 2}" fill="{_hex(DOT)}" text-anchor="end" '
              f'dominant-baseline="central" font-size="{small}px">{_esc(shell)}</text>') if shell else ""
     svg = (
@@ -759,6 +763,9 @@ def render_frames(
             "border": _hex(BORDER),
             "muted": _hex(MUTED),
             "dot": _hex(DOT),
+            "dotClose": _hex(DOTS[0]),
+            "dotMin": _hex(DOTS[1]),
+            "dotMax": _hex(DOTS[2]),
             "radius": f"{CORNER_RADIUS}px",
             "padding": f"{PADDING}px",
         },
