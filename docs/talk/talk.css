@@ -2,7 +2,7 @@
  *
  * The colours are the figures' own (src/coder_agent/evals/figures.py): a pale blue page, an
  * ivory card with a hairline border, dark navy titles, blue-grey text, and the same fixed
- * series order (navy, blue, teal, violet).
+ * series order, in muted tones (navy, dusty blue, sage, lavender).
  *
  * Type: Manrope for every word on the slides and JetBrains Mono for code and the terminal, both
  * loaded from Google Fonts in index.html. One family at a few weights keeps it technical rather
@@ -40,27 +40,64 @@
   --muted: #7c8da8;       /* ticks, footnotes */
   --on-ink: #ffffff;      /* text on an ink-coloured fill: tooltips, badges */
 
-  /* series, in the figures' fixed order, plus the two diagram accents */
-  --navy: #1e4a8a;
+  /* The bright blue the opening slide's label and the fixed chrome (chapter mark, progress
+     bar) were designed with. Kept as it was, so the first slide does not change. */
   --blue: #2f80ed;
-  --teal: #1fb8a6;
-  --violet: #6b5bd2;
-  --orange: #e8973a;
-  --coral: #d9536f;
-  --deep-teal: #0f766e;
+  --rail-now: #1e4a8a;    /* the rail's current dot, the original navy */
 
-  /* the loop diagrams' pale fills: a node's box takes its stage colour, faintly */
-  --tint-teal: #f1fbf9;
-  --tint-coral: #fff4f6;
-  --tint-orange: #fff8ef;
-  --ring-outer: #eaf0f7;  /* the track the arrows run along */
-  --ring-inner: #e6f4f1;
+  /* The slides' muted accents: a midnight navy, then dusty blue, sage and lavender, in the
+     charts' fixed series order. Calm on purpose, so the data reads before the colour does.
+     `--accent-ink` is the dusty blue darkened enough to be read as small text. */
+  --navy: #2b4a78;
+  --dusty: #7f9cc4;
+  --sage: #86a894;
+  --lavender: #a497cc;
+  --rose: #b97a78;
+  --accent-ink: #4d6c99;
+  --sage-ink: #4f7a62;
+  --tint: #eef2f8;        /* a pale dusty-blue wash for highlighted panels */
+
+  /* The loop diagrams and their "It stops when" panels. Calm on purpose: white boxes, slate
+     arrows and navy badges carry the structure, and colour is kept for the three outcomes a
+     run can have, in softened versions of the recording's own stage colours (green for
+     passed, rose for failure, lavender for a pause or a limit). Each has a pale tint for fills. */
+  --loop-track: #edf1f6;  /* the ring the arrows run along */
+  --loop-line: #a3b3c9;   /* the arrows */
+  --loop-label: #6b7f9e;  /* the words on the arrows */
+  --loop-edge: #cbd6e4;   /* a box's border */
+  --loop-pass: #5b8c6b;
+  --loop-pass-tint: #eef5f0;
+  --loop-fail: #b4706d;
+  --loop-fail-tint: #faf1ef;
+  --loop-hold: #7a6cad;   /* soft lavender for a pause or a limit */
+  --loop-hold-tint: #f3f1f9;
 
   /* the recording's terminal, for the dark windows sitting on the paper */
   --term-bg: #191a28;
   --term-fg: #cdd3e0;
   --term-dim: #7c8099;
   --term-pass: #8cba92;
+  /* the one-line terminal on "What I built", drawn from the owner's reference image: a bluer
+     window than the recording, a faint lighter rim, the usual window dots and a green prompt */
+  --term-line-bg: #161a2c;
+  --term-line-edge: #2c3250;
+  --term-line-fg: #eef1f7;
+  --term-close: #f25f5c;
+  --term-min: #f2bd3c;
+  --term-max: #3fbf5f;
+  --term-prompt: #4cc46a;
+
+  /* The opening slide: a slightly warmer ivory card, a slate-blue subtitle, and a softer
+     shadow under the recorded run than the other terminals get, so it sits calmly on the card. */
+  --hero-card: #fafaf8;
+  --hero-sub: #536d85;
+  --lift-soft: 0 1px 2px rgba(16, 42, 86, 0.06), 0 14px 32px -22px rgba(16, 42, 86, 0.28);
+
+  /* the closing slide: a softer grey-blue for its subtitle and header, and how strongly its
+     background shapes (the corner waves, the cloud behind the illustration) show through */
+  --end-sub: #7186a0;
+  --end-wave-opacity: 0.55;
+  --end-cloud-opacity: 0.6;
 
   --sans: "Manrope", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --mono: "JetBrains Mono", "DejaVu Sans Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
@@ -213,7 +250,7 @@ b, strong { font-weight: 600; }
 .takeaway {
   max-width: 52em;
   padding-left: 1em;
-  border-left: 3px solid var(--blue);
+  border-left: 3px solid var(--dusty);
   color: var(--ink);
 }
 
@@ -233,33 +270,48 @@ kbd {
 a { color: var(--blue); }
 
 /* ------------------------------------------------------------------------------------------ */
-/* Fixed chrome: brand, counter, stage line, dot rail, progress bar                           */
+/* Fixed chrome: slide label, counter, stage line, dot rail, progress bar                          */
 /* ------------------------------------------------------------------------------------------ */
 
-/* Brand and counter sit inside the slide's top-left and bottom-left corners, the stage line in
+/* The slide label and counter sit inside the slide's top-left and bottom-left corners, the stage line in
    its top-right one: the slide is centred and capped at 1320px, so its edge is whichever is
    larger, the gutter or half the leftover width. `100%` rather than `100vw`, because the
    viewport width counts the scrollbar and would push the two sides out of line. */
-.brand, .counter, .stages {
+.kicker, .counter, .stages {
   position: fixed;
   z-index: 5;
   --card-edge: calc(max(var(--gutter), (100% - 1320px) / 2) + 22px);
 }
 
-.brand, .counter {
+.kicker, .counter {
   left: var(--card-edge);
   color: var(--ink-soft);   /* darker than --muted, so it stays readable on the deeper page */
   font-size: 13px;
   letter-spacing: 0.04em;
 }
 
-.brand {
-  top: calc(var(--gutter) + 12px);
-  text-decoration: none;
+/* The current slide's eyebrow, in the eyebrow's own blue and code face, on the same line and at
+   the same size as the stage list on the right, so the top of the slide reads as one bar. */
+.kicker {
+  top: calc(var(--gutter) + 20px);
+  margin: 0;
+  color: var(--blue);
   font-family: var(--mono);
 }
 
-.brand:hover, .brand:focus-visible { color: var(--ink); }
+/* With the label in the corner, the same eyebrow inside the slide would say it twice, so it is
+   hidden from sight but kept for screen readers. Only when talk.js runs (it fills the label)
+   and only above phone width (a phone hides the corner chrome, so the eyebrow stays there). */
+@media (min-width: 721px) {
+  .js .slide .eyebrow {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
 
 .counter {
   bottom: calc(var(--gutter) + 12px);
@@ -268,11 +320,11 @@ a { color: var(--blue); }
 
 .counter-now { color: var(--ink); font-weight: 600; }
 
-/* "The Run": the chapters as the CLI's stage list, on the brand's line. Three states, so the
+/* "The Run": the chapters as the CLI's stage list, on the slide label's line. Three states, so the
    line reads like a run in progress: done (soft ink), current (dark, bold, a blue mark) and
    still ahead (muted). */
 .stages {
-  top: calc(var(--gutter) + 12px);
+  top: calc(var(--gutter) + 20px);
   right: var(--card-edge);
   display: flex;
   gap: 20px;
@@ -322,7 +374,7 @@ a { color: var(--blue); }
 }
 
 .rail a:hover::before, .rail a:focus-visible::before { background: var(--muted); }
-.rail a[aria-current="true"]::before { background: var(--navy); transform: scale(1.35); }
+.rail a[aria-current="true"]::before { background: var(--rail-now); transform: scale(1.35); }
 
 .rail a span {
   position: absolute;
@@ -367,7 +419,7 @@ a { color: var(--blue); }
 
 /* A phone has no margin to put them in, and scrolls by touch anyway. */
 @media (max-width: 720px) {
-  .rail, .brand, .counter, .stages { display: none; }
+  .rail, .kicker, .counter, .stages { display: none; }
 }
 
 /* ------------------------------------------------------------------------------------------ */
@@ -382,26 +434,76 @@ a { color: var(--blue); }
 /* Hero                                                                                       */
 /* ------------------------------------------------------------------------------------------ */
 
-.hero .slide, .end .slide { align-items: center; text-align: center; }
-.hero-head .lede { margin-left: auto; margin-right: auto; text-wrap: balance; }
+.end .slide { align-items: center; text-align: center; }
 
-/* The recording is sized by the viewport's height as well as its width, so the title and the
-   whole terminal fit one screen on a laptop. The player fits its columns to whatever width it
-   is given, so a narrower window just means smaller type. */
-.hero .cast-player {
+/* Two columns, 40/60: a short introduction on the left, the recorded run on the right, both
+   centred on the same horizontal line. A grid rather than the slides' usual column, so the two
+   sides share one row and line up by their middles. */
+.hero .slide {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  align-items: center;
+  column-gap: clamp(32px, 4.5vw, 72px);
+  /* Wider side margins than the other slides: they move the text in from the left edge and
+     the terminal in from the right, so the pair sits more centrally with air on both sides. */
+  padding-inline: clamp(24px, 6vw, 104px);
+  background: var(--hero-card);
+}
+
+/* The left column: a small blue label, the title on one line, and a two-line subtitle. Kept
+   light, so it introduces the terminal rather than competing with it.
+   The column is a size container, so the title and subtitle are sized by the column's own
+   width (`cqi`, 1% of it) rather than the window's. That is what keeps the title on one line
+   and the subtitle on two at any screen size: the slide stops growing at 1320px, so window
+   units would overshoot on a wide screen. */
+.hero-text {
+  container-type: inline-size;
+  /* Lifted a little above the terminal's centre: a text block reads as centred when it sits
+     slightly high. `top` rather than a transform, which the slide's entrance animation uses. */
+  position: relative;
+  top: calc(-1 * clamp(8px, 2.5vh, 28px));
+}
+
+.hero-label {
+  margin-bottom: clamp(10px, 1.8vh, 18px);
+  color: var(--blue);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.hero h1 {
+  /* "Coder Agent" is about 5.9 times its font size wide, so 14% of the column fills about 82%
+     of it. The height term shrinks it on a short screen. */
+  font-size: clamp(36px, min(14cqi, 9vh), 66px);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  white-space: nowrap;   /* one line */
+}
+
+.hero-sub {
+  margin-top: clamp(14px, 2.4vh, 24px);
+  color: var(--hero-sub);
+  /* 3.75% of the column fits the subtitle on two lines (measured: two lines up to about 3.9%). */
+  font-size: clamp(15px, 3.75cqi, 19px);
+  line-height: 1.5;
+  text-wrap: balance;    /* two even lines rather than a long one and a short one */
+}
+
+/* The right column: the GIF at the column's full width, its height following its own
+   proportions. The GIF draws its own window frame; the page rounds the corners to match and
+   adds a soft shadow. */
+.hero-run { position: relative; margin: 0; }
+
+.hero-run img {
+  display: block;
   width: 100%;
-  max-width: min(900px, calc((100svh - 350px) * 1.62));
-  min-width: min(100%, 560px);   /* below this the player would need under 9px type */
+  height: auto;
+  border-radius: 12px;
+  box-shadow: var(--lift-soft);
 }
-
-.hero .cast-window {
-  margin: 0 auto;
-  box-shadow: var(--lift-dark);
-}
-
-/* The recording in the talk's code face. The player measures whatever font the screen is set
-   in, so its columns still fit the window. */
-.hero .cast-screen { text-align: left; font-family: var(--mono); }
 
 .hint {
   color: var(--muted);
@@ -409,46 +511,134 @@ a { color: var(--blue); }
   font-weight: 500;
 }
 
-/* On a short screen the hero gives its room to the recording: tighter gaps, no hint line. */
-.hero .slide { gap: clamp(10px, 2.4vh, 32px); }
+/* The caption hangs below the GIF without taking room in the row, so the GIF itself, not
+   the GIF plus caption, is what lines up with the title block. */
+.hero-run .hint {
+  position: absolute;
+  top: 100%;
+  left: 2px;
+  margin-top: clamp(10px, 1.6vh, 16px);
+}
 
+/* On a short screen there is no room under the GIF for the caption. */
 @media (max-height: 760px) {
   .hint { display: none; }
+}
+
+/* A narrow screen stacks the two columns: introduction first, then the run. The title may
+   wrap again here, since the column is the full phone width. */
+@media (max-width: 900px) {
+  .hero .slide { grid-template-columns: minmax(0, 1fr); row-gap: 32px; padding-inline: var(--pad); }
+  .hero-text { top: 0; }
+  .hero h1 { white-space: normal; }
+  .hero-run .hint { position: static; }
 }
 
 /* ------------------------------------------------------------------------------------------ */
 /* Big numbers                                                                                */
 /* ------------------------------------------------------------------------------------------ */
 
-.scores {
+/* "What it scored": the results grouped by benchmark, the in-house pair on the left and the
+   HumanEval slice on the right. Each group is headed by its benchmark, so a reader knows what
+   each number is out of before reading it; the score itself is the largest type on the slide. */
+.results {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: clamp(16px, 3vw, 48px);
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: clamp(20px, 3vw, 44px);
 }
 
-.score {
-  padding-top: 18px;
-  border-top: 2px solid var(--edge);
+.result-bench {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--edge);
+  color: var(--muted);
+  font-size: var(--fs-label);
+  font-weight: 500;
+  letter-spacing: 0;
 }
 
-.score-value {
+.result-bench b { color: var(--ink); font-size: var(--fs-body); }
+
+/* One column per model in the group, however many there are. */
+.result-cards {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+.result {
+  padding: clamp(22px, 2.6vw, 34px);
+  border: 1px solid var(--edge);
+  border-radius: 16px;
+  background: var(--box);
+}
+
+/* The model name is an identifier, so it is in the code face, on a pale chip. */
+.result-model {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--chip);
+  color: var(--accent-ink);
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+}
+
+.result-value {
+  margin: clamp(14px, 2.4vh, 24px) 0 clamp(16px, 2.6vh, 26px);
   color: var(--ink);
-  font-family: var(--sans);
-  font-size: clamp(44px, min(6.4vw, 11vh), 96px);
-  font-weight: 600;
-  letter-spacing: -0.03em;
+  font-size: clamp(42px, min(5.4vw, 10.5vh), 86px);
+  font-weight: 700;
+  letter-spacing: -0.035em;
   line-height: 1;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
-.score-label { margin-top: 14px; color: var(--ink); font-weight: 600; }
-.score-note { color: var(--ink-soft); }
+/* The pass rate as a bar: dusty blue, or sage when every task passed. */
+.meter {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--loop-track);
+  overflow: hidden;
+}
 
-.scores.small .score-value { font-size: clamp(28px, min(3.6vw, 6vh), 52px); }
-.scores.small .score-note { margin-top: 8px; font-size: 0.92em; }
+.meter span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--dusty);
+}
 
-@media (max-width: 720px) {
-  .scores { grid-template-columns: 1fr; }
+.result.is-full .meter span { background: var(--sage); }
+
+/* The bar grows in from the left when its slide arrives, like the charts' bars. talk.js sets
+   its width; this only scales it, so the two never fight. */
+.js .meter span {
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) 0.3s;
+}
+
+.js .is-in .meter span { transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .js .meter span { transform: none; transition: none; }
+}
+
+.result-note {
+  margin-top: 10px;
+  color: var(--ink-soft);
+  font-size: var(--fs-label);
+  font-weight: 500;
+}
+
+.result-pct { color: var(--ink); font-weight: 700; }
+
+@media (max-width: 900px) {
+  .results { grid-template-columns: 1fr; }
 }
 
 /* ------------------------------------------------------------------------------------------ */
@@ -464,13 +654,172 @@ a { color: var(--blue); }
 }
 
 .card {
-  padding: clamp(18px, 2vw, 28px);
+  padding: clamp(20px, 2.3vw, 32px);
   border: 1px solid var(--edge);
   border-radius: 16px;
   background: var(--box);
 }
 
 .card h3 { margin-bottom: 0.45em; }
+
+/* A small line icon in a tinted square, at the top of a card. The icons are Lucide's
+   (lucide.dev, ISC licence), copied in as inline SVG, so the page loads nothing extra. The colour comes from the card's
+   `--tone` (dusty blue unless a card sets another), so a row of cards can be told apart at a
+   glance without any loud colour. */
+.card { --tone: var(--accent-ink); --tone-tint: var(--tint); }
+
+.card-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 18px;
+  border-radius: 12px;
+  background: var(--tone-tint);
+  color: var(--tone);
+}
+
+.card-icon svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* The four tones a card can take, one per muted accent. */
+.card.tone-sage { --tone: var(--sage-ink); --tone-tint: var(--loop-pass-tint); }
+.card.tone-lavender { --tone: var(--loop-hold); --tone-tint: var(--loop-hold-tint); }
+.card.tone-navy { --tone: var(--navy); --tone-tint: var(--chip); }
+
+/* Body text in the cards of the idea slides: a touch larger than running text, so the slide
+   reads from across a room. */
+.memory .card p, .guard .card p:not(.meta) { font-size: 1.05em; line-height: 1.5; }
+
+/* "Context and memory": three roomier cards with larger type, so the slide fills its width
+   with a few large blocks rather than three thin strips. */
+.memory .card { padding: clamp(24px, 2.8vw, 40px); }
+.memory .card h3 { font-size: calc(var(--fs-card) * 1.12); }
+.memory .card p { font-size: 1.1em; }
+
+/* The two context-management techniques: each a bold name over one line, set off by a thin rule
+   in the card's tone so they read as two parts of one card. */
+.techniques { display: grid; gap: 0.9em; margin: 0; padding: 0; list-style: none; }
+.techniques li { padding-left: 0.85em; border-left: 2px solid var(--tone); font-size: 1em; line-height: 1.45; }
+.techniques b { display: block; color: var(--tone); }
+
+/* "Reliability and guardrails": icon beside the heading, so four cards stay compact. */
+.guard .card { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 18px; align-items: start; }
+.guard .card-icon { margin-bottom: 0; }
+.guard .card h3 { margin-top: 2px; }
+
+/* "Observability": two cards built on the same skeleton, so the differences stand out. The
+   header row carries the icon, the name, the question the tool answers, and where it lives. */
+.obs-card { display: flex; flex-direction: column; gap: 16px; }
+
+.obs-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--edge);
+}
+
+.obs-head .card-icon { margin: 0; }
+.obs-head h3 { margin: 0; }
+.obs-question { color: var(--tone); font-weight: 500; font-size: 0.95em; }
+
+.obs-where {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--tone-tint);
+  color: var(--tone);
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+  white-space: nowrap;
+}
+
+.obs-card > p:not(.obs-foot) { color: var(--ink); font-size: 1.05em; }
+
+.obs-foot {
+  margin-top: auto;
+  color: var(--muted);
+  font-size: var(--fs-label);
+  font-weight: 500;
+}
+
+/* The trace schematic: a step name, then its bar on a pale track, placed by --from and --to
+   (percent of the run's time). The failed step's bar and mark are rose. */
+.trace { display: grid; gap: 8px; }
+
+.trace-row {
+  display: grid;
+  grid-template-columns: 6.5em minmax(0, 1fr) 1em;
+  align-items: center;
+  gap: 12px;
+  --bar: var(--dusty);
+}
+
+.trace-row code { color: var(--ink-soft); font-size: 0.82em; }
+.trace-row.is-child code { padding-left: 1em; color: var(--muted); }
+.trace-row.is-child code::before { content: "└ "; color: var(--loop-line); }
+.trace-row.is-fail { --bar: var(--rose); }
+.trace-row b { color: var(--rose); font-size: 0.9em; font-weight: 600; }
+
+.trace-bar {
+  position: relative;
+  height: 12px;
+  border-radius: 6px;
+  background: var(--loop-track);
+}
+
+.trace-bar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--from);
+  width: calc(var(--to) - var(--from));
+  border-radius: 6px;
+  background: var(--bar);
+}
+
+/* The ledger schematic: a small table, a header of its columns, one row per graph node, with
+   pale bars where the numbers would be. */
+.ledger {
+  display: grid;
+  grid-template-columns: 6.5em repeat(4, minmax(0, 1fr));
+  align-items: center;
+  gap: 12px 14px;
+}
+
+.ledger span {
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--edge);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+}
+
+.ledger code { color: var(--ink-soft); font-size: 0.82em; }
+
+.ledger i {
+  height: 10px;
+  border-radius: 5px;
+  background: var(--loop-pass-tint);
+  box-shadow: inset 0 0 0 1px var(--sage);
+  opacity: 0.8;
+}
+
+/* Varied widths, so the cells read as numbers of different sizes, not as one block. */
+.ledger i:nth-of-type(4n + 1) { width: 60%; }
+.ledger i:nth-of-type(4n + 2) { width: 45%; }
+.ledger i:nth-of-type(4n + 3) { width: 80%; }
+.ledger i:nth-of-type(4n + 4) { width: 35%; }
 
 .card .meta {
   display: inline-block;
@@ -487,18 +836,72 @@ a { color: var(--blue); }
   font-size: 1.1em;
 }
 
-.flow i { color: var(--blue); font-style: normal; padding: 0 0.15em; }
+.flow i { color: var(--accent-ink); font-style: normal; padding: 0 0.15em; }
 
-.command {
-  align-self: flex-start;
+/* "What I built": the command, as a one-line terminal window (the owner's reference image).
+   It spans the same width as the card row below, so the two share their left and right edges,
+   and its type is large enough to read from the back of a room. If the screen is too narrow,
+   the line scrolls inside the window instead of pushing the page sideways. */
+.term-line {
+  display: flex;
+  align-items: center;
+  gap: 1.4em;
   max-width: 100%;
   overflow-x: auto;
-  padding: 14px 22px;
-  border-radius: 12px;
-  background: var(--term-bg);   /* the recording's own terminal background */
+  padding: 0.85em 1.6em;
+  border: 1px solid var(--term-line-edge);
+  border-radius: 18px;
+  background: var(--term-line-bg);
+  box-shadow: var(--lift-dark);
+  font-size: clamp(15px, min(1.75vw, 3.6vh), 26px);
 }
 
-.command code { color: var(--term-fg); white-space: nowrap; }
+/* The three window dots, sized from the line's type so they scale with it. */
+.term-dots { display: flex; flex: none; gap: 0.42em; }
+.term-dots i { width: 0.78em; height: 0.78em; border-radius: 50%; background: var(--term-close); }
+.term-dots i:nth-child(2) { background: var(--term-min); }
+.term-dots i:nth-child(3) { background: var(--term-max); }
+
+.term-line code {
+  color: var(--term-line-fg);
+  font-size: 1em;            /* the global `code` rule shrinks code to 0.88em; not here */
+  white-space: nowrap;
+}
+
+.term-prompt { margin-right: 0.35em; color: var(--term-prompt); font-weight: 600; }
+
+/* On a phone the command would need a scrollbar inside the window, so it wraps onto a second
+   line instead, with the dots kept level with the first line. */
+@media (max-width: 720px) {
+  .term-line { align-items: flex-start; gap: 1em; padding: 0.85em 1.2em; }
+  .term-dots { margin-top: 0.42em; }
+  .term-line code { white-space: normal; }
+}
+
+/* The three cards under it: each opens with a short bar in one of the figures' series colours
+   (navy, dusty blue, sage, in their fixed order), so the slide picks up the palette the charts use
+   later. The heading becomes a small label and the flow line is the thing to read. */
+.built .card { position: relative; overflow: hidden; }
+.built .card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: var(--navy);
+}
+.built .card:nth-child(2)::before { background: var(--dusty); }
+.built .card:nth-child(3)::before { background: var(--sage); }
+
+.built .card h3 {
+  margin-bottom: 0.7em;
+  color: var(--muted);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.built .flow { font-size: 1.2em; font-weight: 500; letter-spacing: -0.005em; }
+.built .card { padding: clamp(26px, 4.4vh, 44px) clamp(18px, 2vw, 28px); }
 
 /* ------------------------------------------------------------------------------------------ */
 /* Loop diagrams                                                                              */
@@ -518,22 +921,81 @@ a { color: var(--blue); }
   min-height: 240px;
 }
 
-.stops h3 { margin-bottom: 0.8em; }
+/* The ways out sit on a white panel, like the diagram's own boxes, so the two halves of the
+   slide read as a pair: the loop on the left, how it ends on the right. */
+.stops {
+  padding: clamp(20px, 2.4vw, 32px) clamp(20px, 2.4vw, 32px) clamp(8px, 1vw, 14px);
+  border: 1px solid var(--edge);
+  border-radius: 16px;
+  background: var(--box);
+}
+
+.stops h3 {
+  margin-bottom: 0.3em;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
 
 .stops ul {
-  margin: 0 0 1.4em;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
 
+/* One way out of the loop per row: an icon in a soft tinted circle, then what happens and,
+   under it, the run's outcome in the terminal face, both in the outcome's colour. The colour
+   comes from the row's class (is-pass, is-fail, is-hold, or none for a plain next step). */
 .stops li {
-  padding: 0.55em 0;
+  --tone: var(--navy);
+  --tone-tint: var(--chip);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 0.95em 0;
   border-bottom: 1px solid var(--edge);
-  color: var(--ink);
 }
 
-.stops li span { color: var(--muted); }
-.stops .source { font-family: var(--mono); }
+.stops li:last-child { border-bottom: 0; }
+
+.stops li.is-pass { --tone: var(--loop-pass); --tone-tint: var(--loop-pass-tint); }
+.stops li.is-fail { --tone: var(--loop-fail); --tone-tint: var(--loop-fail-tint); }
+.stops li.is-hold { --tone: var(--loop-hold); --tone-tint: var(--loop-hold-tint); }
+
+.stop-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--tone-tint);
+  color: var(--tone);
+}
+
+/* Line icons drawn in currentColor, so each takes its row's colour. */
+.stop-icon svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.stop-what { color: var(--ink); font-size: 1.08em; font-weight: 600; line-height: 1.35; }
+
+.stop-result {
+  display: block;
+  margin-top: 2px;
+  color: var(--tone);
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+  font-weight: 400;
+}
 
 @media (max-width: 900px) {
   .diagram-row { grid-template-columns: 1fr; }
@@ -544,7 +1006,7 @@ a { color: var(--blue); }
 .loop-sub { fill: var(--ink-soft); font-family: var(--sans); font-size: var(--loop-sub-size); }
 .loop-code { fill: var(--muted); font-family: var(--mono); font-size: 12px; }
 .loop-badge { fill: var(--on-ink); font-family: var(--sans); font-size: 14px; font-weight: 700; }
-.loop-edge { font-family: var(--sans); font-size: 14px; font-weight: 600; }
+.loop-edge { font-family: var(--sans); font-size: 13px; font-weight: 500; }
 /* 30px, not larger: the centre sits between the side boxes, which leave it about 196 units, and
    "up to 4 tries" in Georgia at 36px ran into them. */
 .loop-center { fill: var(--title); font-family: var(--sans); font-size: var(--loop-center-size); font-weight: 700; letter-spacing: -0.02em; }
@@ -572,141 +1034,293 @@ a { color: var(--blue); }
 /* Architecture                                                                               */
 /* ------------------------------------------------------------------------------------------ */
 
+/* Four layers, top to bottom, each with its name in a narrow left column: who starts a run,
+   what orchestrates it, the parts it calls, and what runs across all of them. Connectors are
+   drawn with pseudo-elements: one line down from the user, then a bus from LangGraph that
+   drops into each of the four parts, so "LangGraph calls all four" is visible, not implied. */
 .arch {
   display: grid;
-  gap: 14px;
-  justify-items: center;
+  grid-template-columns: clamp(96px, 11vw, 150px) minmax(0, 1fr);
+  column-gap: clamp(16px, 2vw, 32px);
+  align-items: center;
 }
 
-.arch > div { width: 100%; }
+/* A layer's name, in the code face, beside its row. */
+.arch-tag {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+  letter-spacing: 0.02em;
+  text-align: right;
+}
 
-.arch-user, .arch-graph, .arch-part {
-  padding: 14px 20px;
-  border: 1.5px solid var(--navy);
+.arch-row { display: flex; justify-content: center; }
+
+.arch-node {
+  position: relative;
+  padding: 14px 22px;
+  border: 1px solid var(--loop-edge);
   border-radius: 14px;
   background: var(--box);
-  color: var(--ink-soft);
   text-align: center;
 }
 
-.arch b { display: block; color: var(--ink); font-size: 1.05em; }
+.arch-node b { display: block; color: var(--ink); font-size: 1.08em; font-weight: 600; }
+.arch-node span { display: block; color: var(--ink-soft); font-size: 0.92em; }
+.arch-node code { font-size: 0.86em; color: var(--muted); }
 
-.arch-user { max-width: 220px; color: var(--ink); font-weight: 600; }
-.arch-graph { max-width: 760px; border-width: 2px; background: var(--chip); }
+.arch-node.is-entry { min-width: 240px; }
 
-/* A short vertical line between the layers, drawn with a pseudo-element on each. */
-.arch-graph, .arch-parts { position: relative; }
-
-.arch-graph::before, .arch-parts::before {
-  content: "";
-  position: absolute;
-  top: -15px;
-  left: 50%;
-  width: 2px;
-  height: 14px;
-  background: var(--grid);
+/* The orchestrator is the one emphasised box: navy border, a pale wash. */
+.arch-node.is-core {
+  width: min(100%, 620px);
+  border: 1.5px solid var(--navy);
+  background: var(--tint);
 }
 
+/* The four parts share one row; each has a coloured top edge in the series order. */
 .arch-parts {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
-  max-width: 980px;
+  width: 100%;
 }
 
-.arch-part { border-color: var(--edge); }
-.arch-part span { font-size: 0.92em; }
+.arch-parts .arch-node { border-top: 3px solid var(--navy); padding-block: 16px; }
+.arch-parts .arch-node:nth-child(2) { border-top-color: var(--dusty); }
+.arch-parts .arch-node:nth-child(3) { border-top-color: var(--sage); }
+.arch-parts .arch-node:nth-child(4) { border-top-color: var(--lavender); }
 
+/* A plain vertical line between two single boxes. */
+.arch-link {
+  grid-column: 2;
+  justify-self: center;
+  width: 2px;
+  height: clamp(18px, 3vh, 28px);
+  background: var(--loop-line);
+}
+
+/* The bus from LangGraph to the four parts: a stem down, a horizontal line from the first
+   part's centre to the last's, and a drop into each part (each part's ::before). */
+.arch-bus {
+  grid-column: 2;
+  position: relative;
+  height: clamp(20px, 3.2vh, 30px);
+}
+
+.arch-bus::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: calc(50% - 1px);
+  width: 2px;
+  height: 50%;
+  background: var(--loop-line);
+}
+
+/* 4 columns with a 14px gap: the first centre is at (100% - 42px) / 8 from the left. */
+.arch-bus::after {
+  content: "";
+  position: absolute;
+  top: calc(50% - 1px);
+  left: calc((100% - 42px) / 8);
+  right: calc((100% - 42px) / 8);
+  height: 2px;
+  background: var(--loop-line);
+}
+
+.arch-parts .arch-node::before {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  left: calc(50% - 1px);
+  width: 2px;
+  height: calc(clamp(20px, 3.2vh, 30px) / 2 + 3px);
+  background: var(--loop-line);
+}
+
+/* Cross-cutting concerns: a dashed band under the parts, with its concerns as chips. */
 .arch-cross {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 10px;
-  max-width: 980px;
-  margin-top: 10px;
-  padding-top: 18px;
-  border-top: 1px dashed var(--grid);
+  margin-top: clamp(16px, 2.6vh, 26px);
+  padding: 14px;
+  border: 1px dashed var(--loop-edge);
+  border-radius: 14px;
 }
 
+.arch-tag.is-cross { margin-top: clamp(16px, 2.6vh, 26px); }
+
 .arch-cross span {
-  padding: 5px 14px;
+  padding: 6px 14px;
   border-radius: 999px;
   background: var(--chip);
   color: var(--ink);
-  font-size: 0.88em;
-}
-
-.arch-cross .arch-cross-label {
-  background: none;
-  color: var(--muted);
-  font-size: var(--fs-label);
-  font-weight: 500;
+  font-size: 0.9em;
 }
 
 @media (max-width: 720px) {
+  .arch { grid-template-columns: 1fr; }
+  .arch-tag { text-align: left; }
+  .arch-link, .arch-bus { grid-column: 1; }
   .arch-parts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .arch-bus, .arch-parts .arch-node::before { display: none; }
 }
 
 /* ------------------------------------------------------------------------------------------ */
 /* Pipes, tool tiles, retrieval lanes                                                         */
 /* ------------------------------------------------------------------------------------------ */
 
-/* A row of stages with an arrow between each; the arrow is the next item's ::before. */
-.pipe {
-  display: flex;
-  flex-wrap: wrap;
+/* "MCP": the path of a tool call, as three boxes joined by labelled arrows. The arrow's label
+   (what crosses that link: a tool call, stdio) sits above its line. */
+.mcp-flow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(70px, 9vw, 130px) minmax(0, 1fr) clamp(70px, 9vw, 130px) minmax(0, 1fr);
   align-items: center;
+}
+
+.mcp-node {
+  padding: 14px 20px;
+  border: 1px solid var(--loop-edge);
+  border-radius: 14px;
+  background: var(--box);
+  text-align: center;
+}
+
+.mcp-node b { display: block; color: var(--ink); font-size: 1.05em; font-weight: 600; }
+.mcp-node span { display: block; color: var(--ink-soft); font-size: 0.9em; }
+.mcp-node.is-server { border: 1.5px solid var(--navy); background: var(--tint); }
+
+.mcp-arrow {
+  position: relative;
+  height: 2px;
+  margin: 0 8px;
+  background: var(--loop-line);
+}
+
+/* The head: a small triangle at the right end of the line. */
+.mcp-arrow::after {
+  content: "";
+  position: absolute;
+  right: -2px;
+  top: -5px;
+  border: 6px solid transparent;
+  border-left: 9px solid var(--loop-line);
+  border-right: 0;
+}
+
+.mcp-arrow small {
+  position: absolute;
+  bottom: 8px;
+  left: 0;
+  right: 0;
+  color: var(--loop-label);
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* The six tools the server exposes, one row per kind of action (read, write, execute): the
+   kind on the left, as on the architecture slide, and its tools as tiles on the right. The
+   tiles share three columns across all rows, so they line up as a table. */
+.tool-groups { display: grid; gap: 10px; }
+
+.tool-group {
+  --tone: var(--dusty);
+  display: grid;
+  grid-template-columns: clamp(96px, 11vw, 150px) minmax(0, 1fr);
+  column-gap: clamp(16px, 2vw, 28px);
+  align-items: center;
+}
+
+.tool-group.is-write { --tone: var(--sage); }
+.tool-group.is-run { --tone: var(--lavender); }
+
+.tool-group h3 {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-align: right;
+}
+
+.tool-group ul {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.pipe li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--ink);
-}
-
-.pipe li + li::before { content: "→"; color: var(--blue); }
-
-.pipe li {
-  font-weight: 600;
-}
-
-.pipe li small { color: var(--muted); font-family: var(--mono); font-weight: 400; }
-
-.tools {
+.tool-group li {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.tools div {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 16px 20px;
+  gap: 2px;
+  padding: 12px 18px;
   border: 1px solid var(--edge);
-  border-left: 3px solid var(--deep-teal);
+  border-left: 3px solid var(--tone);
   border-radius: 12px;
   background: var(--box);
 }
 
-.tools code { font-size: 1em; font-weight: 600; }
+.tool-group code { color: var(--ink); font-size: 1em; font-weight: 600; }
+.tool-group li span { font-size: 0.92em; }
 
-@media (max-width: 900px) {
-  .tools { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* The typical order of calls, as code chips joined by arrows. */
+.sequence {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  color: var(--muted);
+  font-size: var(--fs-label);
+  font-weight: 500;
 }
 
-.lanes { display: grid; gap: clamp(20px, 3vh, 36px); }
-.lane h3 { margin-bottom: 0.7em; }
+.sequence code {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--chip);
+  color: var(--ink);
+  font-size: 1em;
+}
+
+.sequence i { font-style: normal; color: var(--loop-line); }
+.sequence .sequence-label { margin-right: 4px; }
+
+/* Indented to start under the tool tiles, so the slide keeps one left edge for its content. */
+.sequence { padding-left: calc(clamp(96px, 11vw, 150px) + clamp(16px, 2vw, 28px)); }
+
+@media (max-width: 900px) {
+  .mcp-flow { grid-template-columns: 1fr; row-gap: 28px; }
+  .mcp-arrow { display: none; }
+  .tool-group, .tool-group ul { grid-template-columns: 1fr; }
+  .tool-group h3 { text-align: left; }
+  .sequence { padding-left: 0; }
+}
+
+/* Each lane is one row: its name and when it runs on the left, its three steps on the right,
+   with an arrow between steps so each row reads left to right as a pipeline. */
+.lanes { display: grid; gap: clamp(16px, 2.6vh, 28px); }
+
+.lane {
+  display: grid;
+  grid-template-columns: clamp(110px, 10vw, 150px) minmax(0, 1fr);
+  column-gap: clamp(14px, 1.6vw, 24px);
+  align-items: center;
+}
+
+.lane h3 { font-size: var(--fs-card); }
+.lane-when { display: block; margin-top: 2px; color: var(--muted); font-family: var(--mono); font-size: var(--fs-label); }
 
 .steps {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  gap: 32px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -716,18 +1330,32 @@ a { color: var(--blue); }
 /* Numbered badges, like the figures' step circles. */
 .steps li {
   position: relative;
-  padding: 16px 20px 16px 62px;
+  padding: 20px 18px 20px 62px;
   border: 1px solid var(--edge);
   border-radius: 14px;
   background: var(--box);
   counter-increment: step;
 }
 
+/* The arrow to the next step, centred in the gap. */
+.steps li:not(:last-child)::after {
+  content: "→";
+  position: absolute;
+  top: 50%;
+  right: -26px;
+  transform: translateY(-50%);
+  color: var(--loop-line);
+  font-size: 1.1em;
+}
+
+/* The retrieval lane's badges in the dusty accent, so the two lanes are told apart. */
+.lane.is-query .steps li::before { background: var(--accent-ink); }
+
 .steps li::before {
   content: counter(step);
   position: absolute;
-  top: 16px;
-  left: 18px;
+  top: 18px;
+  left: 20px;
   display: grid;
   place-items: center;
   width: 30px;
@@ -743,7 +1371,9 @@ a { color: var(--blue); }
 .steps span { font-size: 0.92em; }
 
 @media (max-width: 900px) {
-  .steps { grid-template-columns: 1fr; }
+  .lane { grid-template-columns: 1fr; row-gap: 10px; }
+  .steps { grid-template-columns: 1fr; gap: 14px; }
+  .steps li::after { display: none; }
 }
 
 /* ------------------------------------------------------------------------------------------ */
@@ -784,9 +1414,11 @@ a { color: var(--blue); }
 .chart svg { display: block; overflow: visible; }
 
 .chart text { font-family: var(--sans); }
-.tick { fill: var(--muted); font-size: 13px; }
-.axis-label { fill: var(--ink-soft); font-size: 13px; }
-.value { fill: var(--ink); font-size: 13px; font-weight: 600; }
+/* Chart text a step above the label size, so ticks and values read from the back of a room. */
+.tick { fill: var(--muted); font-size: 14px; }
+.axis-label { fill: var(--ink-soft); font-size: 15px; font-weight: 500; }
+.axis-label.is-key { fill: var(--ink); font-weight: 700; }
+.value { fill: var(--ink); font-size: 15px; font-weight: 700; }
 .grid-line { stroke: var(--grid); stroke-width: 1; stroke-dasharray: 4 4; }
 .baseline { stroke: var(--grid); stroke-width: 1.2; }
 
@@ -820,6 +1452,73 @@ a { color: var(--blue); }
 .facts p { padding-left: 16px; border-left: 3px solid var(--chip); font-size: 0.92em; }
 .facts b { display: block; color: var(--ink); font-size: 1.9em; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; }
 
+/* "Where the tokens go": one bordered panel. The left half, on a pale wash, carries the
+   takeaway; the right half, the chart that proves it. A hairline between them, not a gap, so
+   the number and the chart read as one statement. */
+.cost {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.9fr);
+  border: 1px solid var(--edge);
+  border-radius: 16px;
+  background: var(--box);
+  overflow: hidden;
+}
+
+.cost-lead {
+  padding: clamp(22px, 2.8vw, 38px);
+  border-right: 1px solid var(--edge);
+  background: var(--loop-pass-tint);
+}
+
+.cost-value {
+  color: var(--navy);
+  font-size: clamp(42px, min(5vw, 10vh), 78px);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.cost-label { margin-top: 10px; color: var(--ink); font-size: 1.05em; text-wrap: balance; }
+/* "Act" as a small sage chip, the same green as its output-token segment in the chart. */
+.cost-label b {
+  padding: 1px 8px;
+  border-radius: 6px;
+  background: var(--box);
+  box-shadow: inset 0 0 0 1px var(--sage);
+  color: var(--sage-ink);
+  font-weight: 700;
+}
+
+/* The two supporting facts, smaller, under a hairline. */
+.cost-facts {
+  display: grid;
+  gap: 12px;
+  margin: clamp(18px, 3vh, 28px) 0 0;
+  padding-top: clamp(14px, 2.4vh, 22px);
+  border-top: 1px solid var(--sage);
+}
+
+.cost-facts div { display: grid; grid-template-columns: 4.2em minmax(0, 1fr); align-items: baseline; gap: 12px; }
+.cost-facts dt { color: var(--ink); font-size: 1.35em; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.cost-facts dd { margin: 0; color: var(--ink-soft); font-size: 0.9em; line-height: 1.4; }
+
+.cost-chart {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  margin: 0;
+  padding: clamp(20px, 2.6vw, 34px);
+}
+
+.cost-chart .chart { height: clamp(140px, 24vh, 230px); }
+.cost-chart .legend { justify-content: flex-start; padding-left: 56px; }
+
+@media (max-width: 900px) {
+  .cost { grid-template-columns: 1fr; }
+  .cost-lead { border-right: 0; border-bottom: 1px solid var(--edge); }
+}
+
 /* One tooltip for the whole page, moved to whichever mark is hovered. */
 .tip {
   position: fixed;
@@ -841,41 +1540,127 @@ a { color: var(--blue); }
 /* The end                                                                                  */
 /* ------------------------------------------------------------------------------------------ */
 
-/* The closing screen: the talk ends the way a run of the agent ends, with a green
-   "✓ passed" line in a small terminal pill, then a large serif "Thank you". */
+/* The closing screen: a header row on top, then everything else centred in the space left. A
+   grid rather than the slides' usual centred column, so the header stays pinned to the top. */
+.end .slide {
+  position: relative;      /* the waves below are placed against the slide's corners */
+  overflow: hidden;        /* and clipped by its rounded edge */
+  display: grid;
+  grid-template-rows: auto 1fr;
+  grid-template-columns: minmax(0, 1fr);   /* one full-width column, so the header spans the slide */
+}
+
+/* Two faint waves in opposite corners, from the owner's artwork. Pseudo-elements, so they add
+   no markup; absolutely placed, so they take no room in the grid. Width only, so each keeps
+   its shape. */
+.end .slide::before,
+.end .slide::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  opacity: var(--end-wave-opacity);
+  pointer-events: none;
+}
+
+.end .slide::before {
+  top: 0;
+  left: 0;
+  width: 27%;
+  aspect-ratio: 760 / 492;   /* the image's own proportions */
+  /* Pushed partly past the slide's edge (the slide clips it), so only the curve shows. */
+  transform: translate(-14%, -16%);
+  background-image: url("end-wave-top.png");
+}
+
+.end .slide::after {
+  right: 0;
+  bottom: 0;
+  width: 21%;
+  aspect-ratio: 560 / 261;
+  transform: translate(12%, 14%);
+  background-image: url("end-wave-bottom.png");
+}
+
+/* The real content sits above the waves. */
+.end-head, .finale { position: relative; z-index: 1; }
+
+/* The fixed corner chrome (slide label, counter, chapter line) would repeat the header row, so
+   talk.js marks the page while this screen is current and the chrome fades out. */
+.kicker, .counter, .stages { transition: opacity 0.3s, visibility 0.3s; }
+.on-end .kicker, .on-end .counter, .on-end .stages { opacity: 0; visibility: hidden; }
+
+/* Header: the project's name and the screen count, joined by a hairline. */
+.end-head {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+  letter-spacing: 0.02em;
+  color: var(--end-sub);
+}
+
+.end-rule { flex: 1; height: 1px; background: var(--edge); }
+.end-count { font-variant-numeric: tabular-nums; }
+
 .finale {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: clamp(18px, 3.5vh, 36px);
+  justify-content: center;
 }
 
-.finale-run {
-  padding: 10px 22px;
-  border-radius: 999px;
-  background: var(--term-bg);    /* the recording's terminal window */
-  color: var(--term-pass);       /* the recording's "passed" green */
-  font-family: var(--mono);
-  font-size: 0.95em;
-  letter-spacing: 0.02em;
-  box-shadow: var(--lift-dark);
+/* The illustration: small, so the title stays the focus, on a pale cloud a little larger than
+   it. Width only, so both keep their shape. */
+.finale-art {
+  position: relative;
+  width: clamp(120px, min(14vw, 22vh), 210px);
+  margin-bottom: clamp(34px, 7vh, 68px);   /* room for the cloud, which reaches below the image */
 }
 
-.finale-run span { color: var(--term-dim); }   /* the dim part of the line, as in the terminal */
+.finale-art img {
+  position: relative;   /* above the cloud */
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.finale-art::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 54%;
+  width: 175%;
+  aspect-ratio: 640 / 385;
+  background: url("end-cloud.png") no-repeat center / 100% 100%;
+  opacity: var(--end-cloud-opacity);
+  transform: translate(-50%, -50%);
+}
 
 .finale-title {
-  font-size: clamp(56px, min(9vw, 14vh), 132px);
+  margin: 0;
+  color: var(--title);
+  font-size: clamp(46px, min(5.8vw, 10vh), 84px);   /* about 60-63pt at full slide width */
+  font-weight: 800;
+  letter-spacing: -0.02em;
   line-height: 1;
 }
 
-.finale .lede { margin: 0; color: var(--muted); }
+.finale-sub {
+  margin: clamp(12px, 2.4vh, 22px) 0 0;
+  color: var(--end-sub);
+  font-size: clamp(18px, min(2vw, 3.5vh), 28px);   /* scaled down with the title */
+  font-weight: 400;
+}
 
 /* Printing gives one slide per page, with nothing hidden waiting for an animation. */
 @media print {
   html { scroll-snap-type: none; background: var(--box); }
-  .rail, .brand, .counter, .stages, .progress, .hint { display: none; }
+  .rail, .kicker, .counter, .stages, .progress, .hint { display: none; }
   .screen { min-height: auto; break-after: page; }
-  .js .slide > *, .js .bar, .js .chart .value, .js .chart .dot, .js .loop-arc, .js .loop-head {
+  .js .slide > *, .js .bar, .js .chart .value, .js .chart .dot, .js .loop-arc, .js .loop-head, .js .meter span {
     opacity: 1; transform: none; stroke-dashoffset: 0; transition: none;
   }
 }

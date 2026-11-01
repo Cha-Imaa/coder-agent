@@ -33,12 +33,14 @@
 
   // The palette is read from the stylesheet, not written here, so a colour is set in one place.
   // SERIES is the figures' fixed series order (src/coder_agent/evals/figures.py).
-  var SERIES = ["navy", "blue", "teal", "violet"].map(token);
+  var SERIES = ["navy", "dusty", "sage", "lavender"].map(token);
   var COLOR = {
-    navy: token("navy"), blue: token("blue"), deepTeal: token("deep-teal"), orange: token("orange"),
-    coral: token("coral"), card: token("card"), box: token("box"), chip: token("chip"),
-    tintTeal: token("tint-teal"), tintCoral: token("tint-coral"), tintOrange: token("tint-orange"),
-    ringOuter: token("ring-outer"), ringInner: token("ring-inner"),
+    navy: token("navy"), blue: token("blue"), title: token("title"),
+    card: token("card"), box: token("box"), chip: token("chip"),
+    track: token("loop-track"), line: token("loop-line"), label: token("loop-label"), edge: token("loop-edge"),
+    pass: token("loop-pass"), passTint: token("loop-pass-tint"),
+    fail: token("loop-fail"), failTint: token("loop-fail-tint"),
+    hold: token("loop-hold"), holdTint: token("loop-hold-tint"),
   };
   var SVG_NS = "http://www.w3.org/2000/svg";
   var reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -115,6 +117,7 @@
   var screens = Array.prototype.slice.call(document.querySelectorAll(".screen"));
   var rail = document.querySelector(".rail");
   var counterNow = document.querySelector(".counter-now");
+  var kicker = document.querySelector(".kicker");
   var stageLinks = Array.prototype.slice.call(document.querySelectorAll(".stages a"));
   var progressFill = document.querySelector(".progress span");
   var current = 0;
@@ -126,6 +129,9 @@
   /** One dot per screen, each a link to it, with the screen's title as its label. */
   function buildRail() {
     document.querySelector(".counter-all").textContent = pad(screens.length);
+    // The closing screen's own header shows the same count, so it stays right if screens change.
+    var endCount = document.querySelector(".end-count");
+    if (endCount) endCount.textContent = screens.length + " / " + screens.length;
     screens.forEach(function (screen) {
       var link = document.createElement("a");
       link.href = "#" + screen.id;
@@ -138,8 +144,8 @@
   }
 
   /**
-   * Mark screen `index` as the current one in the rail, the counter, the progress bar and the
-   * address bar.
+   * Mark screen `index` as the current one in the rail, the top-left label, the counter, the
+   * progress bar and the address bar.
    */
   function setCurrent(index) {
     // A loop left half-walked would look broken when the reader comes back to it, so the screen
@@ -147,6 +153,12 @@
     if (index !== current) resetLoop(screens[current]);
     current = index;
     counterNow.textContent = pad(index + 1);
+    // The top-left label shows this slide's eyebrow; a slide without one (the closing screen)
+    // leaves the corner empty.
+    var eyebrow = screens[index].querySelector(".eyebrow");
+    kicker.textContent = eyebrow ? eyebrow.textContent : "";
+    // The closing screen carries its own header, so the corner chrome steps aside there.
+    document.documentElement.classList.toggle("on-end", screens[index].id === "end");
     progressFill.style.transform = "scaleX(" + (index + 1) / screens.length + ")";
     var links = rail.querySelectorAll("a");
     for (var i = 0; i < links.length; i++) links[i].setAttribute("aria-current", i === index ? "true" : "false");
@@ -260,36 +272,39 @@
 
   // The two loops of the ivory loop figures. Nodes sit evenly around a ring, clockwise from
   // the top; edge i runs from node i to node i+1 and wraps round to the first.
+  //
+  // Colour is kept for meaning only. A plain node is a white box with a hairline border and a
+  // navy badge (no `accent`); a node that stands for an outcome takes that outcome's colour:
+  // rose for learning from a failure, lavender for the pause to ask you. Arrows are slate, except
+  // the one a failure takes (`tone: "fail"`), and the way out is green.
   var LOOPS = {
     outer: {
-      ring: COLOR.ringOuter,
-      center: ["up to 4 tries", "max_iterations"],
+      center: ["4 iterations", "max_iterations"],
       nodes: [
-        { title: "Plan", sub: "a short numbered plan", code: "plan", color: COLOR.navy, fill: COLOR.box },
-        { title: "Do the work", sub: "the inner loop runs here", code: "act", color: COLOR.deepTeal, fill: COLOR.tintTeal },
-        { title: "Run the tests", sub: "pass or fail", code: "run_tests", color: COLOR.navy, fill: COLOR.box },
-        { title: "Learn from it", sub: "show the failing output", code: "reflect", color: COLOR.coral, fill: COLOR.tintCoral },
+        { title: "Plan", sub: "one call, numbered steps", code: "plan" },
+        { title: "Execute", sub: "the inner tool loop", code: "act" },
+        { title: "Run the tests", sub: "the repo's test command", code: "run_tests" },
+        { title: "Reflect", sub: "failure output fed back", code: "reflect", accent: COLOR.fail, fill: COLOR.failTint },
       ],
       edges: [
-        { label: "plan ready", color: COLOR.blue },
-        { label: "work done", color: COLOR.blue },
-        { label: "tests fail", color: COLOR.coral },
-        { label: "try again", color: COLOR.blue },
+        { label: "plan ready" },
+        { label: "no more tool calls" },
+        { label: "tests fail", tone: "fail" },
+        { label: "try again" },
       ],
       exit: { from: 2, label: "tests pass", text: "Done" },
     },
     inner: {
-      ring: COLOR.ringInner,
-      center: ["repeat", "until the model is done"],
+      center: ["repeat", "until no tool call"],
       nodes: [
-        { title: "The model decides", sub: "asks for a tool", code: "act", color: COLOR.navy, fill: COLOR.box },
-        { title: "Safety check", sub: "risky actions ask you", code: "approve", color: COLOR.orange, fill: COLOR.tintOrange },
-        { title: "The tool runs", sub: "read, edit, or run", code: "tools", color: COLOR.deepTeal, fill: COLOR.tintTeal },
+        { title: "The model decides", sub: "emits tool calls", code: "act" },
+        { title: "Approval", sub: "for edits and commands", code: "approve", accent: COLOR.hold, fill: COLOR.holdTint },
+        { title: "The tool runs", sub: "over MCP, in the sandbox", code: "tools" },
       ],
       edges: [
-        { label: "tool request", color: COLOR.deepTeal },
-        { label: "allowed", color: COLOR.deepTeal },
-        { label: "result", color: COLOR.deepTeal },
+        { label: "tool call" },
+        { label: "approved" },
+        { label: "tool result" },
       ],
     },
   };
@@ -330,12 +345,14 @@
     el("polygon", { points: points, fill: color, class: cls }, parent);
   }
 
-  /** A rounded label pill centred on (x, y), as on the figures' edges. */
+  /**
+   * An arrow's label centred on (x, y). It sits on a patch of the card's own colour with no
+   * outline, so it just interrupts the ring instead of adding one more shape to the drawing.
+   */
   function pill(parent, x, y, label, color) {
-    var width = label.length * 7.6 + 28;
+    var width = label.length * 7 + 18;
     el("rect", {
-      x: x - width / 2, y: y - 15, width: width, height: 30, rx: 15,
-      fill: COLOR.box, stroke: color, "stroke-width": 1.6,
+      x: x - width / 2, y: y - 13, width: width, height: 26, rx: 13, fill: COLOR.card,
     }, parent);
     text(parent, x, y + 4.5, label, { class: "loop-edge", fill: color, "text-anchor": "middle" });
   }
@@ -363,12 +380,14 @@
     host.walkStep = -1;   // -1: no walk, the whole diagram shows
 
     // The pale track the arrows run along.
-    el("circle", { cx: 0, cy: 0, r: RING, fill: "none", stroke: spec.ring, "stroke-width": 30 }, svg);
+    el("circle", { cx: 0, cy: 0, r: RING, fill: "none", stroke: COLOR.track, "stroke-width": 30 }, svg);
 
     // Arcs between consecutive nodes, each starting and ending just clear of the boxes. An arc
     // lights with the node it leaves, so each step says "this happens, then it goes there".
     spec.edges.forEach(function (edge, i) {
       var group = stepGroup(svg, [i]);
+      var lineColor = edge.tone === "fail" ? COLOR.fail : COLOR.line;
+      var labelColor = edge.tone === "fail" ? COLOR.fail : COLOR.label;
       var next = (i + 1) % count;
       var endAngle = angles[next] + (next === 0 ? 360 : 0);
       var start = leaveBox(angles[i], centers[i], 1, 10);
@@ -378,12 +397,12 @@
       el("path", {
         d: "M" + a.x.toFixed(1) + "," + a.y.toFixed(1) +
           "A" + RING + "," + RING + " 0 0 1 " + b.x.toFixed(1) + "," + b.y.toFixed(1),
-        fill: "none", stroke: edge.color, "stroke-width": 2.6, "stroke-linecap": "round",
+        fill: "none", stroke: lineColor, "stroke-width": 2, "stroke-linecap": "round",
         pathLength: 1, class: "loop-arc",
       }, group);
-      arrowHead(group, end, edge.color, "loop-head");
+      arrowHead(group, end, lineColor, "loop-head");
       var mid = onRing((start + end) / 2);
-      pill(group, mid.x, mid.y, edge.label, edge.color);
+      pill(group, mid.x, mid.y, edge.label, labelColor);
     });
 
     // Nodes: a box, a numbered badge on its corner, a title, a line of description, the node's
@@ -393,8 +412,11 @@
       var c = centers[i];
       var x = c.x - BOX.w / 2;
       var y = c.y - BOX.h / 2;
-      el("rect", { x: x, y: y, width: BOX.w, height: BOX.h, rx: 14, fill: node.fill, stroke: node.color, "stroke-width": 2.2 }, group);
-      el("circle", { cx: x + 8, cy: y + 4, r: 15, fill: node.color, stroke: COLOR.card, "stroke-width": 3 }, group);
+      // A plain node: white box, hairline border, navy badge. An outcome node: its colour.
+      var border = node.accent || COLOR.edge;
+      var badge = node.accent || COLOR.title;
+      el("rect", { x: x, y: y, width: BOX.w, height: BOX.h, rx: 14, fill: node.fill || COLOR.box, stroke: border, "stroke-width": 1.5 }, group);
+      el("circle", { cx: x + 8, cy: y + 4, r: 14, fill: badge, stroke: COLOR.card, "stroke-width": 3 }, group);
       text(group, x + 8, y + 9, String(i + 1), { class: "loop-badge", "text-anchor": "middle" });
       text(group, c.x, c.y - 12, node.title, { class: "loop-title", "text-anchor": "middle" });
       text(group, c.x, c.y + 10, node.sub, { class: "loop-sub", "text-anchor": "middle" });
@@ -412,11 +434,12 @@
       var from = centers[spec.exit.from];
       var x0 = from.x + BOX.w / 2 + 8;
       var x1 = x0 + 74;
-      el("path", { d: "M" + x0 + "," + from.y + "H" + (x1 - 12), stroke: COLOR.navy, "stroke-width": 2.6, fill: "none" }, exit);
-      el("polygon", { points: x1 + "," + from.y + " " + (x1 - 13) + "," + (from.y - 7) + " " + (x1 - 13) + "," + (from.y + 7), fill: COLOR.navy }, exit);
-      text(exit, (x0 + x1) / 2, from.y + 26, spec.exit.label, { class: "loop-edge", fill: COLOR.navy, "text-anchor": "middle" });
-      el("rect", { x: x1 + 6, y: from.y - 22, width: 86, height: 44, rx: 22, fill: COLOR.chip, stroke: COLOR.navy, "stroke-width": 2.2 }, exit);
-      text(exit, x1 + 49, from.y + 6, spec.exit.text, { class: "loop-title", "text-anchor": "middle" });
+      // The way out is the run's "passed", so it is drawn in the passed green.
+      el("path", { d: "M" + x0 + "," + from.y + "H" + (x1 - 12), stroke: COLOR.pass, "stroke-width": 2, fill: "none" }, exit);
+      el("polygon", { points: x1 + "," + from.y + " " + (x1 - 13) + "," + (from.y - 7) + " " + (x1 - 13) + "," + (from.y + 7), fill: COLOR.pass }, exit);
+      text(exit, (x0 + x1) / 2, from.y + 26, spec.exit.label, { class: "loop-edge", fill: COLOR.pass, "text-anchor": "middle" });
+      el("rect", { x: x1 + 6, y: from.y - 22, width: 86, height: 44, rx: 22, fill: COLOR.passTint, stroke: COLOR.pass, "stroke-width": 1.5 }, exit);
+      text(exit, x1 + 49, from.y + 6, spec.exit.text, { class: "loop-title", style: "fill: " + COLOR.pass, "text-anchor": "middle" });
       right = Math.max(right, x1 + 96);
     }
 
@@ -579,7 +602,7 @@
     el("line", { x1: m.left, x2: m.left + plotW, y1: m.top + plotH, y2: m.top + plotH, class: "baseline" }, c.svg);
 
     var band = plotH / rows.length;
-    var thickness = Math.min(40, band * 0.5);
+    var thickness = Math.min(44, band * 0.55);
     rows.forEach(function (row, ri) {
       var y = m.top + band * ri + (band - thickness) / 2;
       var x = m.left;
@@ -594,7 +617,9 @@
         x += w + 2;
       });
       hitArea(c.svg, m.left, m.top + band * ri, plotW, band, row.tip);
-      text(c.svg, m.left - 12, y + thickness / 2 + 5, row.label, { class: "axis-label", "text-anchor": "end" });
+      // The row that holds most of the total gets a bolder label, so the eye lands on it first.
+      var isKey = totals[ri] === Math.max.apply(null, totals);
+      text(c.svg, m.left - 12, y + thickness / 2 + 5, row.label, { class: isKey ? "axis-label is-key" : "axis-label", "text-anchor": "end" });
       text(c.svg, scaleX(totals[ri]) + 12, y + thickness / 2 + 5, row.text, { class: "value" });
     });
   }
@@ -680,7 +705,7 @@
       drawStacked(host, data.nodes.nodes.map(function (n) {
         return {
           label: n.node,
-          segments: [{ value: n.input, color: SERIES[0] }, { value: n.output, color: SERIES[1] }],
+          segments: [{ value: n.input, color: SERIES[0] }, { value: n.output, color: SERIES[2] }],
           text: grouped(n.total) + "  (" + n.calls.toFixed(1) + " calls)",
           tip: [n.node, grouped(n.input) + " in · " + grouped(n.output) + " out · " + n.calls.toFixed(1) + " calls"],
         };
@@ -692,7 +717,7 @@
   function drawLegends(data) {
     var legends = {
       categories: data.categories.series.map(function (s, i) { return { name: s.name, color: SERIES[i] }; }),
-      nodes: [{ name: "input tokens", color: SERIES[0] }, { name: "output tokens", color: SERIES[1] }],
+      nodes: [{ name: "input tokens", color: SERIES[0] }, { name: "output tokens", color: SERIES[2] }],
     };
     Object.keys(legends).forEach(function (key) {
       var host = document.querySelector('[data-legend="' + key + '"]');
@@ -712,6 +737,22 @@
       caption.textContent = "Tokens per run by graph node, averaged over " + data.nodes.runs +
         " runs of " + data.nodes.model + ".";
     }
+  }
+
+  /**
+   * Fill each score card's meter and percentage from its score text ("11 / 12"), so the bar
+   * and the number can never disagree. Run once at start (with the numbers in the page) and
+   * again after the results load.
+   */
+  function fillMeters() {
+    Array.prototype.forEach.call(document.querySelectorAll(".result"), function (card) {
+      var parts = card.querySelector(".result-value").textContent.split("/");
+      var share = Number(parts[0]) / Number(parts[1]);
+      if (!isFinite(share)) return;
+      card.querySelector(".meter span").style.width = (share * 100).toFixed(1) + "%";
+      card.querySelector(".result-pct").textContent = percent(share);
+      card.classList.toggle("is-full", share === 1);
+    });
   }
 
   /** Draw every chart, then redraw one whenever its box changes size. */
@@ -741,6 +782,7 @@
       .then(function (response) { return response.json(); })
       .then(function (data) {
         fillStats(data);
+        fillMeters();
         drawCharts(data);
         drawLegends(data);
       })
@@ -769,6 +811,7 @@
   }
 
   buildRail();
+  fillMeters();
   watchScreens();
   document.addEventListener("keydown", onKey);
   Array.prototype.forEach.call(document.querySelectorAll("[data-loop]"), function (host) {

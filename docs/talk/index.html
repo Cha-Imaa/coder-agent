@@ -5,21 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Coder Agent</title>
   <meta name="description" content="A walkthrough of coder-agent, a terminal coding agent built on LangGraph, MCP and local RAG, with charts drawn from its real eval results.">
-  <!-- The recording's window chrome and player come from the docs site itself, so the hero is
-       the same cast the landing page and the README show. -->
   <!-- The talk's two typefaces, from Google Fonts (free). Manrope for all text, JetBrains Mono for
        code and the terminal. If they cannot load, talk.css falls back to Segoe UI and Consolas. -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Manrope:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="../assets/cast-player.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Manrope:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="talk.css">
 </head>
 <body>
 
-<!-- Fixed chrome: the way back to the docs site, the screen counter, and the dot rail (built by
-     talk.js from the sections below, so adding a screen needs no change here). -->
-<a class="brand" href="../">coder-agent</a>
+<!-- Fixed chrome: the current slide's small blue title (its eyebrow, copied in by talk.js as the
+     slides change), the screen counter, and the dot rail (built by talk.js from the sections
+     below, so adding a screen needs no change here). The label is hidden from screen readers,
+     which already read the same eyebrow inside the slide. -->
+<p class="kicker" aria-hidden="true"></p>
 <!-- "The Run": the talk's chapters are the stages the CLI prints during a run. Each section names
      its chapter in `data-stage`; talk.js highlights the one on screen. The marks are hidden from
      screen readers, which would otherwise read out "black right-pointing triangle". -->
@@ -37,22 +36,33 @@
 
 <main>
 
-  <!-- 1 · Hero ------------------------------------------------------------------------------ -->
+  <!-- 1 · Hero ------------------------------------------------------------------------------
+       Two columns: a short introduction on the left (40%), the recorded run on the right (60%),
+       so the terminal is the slide's main visual and the title introduces it.
+       The label here is not an `.eyebrow`, so talk.js leaves the top-left corner empty on this
+       screen instead of repeating it.
+       The terminal is the demo GIF (figures/demo.gif), the same recording the README shows. It
+       carries its own window frame, so the page only rounds its corners and adds a soft shadow;
+       width and height are its real pixel size, so it keeps its proportions as it scales. -->
   <section class="screen hero" id="start" data-stage="context" data-title="Coder Agent">
     <div class="slide">
-      <header class="hero-head">
-        <p class="eyebrow">Technical project walkthrough</p>
+      <header class="hero-text">
+        <p class="hero-label">Autonomous coding agent</p>
         <h1>Coder Agent</h1>
-        <p class="lede">An autonomous coding assistant: it reads a repository, edits it, and runs
-          the tests until they pass.</p>
+        <p class="hero-sub">An autonomous agent that understands codebases, makes changes, and
+          validates solutions through testing.</p>
       </header>
-      <div class="cast-player" data-src="../figures/demo.frames.json"></div>
-      <p class="hint">A real run, replayed · scroll or press <kbd>↓</kbd> · <kbd>F</kbd> for full screen</p>
+
+      <figure class="hero-run">
+        <img src="../figures/demo.gif" width="836" height="512"
+             alt="A recorded run: coder run is given a failing test task, finds the relevant files, plans, edits durations.py, runs pytest, and the tests pass.">
+        <figcaption class="hint">A real run, recorded · <kbd>↓</kbd> next · <kbd>F</kbd> full screen</figcaption>
+      </figure>
     </div>
   </section>
 
   <!-- 2 · What I built ---------------------------------------------------------------------- -->
-  <section class="screen" id="built" data-stage="context" data-title="What I built">
+  <section class="screen built" id="built" data-stage="context" data-title="What I built">
     <div class="slide">
       <header class="head">
         <div>
@@ -61,21 +71,27 @@
           <p class="lede">A command-line agent that takes a repository task, edits files, and verifies the change.</p>
         </div>
       </header>
+      <!-- The one command a user types, drawn as a small terminal window: three window dots, a
+           green prompt, then the command. Placed straight under the title so the slide reads
+           "here is what you type", then the cards say what happens next. -->
+      <div class="term-line" role="img" aria-label='Terminal: coder run ./repo "make the failing tests pass"'>
+        <span class="term-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        <code><span class="term-prompt">$</span> coder run ./repo "make the failing tests pass"</code>
+      </div>
       <div class="trio">
         <article class="card">
           <h3>Capabilities</h3>
-          <p class="flow">search <i>·</i> edit <i>·</i> execute <i>·</i> test</p>
+          <p class="flow">search&nbsp;<i>·</i> edit&nbsp;<i>·</i> execute&nbsp;<i>·</i> test</p>
         </article>
         <article class="card">
           <h3>Agent loop</h3>
-          <p class="flow">plan <i>→</i> act <i>→</i> verify <i>→</i> retry</p>
+          <p class="flow">plan&nbsp;<i>→</i> act&nbsp;<i>→</i> verify&nbsp;<i>→</i> retry</p>
         </article>
         <article class="card">
           <h3>Core stack</h3>
-          <p class="flow">LangGraph <i>·</i> LLMs <i>·</i> MCP <i>·</i> RAG</p>
+          <p class="flow">LangGraph&nbsp;<i>·</i> LLMs&nbsp;<i>·</i> MCP&nbsp;<i>·</i> RAG</p>
         </article>
       </div>
-      <p class="command"><code>coder run ./repo "make the failing tests pass"</code></p>
     </div>
   </section>
 
@@ -86,20 +102,23 @@
         <div>
           <p class="eyebrow">Two loops drive the agent · 1 of 2</p>
           <h2>The outer loop</h2>
-          <p class="lede">Plan, do the work, run the tests, and retry with what went wrong.</p>
+          <p class="lede">Plan, execute, run the repository's tests, and re-plan from the failure output.</p>
         </div>
       </header>
       <div class="diagram-row">
         <div class="diagram" data-loop="outer" role="img"
-             aria-label="Outer loop: plan, do the work, run the tests; if they fail, learn from the failing output and plan again, up to four tries; if they pass, done."></div>
+             aria-label="Outer loop: plan, execute the plan, run the tests; if they fail, the failure output is fed back and the agent re-plans, up to four iterations; if they pass, done."></div>
         <div class="stops">
           <h3>It stops when</h3>
+          <!-- Each way out: an icon, what happens, and the outcome the run reports. -->
           <ul>
-            <li>the tests pass <span>→ passed</span></li>
-            <li>all four tries are used <span>→ failed</span></li>
-            <li>the step budget runs out <span>→ gave up</span></li>
+            <li class="is-pass"><span class="stop-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+              <span class="stop-what">The tests pass<span class="stop-result">✓ passed</span></span></li>
+            <li class="is-fail"><span class="stop-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.34-5.66"/><path d="M4 4v5h5"/></svg></span>
+              <span class="stop-what">4 iterations used, tests still failing<span class="stop-result">✗ failed</span></span></li>
+            <li class="is-hold"><span class="stop-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5"/><path d="M9.5 2.5h5"/></svg></span>
+              <span class="stop-what">The 40-step budget is spent<span class="stop-result">gave up</span></span></li>
           </ul>
-          <p class="source">graph/build.py · route_after_tests</p>
         </div>
       </div>
     </div>
@@ -112,19 +131,21 @@
         <div>
           <p class="eyebrow">Two loops drive the agent · 2 of 2</p>
           <h2>The inner loop</h2>
-          <p class="lede">Ask for a tool, run it, look at the result, repeat. This is step 2 of the outer loop.</p>
+          <p class="lede">The model requests tool calls, they run, and the results go back to it. This is the Act step of the outer loop.</p>
         </div>
       </header>
       <div class="diagram-row">
         <div class="diagram" data-loop="inner" role="img"
-             aria-label="Inner loop: the model asks for a tool, a safety check asks you before risky actions, the tool runs and its result goes back to the model, until the model is done."></div>
+             aria-label="Inner loop: the model requests a tool call, edits and shell commands wait for your approval, the tool runs over MCP and its result goes back to the model, until the model stops calling tools."></div>
         <div class="stops">
           <h3>It stops when</h3>
+          <!-- Each way out: an icon, what happens, and where the run goes next. -->
           <ul>
-            <li>no more tool requests <span>→ the tests run</span></li>
-            <li>40 Act steps are used <span>→ gave up</span></li>
+            <li><span class="stop-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
+              <span class="stop-what">The model makes no tool call<span class="stop-result">the tests run</span></span></li>
+            <li class="is-hold"><span class="stop-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5"/><path d="M9.5 2.5h5"/></svg></span>
+              <span class="stop-what">40 Act calls used in the run<span class="stop-result">gave up</span></span></li>
           </ul>
-          <p class="source">approval can be switched off with --yes</p>
         </div>
       </div>
     </div>
@@ -140,18 +161,31 @@
           <p class="lede">Components, and the boundaries between them.</p>
         </div>
       </header>
+      <!-- Four layers, each named on the left. The connectors (a line from the user, a bus from
+           LangGraph into each part) are drawn by talk.css, so they need no markup beyond the
+           two empty spacer rows. -->
       <div class="arch">
-        <div class="arch-user">User · CLI</div>
-        <div class="arch-graph"><b>LangGraph</b> orchestration, state, routing</div>
+        <span class="arch-tag">interface</span>
+        <div class="arch-row"><div class="arch-node is-entry"><b>User · CLI</b><code>coder run</code></div></div>
+
+        <div class="arch-link" aria-hidden="true"></div>
+
+        <span class="arch-tag">orchestration</span>
+        <div class="arch-row"><div class="arch-node is-core"><b>LangGraph</b><span>orchestration, state, routing</span></div></div>
+
+        <div class="arch-bus" aria-hidden="true"></div>
+
+        <span class="arch-tag">components</span>
         <div class="arch-parts">
-          <div class="arch-part"><b>LLM</b><span>plan and act decisions</span></div>
-          <div class="arch-part"><b>RAG</b><span>code retrieval</span></div>
-          <div class="arch-part"><b>MCP</b><span>file and shell tools</span></div>
-          <div class="arch-part"><b>Sandbox</b><span>execution boundary</span></div>
+          <div class="arch-node"><b>LLM</b><span>plan and act decisions</span></div>
+          <div class="arch-node"><b>RAG</b><span>code retrieval</span></div>
+          <div class="arch-node"><b>MCP</b><span>file and shell tools</span></div>
+          <div class="arch-node"><b>Sandbox</b><span>execution boundary</span></div>
         </div>
+
+        <span class="arch-tag is-cross">cross-cutting</span>
         <div class="arch-cross">
-          <span class="arch-cross-label">Cross-cutting</span>
-          <span>context management</span><span>SQLite checkpoints</span><span>telemetry + LangSmith</span><span>approval + tests</span>
+          <span>context management</span><span>SQLite checkpoints</span><span>LangSmith + run ledger</span><span>approval + tests</span>
         </div>
       </div>
     </div>
@@ -164,23 +198,44 @@
         <div>
           <p class="eyebrow">Tools</p>
           <h2>MCP: giving the model actions</h2>
-          <p class="lede">A real Model Context Protocol client and server, talking over stdio.</p>
+          <p class="lede">A standard Model Context Protocol client and a local server, exchanging JSON-RPC over stdio.</p>
         </div>
       </header>
-      <ol class="pipe">
-        <li>the model chooses a tool</li>
-        <li>MCP client <small>stdio</small></li>
-        <li>local MCP server</li>
-      </ol>
-      <div class="tools">
-        <div><code>read_file</code><span>read a file's contents</span></div>
-        <div><code>edit_file</code><span>change part of a file</span></div>
-        <div><code>write_file</code><span>create or overwrite a file</span></div>
-        <div><code>list_dir</code><span>list a directory</span></div>
-        <div><code>search_code</code><span>search the repository</span></div>
-        <div><code>run_command</code><span>run a shell command</span></div>
+      <!-- The path of one tool call: the model picks a tool, the client sends it over stdio, the
+           server runs it. The arrows and their labels are drawn by talk.css. -->
+      <div class="mcp-flow" role="img" aria-label="The model chooses a tool, the MCP client sends the call over stdio, and the local MCP server runs it.">
+        <div class="mcp-node"><b>Model</b><span>chooses a tool</span></div>
+        <span class="mcp-arrow" aria-hidden="true"><small>tool call</small></span>
+        <div class="mcp-node"><b>MCP client</b><span>sends the call</span></div>
+        <span class="mcp-arrow" aria-hidden="true"><small>stdio</small></span>
+        <div class="mcp-node is-server"><b>Local MCP server</b><span>runs the tool</span></div>
       </div>
-      <p class="aside">Typical sequence: <code>search_code</code> → <code>read_file</code> → <code>edit_file</code> → <code>run_command</code> → result back to the model</p>
+      <!-- The six tools, grouped by what they do to the repository. -->
+      <div class="tool-groups">
+        <section class="tool-group">
+          <h3>read</h3>
+          <ul>
+            <li><code>read_file</code><span>read a file or a line range</span></li>
+            <li><code>list_dir</code><span>list a directory tree</span></li>
+            <li><code>search_code</code><span>regex search across the repo</span></li>
+          </ul>
+        </section>
+        <section class="tool-group is-write">
+          <h3>write</h3>
+          <ul>
+            <li><code>edit_file</code><span>replace an exact string</span></li>
+            <li><code>write_file</code><span>create or overwrite a file</span></li>
+          </ul>
+        </section>
+        <section class="tool-group is-run">
+          <h3>execute</h3>
+          <ul>
+            <li><code>run_command</code><span>shell command, in the sandbox</span></li>
+          </ul>
+        </section>
+      </div>
+      <p class="sequence"><span class="sequence-label">Typical sequence</span>
+        <code>search_code</code><i>→</i><code>read_file</code><i>→</i><code>edit_file</code><i>→</i><code>run_command</code><i>→</i>result back to the model</p>
     </div>
   </section>
 
@@ -196,82 +251,104 @@
       </header>
       <div class="lanes">
         <div class="lane">
-          <h3>Indexing</h3>
+          <h3>Indexing <span class="lane-when">once per repo</span></h3>
           <ol class="steps">
-            <li><b>Repo files</b><span>loader + ignore rules</span></li>
-            <li><b>Code chunks</b><span>tree-sitter, line-window fallback</span></li>
-            <li><b>Chroma</b><span>local embeddings + metadata</span></li>
+            <li><b>Repo files</b><span>.gitignore-aware, hashed for incremental updates</span></li>
+            <li><b>Code chunks</b><span>tree-sitter per function or class, line-window fallback</span></li>
+            <li><b>Chroma</b><span>local CPU embeddings + path and line metadata</span></li>
           </ol>
         </div>
-        <div class="lane">
-          <h3>Retrieval</h3>
+        <div class="lane is-query">
+          <h3>Retrieval <span class="lane-when">for each task</span></h3>
           <ol class="steps">
-            <li><b>BM25 + dense</b><span>keywords + semantic similarity</span></li>
-            <li><b>Reciprocal rank fusion</b><span>combine the ranked lists</span></li>
-            <li><b>Top 6 chunks</b><span>up to 6,000 characters to plan + act</span></li>
+            <li><b>BM25 + dense</b><span>identifier-aware keywords + semantic similarity</span></li>
+            <li><b>Reciprocal rank fusion</b><span>merges the two rankings, no score calibration</span></li>
+            <li><b>Top 6 chunks</b><span>≤ 6,000 characters, injected into the Plan and Act prompts</span></li>
           </ol>
         </div>
       </div>
-      <p class="source">Defaults: ≤ 1,500 characters per chunk · 60-line fallback window · 10-line overlap · 384-D embeddings</p>
+      <p class="source">Defaults: ≤ 1,500 characters per chunk · 60-line fallback window · 10-line overlap · 384-D embeddings · optional cross-encoder reranker</p>
     </div>
   </section>
 
   <!-- 8 · Context and memory ---------------------------------------------------------------- -->
-  <section class="screen" id="memory" data-stage="executing" data-title="Context and memory">
+  <section class="screen memory" id="memory" data-stage="executing" data-title="Context and memory">
     <div class="slide">
       <header class="head">
         <div>
           <p class="eyebrow">State</p>
           <h2>Context and memory</h2>
-          <p class="lede">What the model sees, and what a run can resume from.</p>
+          <p class="lede">What the model sees on each call, and what a run can resume from.</p>
         </div>
       </header>
+      <!-- Context management (graph/context.py) runs before every Act call, cheapest step first:
+           stubbing costs nothing, summarisation costs one model call and only runs if the
+           conversation is still over budget. -->
       <div class="trio">
         <article class="card">
-          <h3>History</h3>
-          <p>Requests, tool calls and results, kept in graph state.</p>
+          <span class="card-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></span>
+          <h3>Conversation state</h3>
+          <p>Messages, tool calls and tool results, held in LangGraph state and appended by its message reducer.</p>
         </article>
-        <article class="card">
-          <h3>Trimming</h3>
-          <p>Recent tool output stays whole; past 60k tokens, the rest is summarised.</p>
+        <article class="card tone-sage">
+          <span class="card-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="6" r="3"/><path d="M8.12 8.12 12 12"/><path d="M20 4 8.12 15.88"/><circle cx="6" cy="18" r="3"/><path d="M14.8 14.8 20 20"/></svg></span>
+          <h3>Context management</h3>
+          <ul class="techniques">
+            <li><b>Stubbing</b>Older tool outputs are cut to a 400-character stub; the 6 most recent stay whole.</li>
+            <li><b>Summarisation</b>Still over the 60k-token budget? The model condenses the middle; the task and recent turns stay verbatim.</li>
+          </ul>
         </article>
-        <article class="card">
+        <article class="card tone-lavender">
+          <span class="card-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg></span>
           <h3>Checkpoints</h3>
-          <p>State saved in SQLite, so a run can pause and resume.</p>
+          <p>State persisted to SQLite after every step, so a run can pause for approval and resume.</p>
         </article>
       </div>
     </div>
   </section>
 
   <!-- 9 · Guardrails ----------------------------------------------------------------------- -->
-  <section class="screen" id="guardrails" data-stage="executing" data-title="Reliability and guardrails">
+  <section class="screen guard" id="guardrails" data-stage="executing" data-title="Reliability and guardrails">
     <div class="slide">
       <header class="head">
         <div>
           <p class="eyebrow">Safety</p>
           <h2>Reliability and guardrails</h2>
+          <p class="lede">Checked by tests, contained by a sandbox, approved by a person, and kept running by a fallback model.</p>
         </div>
       </header>
       <div class="quad">
-        <article class="card">
-          <h3>Verification</h3>
-          <p>Failing tests feed the repair loop.</p>
-          <p class="meta">4 iterations · 40 Act steps</p>
+        <article class="card tone-sage">
+          <span class="card-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg></span>
+          <div>
+            <h3>Verification</h3>
+            <p>The repository's own tests decide pass or fail; failures feed the repair loop.</p>
+            <p class="meta">≤ 4 iterations · ≤ 40 Act calls</p>
+          </div>
+        </article>
+        <article class="card tone-navy">
+          <span class="card-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg></span>
+          <div>
+            <h3>Security</h3>
+            <p>Path jail, command denylist, optional Docker container.</p>
+            <p class="meta">1 GB · 1 CPU · no network · capabilities dropped</p>
+          </div>
+        </article>
+        <article class="card tone-lavender">
+          <span class="card-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m16 11 2 2 4-4"/></svg></span>
+          <div>
+            <h3>Human control</h3>
+            <p>Approval before every edit, write or shell command.</p>
+            <p class="meta">pause → checkpoint → resume</p>
+          </div>
         </article>
         <article class="card">
-          <h3>Security</h3>
-          <p>Path jail, command policy, optional Docker.</p>
-          <p class="meta">1 GB · 1 CPU · network off</p>
-        </article>
-        <article class="card">
-          <h3>Human control</h3>
-          <p>Approval before any file change or command.</p>
-          <p class="meta">pause → checkpoint → resume</p>
-        </article>
-        <article class="card">
-          <h3>Model resilience</h3>
-          <p>Retries with backoff, then a fallback model.</p>
-          <p class="meta">gpt-oss → Gemini</p>
+          <span class="card-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg></span>
+          <div>
+            <h3>Model resilience</h3>
+            <p>SDK retries, then backoff with jitter, then a second provider.</p>
+            <p class="meta">gpt-oss-120b (Groq) → Gemini 2.5 Flash</p>
+          </div>
         </article>
       </div>
     </div>
@@ -287,15 +364,49 @@
           <p class="lede">What happened in each run, and what it cost.</p>
         </div>
       </header>
-      <div class="duo">
-        <article class="card">
-          <h3>LangSmith tracing</h3>
-          <p>Which nodes and tools ran, in what order, and where it failed.</p>
+      <!-- Two cards with the same skeleton (icon, name, the question it answers, where it lives,
+           one line, then a small schematic), so they compare at a glance. The schematics show
+           the shape of each tool's data, not real values: a trace is a sequence of steps in
+           time, the ledger is a table of numbers per node. -->
+      <div class="duo obs">
+        <article class="card obs-card">
+          <header class="obs-head">
+            <span class="card-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12h-8"/><path d="M21 6H8"/><path d="M21 18h-8"/><path d="M3 6v4c0 1.1.9 2 2 2h3"/><path d="M3 10v6c0 1.1.9 2 2 2h3"/></svg></span>
+            <div>
+              <h3>LangSmith tracing</h3>
+              <p class="obs-question">What happened?</p>
+            </div>
+            <span class="obs-where">hosted · free tier</span>
+          </header>
+          <p>Every node, model call and tool call, in order, with inputs, outputs and latency.</p>
+          <!-- A trace as a waterfall: one row per step, its bar placed along the run's time. -->
+          <div class="trace" aria-hidden="true">
+            <div class="trace-row"><code>plan</code><span class="trace-bar" style="--from: 0%; --to: 10%"></span></div>
+            <div class="trace-row"><code>act</code><span class="trace-bar" style="--from: 10%; --to: 52%"></span></div>
+            <div class="trace-row is-child"><code>tools</code><span class="trace-bar" style="--from: 16%; --to: 46%"></span></div>
+            <div class="trace-row is-fail"><code>run_tests</code><span class="trace-bar" style="--from: 52%; --to: 74%"></span><b>✗</b></div>
+            <div class="trace-row"><code>reflect</code><span class="trace-bar" style="--from: 74%; --to: 86%"></span></div>
+          </div>
+          <p class="obs-foot">schematic: one bar per step, along the run's time</p>
         </article>
-        <article class="card">
-          <h3>Local ledger</h3>
-          <p>Status, time, tokens and calls per graph node. Free and offline.</p>
-          <p class="meta">ledger.sqlite · <code>coder stats</code></p>
+        <article class="card obs-card tone-sage">
+          <header class="obs-head">
+            <span class="card-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5v-11"/></svg></span>
+            <div>
+              <h3>Local ledger</h3>
+              <p class="obs-question">What did it cost?</p>
+            </div>
+            <span class="obs-where">local · offline</span>
+          </header>
+          <p>Per run: outcome, wall time, iterations and tokens. Per node: calls and token counts.</p>
+          <!-- The ledger's per-node table: the columns it records, one row per graph node. -->
+          <div class="ledger" aria-hidden="true">
+            <span>node</span><span>calls</span><span>input</span><span>output</span><span>model</span>
+            <code>plan</code><i></i><i></i><i></i><i></i>
+            <code>act</code><i></i><i></i><i></i><i></i>
+            <code>run_tests</code><i></i><i></i><i></i><i></i>
+          </div>
+          <p class="obs-foot">schematic: one row per graph node, summed over the run</p>
         </article>
       </div>
     </div>
@@ -306,27 +417,44 @@
     <div class="slide">
       <header class="head">
         <div>
-          <p class="eyebrow">In one breath</p>
+          <p class="eyebrow">Results · overview</p>
           <h2>What it scored</h2>
-          <p class="lede">Tasks with hidden tests the agent never sees. A pass means those tests went green.</p>
+          <p class="lede">Each task is graded by hidden tests the agent never sees. pass@1: solved on a single run.</p>
         </div>
       </header>
-      <div class="scores">
-        <div class="score">
-          <p class="score-value" data-stat="model0_score">12 / 12</p>
-          <p class="score-label"><span data-stat="model0_name">gpt-oss-120b</span></p>
-          <p class="score-note">in-house tasks</p>
-        </div>
-        <div class="score">
-          <p class="score-value" data-stat="model1_score">11 / 12</p>
-          <p class="score-label"><span data-stat="model1_name">K2-Think-v2</span></p>
-          <p class="score-note">the same twelve tasks</p>
-        </div>
-        <div class="score">
-          <p class="score-value" data-stat="humaneval_score">30 / 30</p>
-          <p class="score-label"><span data-stat="model1_name">K2-Think-v2</span></p>
-          <p class="score-note">a HumanEval slice</p>
-        </div>
+      <!-- The three results, grouped by the benchmark they come from: the two models side by
+           side on the in-house suite, then the HumanEval slice on its own. Each card: the model,
+           the score (the largest thing on the slide), and a meter that talk.js fills from the
+           score, so the bar always matches the number. -->
+      <div class="results">
+        <section class="result-group">
+          <h3 class="result-bench"><b>In-house suite</b> · 12 tasks, the same for both models</h3>
+          <div class="result-cards">
+            <div class="result">
+              <p class="result-model" data-stat="model0_name">gpt-oss-120b</p>
+              <p class="result-value" data-stat="model0_score">12 / 12</p>
+              <div class="meter"><span></span></div>
+              <p class="result-note"><span class="result-pct"></span> pass@1</p>
+            </div>
+            <div class="result">
+              <p class="result-model" data-stat="model1_name">K2-Think-v2</p>
+              <p class="result-value" data-stat="model1_score">11 / 12</p>
+              <div class="meter"><span></span></div>
+              <p class="result-note"><span class="result-pct"></span> pass@1</p>
+            </div>
+          </div>
+        </section>
+        <section class="result-group">
+          <h3 class="result-bench"><b>HumanEval slice</b> · 30 problems, official tests hidden</h3>
+          <div class="result-cards">
+            <div class="result">
+              <p class="result-model" data-stat="model1_name">K2-Think-v2</p>
+              <p class="result-value" data-stat="humaneval_score">30 / 30</p>
+              <div class="meter"><span></span></div>
+              <p class="result-note"><span class="result-pct"></span> pass@1</p>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   </section>
@@ -338,7 +466,7 @@
         <div>
           <p class="eyebrow">Results · by category</p>
           <h2>pass@1 by task category</h2>
-          <p class="lede">K2 Think missed one multi-file task; everything else passed its hidden tests.</p>
+          <p class="lede">K2-Think-v2 missed one multi-file task at the 40-step cap; every other task passed its hidden tests.</p>
         </div>
       </header>
       <div class="chart tall" data-chart="categories"></div>
@@ -353,15 +481,15 @@
         <div>
           <p class="eyebrow">Results · a surprising one</p>
           <h2>Retrieval made no measurable difference</h2>
-          <p class="lede">Twelve tasks per retrieval mode, one model, one afternoon.</p>
+          <p class="lede">The 12-task suite once per retrieval mode, on K2-Think-v2, at a single commit.</p>
         </div>
       </header>
       <div class="panels two-plus">
         <figure class="panel"><figcaption><b>pass@1 by retrieval mode</b>hidden-test pass rate</figcaption><div class="chart" data-chart="ablation-pass"></div></figure>
         <figure class="panel"><figcaption><b>tokens per task</b>mean, all model calls</figcaption><div class="chart" data-chart="ablation-tokens"></div></figure>
         <div class="facts">
-          <p><b data-stat="recall3">0.99</b>recall@3, measured on its own</p>
-          <p><b><span data-stat="mrr">0.56</span> → <span data-stat="mrr_rerank">0.76</span></b>MRR after adding the reranker</p>
+          <p><b data-stat="recall3">0.99</b>file recall@3 on 40 retrieval queries, every mode</p>
+          <p><b><span data-stat="mrr">0.56</span> → <span data-stat="mrr_rerank">0.76</span></b>MRR with the cross-encoder reranker</p>
         </div>
       </div>
       <p class="takeaway">The benchmark repositories have three to five files: the model finds the right one with a single <code>list_dir</code>, whichever way retrieval ranks it.</p>
@@ -378,12 +506,21 @@
           <p class="lede" data-caption="nodes">Tokens per run by graph node, averaged over 12 runs of K2-Think-v2.</p>
         </div>
       </header>
-      <div class="chart short" data-chart="nodes"></div>
-      <div class="legend" data-legend="nodes"></div>
-      <div class="scores small">
-        <div class="score"><p class="score-value" data-stat="act_share">~99%</p><p class="score-note">of tokens are spent in Act</p></div>
-        <div class="score"><p class="score-value" data-stat="act_calls">15.2</p><p class="score-note">Act calls per run, each resending the context</p></div>
-        <div class="score"><p class="score-value" data-stat="plan_tokens">949</p><p class="score-note">tokens for the single Plan call</p></div>
+      <!-- One panel, two halves: the takeaway on the left (the share spent in Act, the largest
+           number, and the two facts that explain it), the chart that shows it on the right. -->
+      <div class="cost">
+        <div class="cost-lead">
+          <p class="cost-value" data-stat="act_share">~99%</p>
+          <p class="cost-label">of tokens are spent in <b>Act</b>, the tool-calling step</p>
+          <dl class="cost-facts">
+            <div><dt data-stat="act_calls">15.2</dt><dd>Act calls per run, each resending the context</dd></div>
+            <div><dt data-stat="plan_tokens">949</dt><dd>tokens for the single Plan call</dd></div>
+          </dl>
+        </div>
+        <figure class="cost-chart">
+          <div class="chart" data-chart="nodes"></div>
+          <div class="legend" data-legend="nodes"></div>
+        </figure>
       </div>
       <p class="aside">Every model call on a free tier, every embedding computed locally.</p>
     </div>
@@ -404,17 +541,27 @@
         <figure class="panel"><figcaption><b>tokens per task</b>mean, all model calls</figcaption><div class="chart" data-chart="model-tokens"></div></figure>
         <figure class="panel"><figcaption><b>seconds per task</b>mean wall time</figcaption><div class="chart" data-chart="model-seconds"></div></figure>
       </div>
-      <p class="takeaway">K2 Think is faster per task but spends more than twice the tokens: more tool-calling steps, each one resending the conversation.</p>
+      <p class="takeaway">K2-Think-v2 is faster per task but uses more than twice the tokens: about 15 tool-calling steps against 11, each one resending the conversation.</p>
     </div>
   </section>
 
-  <!-- The talk closes like a run of the agent: the final stage line, then the thanks. -->
+  <!-- 16 · Thank you ------------------------------------------------------------------------
+       A quiet close: its own header row (the page's fixed corner chrome is hidden on this
+       screen), a small illustration on a pale cloud, and the thanks. Two faint waves sit in
+       the slide's corners; talk.css draws them, so they need no markup here. -->
   <section class="screen end" id="end" data-stage="passed" data-title="Thank you">
     <div class="slide">
+      <header class="end-head" aria-hidden="true">
+        <span class="end-name">coder-agent</span>
+        <span class="end-rule"></span>
+        <span class="end-count">16 / 16</span>
+      </header>
       <div class="finale">
-        <p class="finale-run">✓ passed <span>· run complete</span></p>
-        <h2 class="finale-title">Thank you</h2>
-        <p class="lede">Questions are welcome.</p>
+        <div class="finale-art">
+          <img src="end-window.png" width="520" height="360" alt="">
+        </div>
+        <h2 class="finale-title">Thank you.</h2>
+        <p class="finale-sub">Looking forward to our discussion.</p>
       </div>
     </div>
   </section>
@@ -423,7 +570,6 @@
 
 <div class="tip" role="status" aria-live="polite" hidden></div>
 
-<script src="../assets/cast-player.js"></script>
 <script src="talk.js"></script>
 </body>
 </html>
