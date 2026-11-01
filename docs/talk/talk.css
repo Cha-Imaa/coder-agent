@@ -1,12 +1,22 @@
 /* The talk: one full-screen "slide" per idea, in the ivory look of the result figures.
  *
  * The colours are the figures' own (src/coder_agent/evals/figures.py): a pale blue page, an
- * ivory card with a hairline border, navy serif titles, blue-grey sans text, and the same fixed
- * series order (navy, blue, teal, violet). No web fonts: Georgia and Segoe UI are what the
- * figures are drawn in, and every system has a close fallback.
+ * ivory card with a hairline border, dark navy titles, blue-grey text, and the same fixed
+ * series order (navy, blue, teal, violet).
+ *
+ * Type: Manrope for every word on the slides and JetBrains Mono for code and the terminal, both
+ * loaded from Google Fonts in index.html. One family at a few weights keeps it technical rather
+ * than decorative; the hierarchy comes from size and weight (700 titles, 600 headings, 400 body,
+ * 500 labels), never capitals. If the fonts cannot load, Segoe UI and Consolas stand in.
+ *
+ * Every colour and font is a custom property in the `run` block below, and nothing else in this
+ * file (or in talk.js, which reads the same properties for its SVG) names a colour. So a new look
+ * is one more block like it, under another `data-theme`, with no change to the rules or markup.
+ * Two were tried, Blueprint and Midnight IDE, and the owner kept this one.
+ * `:root` is listed too, so the page still has its look if the attribute is missing.
  */
 
-:root {
+:root, [data-theme="run"] {
   color-scheme: light;
 
   /* surfaces */
@@ -14,16 +24,21 @@
      clearly stands out from it instead of blending in. */
   --page: #dfe6f0;        /* behind the card */
   --card: #fdfcf7;        /* the ivory slide */
+  --card-texture: none;   /* a background image over the card (Blueprint draws its grid here) */
   --edge: #d3dce9;        /* its hairline border */
   --lift: 0 1px 2px rgba(16, 42, 86, 0.06), 0 18px 48px -24px rgba(16, 42, 86, 0.28);  /* card shadow */
-  --chip: #eaf0f7;        /* callouts and tags */
-  --white: #ffffff;       /* boxes that sit on the card */
+  --lift-dark: 0 30px 60px -30px rgba(16, 42, 86, 0.35);   /* under the terminal windows */
+  --chip: #eaf0f7;        /* tags and pills */
+  --box: #ffffff;         /* boxes that sit on the card */
   --grid: #d8e1ec;        /* chart guides */
+  --dot: #aebdd2;         /* the rail's dots, darker than --grid so they show on the page */
 
   /* text */
-  --ink: #102a56;         /* titles, values */
+  --title: #18325b;       /* slide titles and headings */
+  --ink: #102a56;         /* values, strong text */
   --ink-soft: #40557d;    /* body text */
   --muted: #7c8da8;       /* ticks, footnotes */
+  --on-ink: #ffffff;      /* text on an ink-coloured fill: tooltips, badges */
 
   /* series, in the figures' fixed order, plus the two diagram accents */
   --navy: #1e4a8a;
@@ -34,9 +49,36 @@
   --coral: #d9536f;
   --deep-teal: #0f766e;
 
-  --serif: Georgia, "Times New Roman", "DejaVu Serif", serif;
-  --sans: "Segoe UI", "Helvetica Neue", Arial, "DejaVu Sans", sans-serif;
-  --mono: "DejaVu Sans Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  /* the loop diagrams' pale fills: a node's box takes its stage colour, faintly */
+  --tint-teal: #f1fbf9;
+  --tint-coral: #fff4f6;
+  --tint-orange: #fff8ef;
+  --ring-outer: #eaf0f7;  /* the track the arrows run along */
+  --ring-inner: #e6f4f1;
+
+  /* the recording's terminal, for the dark windows sitting on the paper */
+  --term-bg: #191a28;
+  --term-fg: #cdd3e0;
+  --term-dim: #7c8099;
+  --term-pass: #8cba92;
+
+  --sans: "Manrope", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --mono: "JetBrains Mono", "DejaVu Sans Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+
+  /* The type scale. The brief gives sizes for a 16:9 deck; here each one is reached at full
+     slide width and shrinks with the smaller of width and height, like the spacing below, so a
+     laptop screen gets slightly smaller type rather than a slide that spills. */
+  --fs-title: clamp(30px, min(3.3vw, 6vh), 44px);     /* main slide titles: 700 */
+  --fs-card: clamp(18px, min(1.6vw, 3vh), 22px);      /* card and panel headings: 600 */
+  --fs-body: clamp(15px, 0.9vw + 7px, 19px);          /* body text: 400 */
+  --fs-label: clamp(12px, 0.45vw + 8px, 15px);         /* eyebrows, captions, chart ticks: 500 */
+
+  /* The loop diagrams' text, in SVG units. Each label has to fit a fixed box: a node is 184
+     units wide, and the centre label has about 196 units between the side boxes. A wider face
+     (a monospace one, say) needs these smaller. */
+  --loop-title-size: 18px;
+  --loop-sub-size: 14px;
+  --loop-center-size: 30px;
 
   /* Spacing follows the smaller of width and height, so a short laptop screen gets tighter
      margins rather than a slide that spills past the fold. */
@@ -70,7 +112,8 @@ body {
   background: var(--page);
   color: var(--ink-soft);
   font-family: var(--sans);
-  font-size: clamp(15px, 1.05vw + 6px, 18px);
+  font-size: var(--fs-body);
+  font-weight: 400;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
 }
@@ -97,7 +140,7 @@ body {
   max-width: 1320px;
   margin: 0 auto;
   padding: var(--pad);
-  background: var(--card);
+  background: var(--card-texture), var(--card);
   border: 1px solid var(--edge);
   border-radius: var(--radius);
   box-shadow: var(--lift);   /* lifts the card off the page */
@@ -130,36 +173,41 @@ body {
 
 h1, h2, h3 {
   margin: 0;
-  color: var(--ink);
-  font-family: var(--serif);
-  font-weight: 400;
-  letter-spacing: -0.01em;
+  color: var(--title);
+  font-family: var(--sans);
 }
 
-h1 { font-size: clamp(40px, min(6.4vw, 10vh), 92px); line-height: 1.02; }
-h2 { font-size: clamp(28px, min(3.6vw, 6.4vh), 52px); line-height: 1.1; }
-h3 { font-size: clamp(19px, 1.5vw, 24px); line-height: 1.25; }
+/* Large type is set slightly tighter, as geometric faces like Manrope look loose when big. */
+h1 { font-size: clamp(40px, min(6vw, 9.5vh), 84px); font-weight: 700; line-height: 1.05; letter-spacing: -0.025em; }
+h2 { font-size: var(--fs-title); font-weight: 700; line-height: 1.15; letter-spacing: -0.02em; }
+h3 { font-size: var(--fs-card); font-weight: 600; line-height: 1.3; letter-spacing: -0.01em; }
 
 p { margin: 0; }
 
+/* Bold in running text is for key ideas, so it is semibold: it stands out without shouting. */
+b, strong { font-weight: 600; }
+
+/* The small line above a title, in the code face so it reads like a machine's label. */
 .eyebrow {
-  margin-bottom: 0.7em;
+  margin-bottom: 0.6em;
   color: var(--blue);
-  font-size: 0.78em;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-family: var(--mono);
+  font-size: var(--fs-label);
+  font-weight: 400;
+  letter-spacing: 0.02em;
 }
 
 .lede {
   max-width: 44em;
-  margin-top: 0.45em;
-  font-size: 1.08em;
+  margin-top: 0.55em;
+  font-size: 1.05em;
+  text-wrap: pretty;   /* no single word left alone on the last line */
 }
 
 .aside, .source {
   color: var(--muted);
-  font-size: 0.86em;
+  font-size: var(--fs-label);
+  font-weight: 500;
 }
 
 .takeaway {
@@ -179,7 +227,7 @@ kbd {
   padding: 0.05em 0.4em;
   border: 1px solid var(--grid);
   border-radius: 5px;
-  background: var(--white);
+  background: var(--box);
 }
 
 a { color: var(--blue); }
@@ -269,7 +317,7 @@ a { color: var(--blue); }
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #aebdd2;   /* darker than --grid, so the dots show on the slate page */
+  background: var(--dot);
   transition: background 0.2s, transform 0.2s;
 }
 
@@ -282,7 +330,7 @@ a { color: var(--blue); }
   padding: 3px 9px;
   border-radius: 6px;
   background: var(--ink);
-  color: var(--white);
+  color: var(--on-ink);
   font-size: 12px;
   white-space: nowrap;
   opacity: 0;
@@ -323,43 +371,19 @@ a { color: var(--blue); }
 }
 
 /* ------------------------------------------------------------------------------------------ */
-/* Header row: title on the left, the figures' callout chip on the right                      */
+/* Header row: eyebrow, title and lede                                                        */
 /* ------------------------------------------------------------------------------------------ */
 
-.head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 32px;
-}
-
-.callout {
-  flex: none;
-  max-width: 21em;
-  padding: clamp(10px, 2vh, 16px) 22px;
-  border-radius: 14px;
-  background: var(--chip);
-  font-size: 0.86em;
-  line-height: 1.45;
-}
-
-.callout b {
-  display: block;
-  margin-bottom: 4px;
-  color: var(--blue);
-  font-weight: 600;
-}
-
-@media (max-width: 900px) {
-  .head { flex-direction: column; gap: 16px; }
-}
+/* The title block alone on its row; the blue callout chips that once sat on the right were
+   taken out, so the header is a plain block. */
+.head { display: block; }
 
 /* ------------------------------------------------------------------------------------------ */
 /* Hero                                                                                       */
 /* ------------------------------------------------------------------------------------------ */
 
 .hero .slide, .end .slide { align-items: center; text-align: center; }
-.hero-head .lede { margin-left: auto; margin-right: auto; }
+.hero-head .lede { margin-left: auto; margin-right: auto; text-wrap: balance; }
 
 /* The recording is sized by the viewport's height as well as its width, so the title and the
    whole terminal fit one screen on a laptop. The player fits its columns to whatever width it
@@ -372,14 +396,17 @@ a { color: var(--blue); }
 
 .hero .cast-window {
   margin: 0 auto;
-  box-shadow: 0 30px 60px -30px rgba(16, 42, 86, 0.35);
+  box-shadow: var(--lift-dark);
 }
 
-.hero .cast-screen { text-align: left; }
+/* The recording in the talk's code face. The player measures whatever font the screen is set
+   in, so its columns still fit the window. */
+.hero .cast-screen { text-align: left; font-family: var(--mono); }
 
 .hint {
   color: var(--muted);
-  font-size: 0.82em;
+  font-size: var(--fs-label);
+  font-weight: 500;
 }
 
 /* On a short screen the hero gives its room to the recording: tighter gaps, no hint line. */
@@ -406,8 +433,10 @@ a { color: var(--blue); }
 
 .score-value {
   color: var(--ink);
-  font-family: var(--serif);
-  font-size: clamp(44px, min(6.8vw, 12vh), 104px);
+  font-family: var(--sans);
+  font-size: clamp(44px, min(6.4vw, 11vh), 96px);
+  font-weight: 600;
+  letter-spacing: -0.03em;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
@@ -438,7 +467,7 @@ a { color: var(--blue); }
   padding: clamp(18px, 2vw, 28px);
   border: 1px solid var(--edge);
   border-radius: 16px;
-  background: var(--white);
+  background: var(--box);
 }
 
 .card h3 { margin-bottom: 0.45em; }
@@ -466,10 +495,10 @@ a { color: var(--blue); }
   overflow-x: auto;
   padding: 14px 22px;
   border-radius: 12px;
-  background: #191a28;   /* the recording's own terminal background */
+  background: var(--term-bg);   /* the recording's own terminal background */
 }
 
-.command code { color: #cdd3e0; white-space: nowrap; }
+.command code { color: var(--term-fg); white-space: nowrap; }
 
 /* ------------------------------------------------------------------------------------------ */
 /* Loop diagrams                                                                              */
@@ -511,14 +540,14 @@ a { color: var(--blue); }
 }
 
 /* The SVG's text is styled here rather than inline, so the diagrams use the page's fonts. */
-.loop-title { fill: var(--ink); font-family: var(--sans); font-size: 18px; font-weight: 600; }
-.loop-sub { fill: var(--ink-soft); font-family: var(--sans); font-size: 14px; }
+.loop-title { fill: var(--ink); font-family: var(--sans); font-size: var(--loop-title-size); font-weight: 600; }
+.loop-sub { fill: var(--ink-soft); font-family: var(--sans); font-size: var(--loop-sub-size); }
 .loop-code { fill: var(--muted); font-family: var(--mono); font-size: 12px; }
-.loop-badge { fill: var(--white); font-family: var(--sans); font-size: 14px; font-weight: 700; }
+.loop-badge { fill: var(--on-ink); font-family: var(--sans); font-size: 14px; font-weight: 700; }
 .loop-edge { font-family: var(--sans); font-size: 14px; font-weight: 600; }
 /* 30px, not larger: the centre sits between the side boxes, which leave it about 196 units, and
    "up to 4 tries" in Georgia at 36px ran into them. */
-.loop-center { fill: var(--ink); font-family: var(--serif); font-size: 30px; }
+.loop-center { fill: var(--title); font-family: var(--sans); font-size: var(--loop-center-size); font-weight: 700; letter-spacing: -0.02em; }
 .loop-center-sub { fill: var(--muted); font-family: var(--mono); font-size: 13px; }
 
 /* The arcs draw themselves in when the screen arrives. */
@@ -555,7 +584,7 @@ a { color: var(--blue); }
   padding: 14px 20px;
   border: 1.5px solid var(--navy);
   border-radius: 14px;
-  background: var(--white);
+  background: var(--box);
   color: var(--ink-soft);
   text-align: center;
 }
@@ -610,10 +639,8 @@ a { color: var(--blue); }
 .arch-cross .arch-cross-label {
   background: none;
   color: var(--muted);
-  font-size: 0.78em;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: var(--fs-label);
+  font-weight: 500;
 }
 
 @media (max-width: 720px) {
@@ -664,7 +691,7 @@ a { color: var(--blue); }
   border: 1px solid var(--edge);
   border-left: 3px solid var(--deep-teal);
   border-radius: 12px;
-  background: var(--white);
+  background: var(--box);
 }
 
 .tools code { font-size: 1em; font-weight: 600; }
@@ -692,7 +719,7 @@ a { color: var(--blue); }
   padding: 16px 20px 16px 62px;
   border: 1px solid var(--edge);
   border-radius: 14px;
-  background: var(--white);
+  background: var(--box);
   counter-increment: step;
 }
 
@@ -707,7 +734,7 @@ a { color: var(--blue); }
   height: 30px;
   border-radius: 50%;
   background: var(--navy);
-  color: var(--white);
+  color: var(--on-ink);
   font-size: 14px;
   font-weight: 700;
 }
@@ -736,15 +763,18 @@ a { color: var(--blue); }
 .panel figcaption {
   margin-bottom: 6px;
   color: var(--ink-soft);
-  font-size: 0.86em;
+  font-size: var(--fs-label);
+  font-weight: 500;
 }
 
+/* A chart panel's heading is a card heading. */
 .panel figcaption b {
   display: block;
-  color: var(--ink);
-  font-family: var(--serif);
-  font-size: 1.3em;
-  font-weight: 400;
+  margin-bottom: 2px;
+  color: var(--title);
+  font-size: var(--fs-card);
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 /* talk.js draws each chart at the size of this box, in pixels, and redraws on resize. */
@@ -788,7 +818,7 @@ a { color: var(--blue); }
 
 .facts { display: grid; gap: clamp(14px, 3vh, 26px); padding-bottom: 28px; }
 .facts p { padding-left: 16px; border-left: 3px solid var(--chip); font-size: 0.92em; }
-.facts b { display: block; color: var(--ink); font-family: var(--serif); font-size: 2em; font-weight: 400; line-height: 1.1; }
+.facts b { display: block; color: var(--ink); font-size: 1.9em; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; }
 
 /* One tooltip for the whole page, moved to whichever mark is hovered. */
 .tip {
@@ -798,11 +828,11 @@ a { color: var(--blue); }
   padding: 8px 12px;
   border-radius: 8px;
   background: var(--ink);
-  color: var(--white);
+  color: var(--on-ink);
   font-size: 13px;
   line-height: 1.4;
   pointer-events: none;
-  box-shadow: 0 8px 24px -8px rgba(16, 42, 86, 0.45);
+  box-shadow: var(--lift-dark);
 }
 
 .tip b { display: block; }
@@ -823,18 +853,18 @@ a { color: var(--blue); }
 .finale-run {
   padding: 10px 22px;
   border-radius: 999px;
-  background: #191a28;          /* the recording's terminal window */
-  color: #8cba92;               /* the recording's "passed" green */
+  background: var(--term-bg);    /* the recording's terminal window */
+  color: var(--term-pass);       /* the recording's "passed" green */
   font-family: var(--mono);
   font-size: 0.95em;
   letter-spacing: 0.02em;
-  box-shadow: 0 14px 30px -18px rgba(16, 42, 86, 0.6);
+  box-shadow: var(--lift-dark);
 }
 
-.finale-run span { color: #7c8099; }   /* the dim part of the line, as in the terminal */
+.finale-run span { color: var(--term-dim); }   /* the dim part of the line, as in the terminal */
 
 .finale-title {
-  font-size: clamp(56px, min(10vw, 16vh), 150px);
+  font-size: clamp(56px, min(9vw, 14vh), 132px);
   line-height: 1;
 }
 
@@ -842,7 +872,7 @@ a { color: var(--blue); }
 
 /* Printing gives one slide per page, with nothing hidden waiting for an animation. */
 @media print {
-  html { scroll-snap-type: none; background: var(--white); }
+  html { scroll-snap-type: none; background: var(--box); }
   .rail, .brand, .counter, .stages, .progress, .hint { display: none; }
   .screen { min-height: auto; break-after: page; }
   .js .slide > *, .js .bar, .js .chart .value, .js .chart .dot, .js .loop-arc, .js .loop-head {

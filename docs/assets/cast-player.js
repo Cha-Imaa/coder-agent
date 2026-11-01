@@ -11,7 +11,6 @@
 (function (root) {
   "use strict";
 
-  var FONT = '"DejaVu Sans Mono","SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace';
   var ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;" };
 
   function esc(text) {
@@ -81,14 +80,14 @@
   }
 
   // The reader's monospace font is not ours, so the columns are fitted rather than assumed: one
-  // measurement of the stack at a known size gives the advance width per pixel of font size.
-  function unit() {
-    if (!unit.value) {
-      var ctx = document.createElement("canvas").getContext("2d");
-      ctx.font = "100px " + FONT;
-      unit.value = ctx.measureText("MMMMMMMMMM").width / 1000;
-    }
-    return unit.value;
+  // measurement of the font at a known size gives the advance width per pixel of font size.
+  // The font is the one the stylesheet gives the screen, so a page that restyles it (the talk
+  // sets it in JetBrains Mono) is still measured correctly. Not cached: a web font can finish
+  // loading after the first fit, and the measurement is cheap.
+  function unit(family) {
+    var ctx = document.createElement("canvas").getContext("2d");
+    ctx.font = "100px " + family;
+    return ctx.measureText("MMMMMMMMMM").width / 1000;
   }
 
   // The padding is read back rather than assumed: a narrow screen gets a smaller one from the
@@ -100,7 +99,7 @@
     if (room <= 0) return;
     // 2% slack: an exact fit is undone by the browser's sub-pixel rounding of each glyph, and
     // the screen then scrolls sideways by a pixel or three for nothing.
-    var size = Math.min(data.fontSize || 15, Math.max(9, (room * 0.98) / data.cols / unit()));
+    var size = Math.min(data.fontSize || 15, Math.max(9, (room * 0.98) / data.cols / unit(style.fontFamily)));
     view.win.style.setProperty("--cast-font", size.toFixed(2) + "px");
   }
 
@@ -178,6 +177,12 @@
       var view = build(host, data);
       fit(view, data);
       root.addEventListener("resize", function () { fit(view, data); });
+      // A web font may still be on its way; fit again once it has arrived, since its glyphs
+      // can be wider than the fallback's the first fit measured.
+      if (document.fonts) {
+        var family = root.getComputedStyle(view.screen).fontFamily;
+        document.fonts.load("15px " + family).then(function () { fit(view, data); });
+      }
       play(view, data);
     }).catch(function () {
       // A player that cannot load its frames says so rather than leaving a hole in the page.

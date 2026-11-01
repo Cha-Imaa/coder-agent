@@ -23,11 +23,22 @@
   /* 1. Helpers                                                                               */
   /* ---------------------------------------------------------------------------------------- */
 
-  // The figures' palette (src/coder_agent/evals/figures.py), in its fixed series order.
-  var SERIES = ["#1e4a8a", "#2f80ed", "#1fb8a6", "#6b5bd2"];
+  /**
+   * The value of a colour token from the stylesheet, such as `token("navy")` -> "#1e4a8a".
+   * Read at draw time, so the SVG always matches the stylesheet's palette.
+   */
+  function token(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue("--" + name).trim();
+  }
+
+  // The palette is read from the stylesheet, not written here, so a colour is set in one place.
+  // SERIES is the figures' fixed series order (src/coder_agent/evals/figures.py).
+  var SERIES = ["navy", "blue", "teal", "violet"].map(token);
   var COLOR = {
-    navy: "#1e4a8a", blue: "#2f80ed", deepTeal: "#0f766e", orange: "#e8973a", coral: "#d9536f",
-    ink: "#102a56", card: "#fafaf8", white: "#ffffff", chip: "#eaf0f7",
+    navy: token("navy"), blue: token("blue"), deepTeal: token("deep-teal"), orange: token("orange"),
+    coral: token("coral"), card: token("card"), box: token("box"), chip: token("chip"),
+    tintTeal: token("tint-teal"), tintCoral: token("tint-coral"), tintOrange: token("tint-orange"),
+    ringOuter: token("ring-outer"), ringInner: token("ring-inner"),
   };
   var SVG_NS = "http://www.w3.org/2000/svg";
   var reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -251,13 +262,13 @@
   // the top; edge i runs from node i to node i+1 and wraps round to the first.
   var LOOPS = {
     outer: {
-      ring: COLOR.chip,
+      ring: COLOR.ringOuter,
       center: ["up to 4 tries", "max_iterations"],
       nodes: [
-        { title: "Plan", sub: "a short numbered plan", code: "plan", color: COLOR.navy, fill: COLOR.white },
-        { title: "Do the work", sub: "the inner loop runs here", code: "act", color: COLOR.deepTeal, fill: "#f1fbf9" },
-        { title: "Run the tests", sub: "pass or fail", code: "run_tests", color: COLOR.navy, fill: COLOR.white },
-        { title: "Learn from it", sub: "show the failing output", code: "reflect", color: COLOR.coral, fill: "#fff4f6" },
+        { title: "Plan", sub: "a short numbered plan", code: "plan", color: COLOR.navy, fill: COLOR.box },
+        { title: "Do the work", sub: "the inner loop runs here", code: "act", color: COLOR.deepTeal, fill: COLOR.tintTeal },
+        { title: "Run the tests", sub: "pass or fail", code: "run_tests", color: COLOR.navy, fill: COLOR.box },
+        { title: "Learn from it", sub: "show the failing output", code: "reflect", color: COLOR.coral, fill: COLOR.tintCoral },
       ],
       edges: [
         { label: "plan ready", color: COLOR.blue },
@@ -268,12 +279,12 @@
       exit: { from: 2, label: "tests pass", text: "Done" },
     },
     inner: {
-      ring: "#e6f4f1",
+      ring: COLOR.ringInner,
       center: ["repeat", "until the model is done"],
       nodes: [
-        { title: "The model decides", sub: "asks for a tool", code: "act", color: COLOR.navy, fill: COLOR.white },
-        { title: "Safety check", sub: "risky actions ask you", code: "approve", color: COLOR.orange, fill: "#fff8ef" },
-        { title: "The tool runs", sub: "read, edit, or run", code: "tools", color: COLOR.deepTeal, fill: "#f1fbf9" },
+        { title: "The model decides", sub: "asks for a tool", code: "act", color: COLOR.navy, fill: COLOR.box },
+        { title: "Safety check", sub: "risky actions ask you", code: "approve", color: COLOR.orange, fill: COLOR.tintOrange },
+        { title: "The tool runs", sub: "read, edit, or run", code: "tools", color: COLOR.deepTeal, fill: COLOR.tintTeal },
       ],
       edges: [
         { label: "tool request", color: COLOR.deepTeal },
@@ -324,7 +335,7 @@
     var width = label.length * 7.6 + 28;
     el("rect", {
       x: x - width / 2, y: y - 15, width: width, height: 30, rx: 15,
-      fill: COLOR.white, stroke: color, "stroke-width": 1.6,
+      fill: COLOR.box, stroke: color, "stroke-width": 1.6,
     }, parent);
     text(parent, x, y + 4.5, label, { class: "loop-edge", fill: color, "text-anchor": "middle" });
   }

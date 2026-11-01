@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="run">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,6 +7,11 @@
   <meta name="description" content="A walkthrough of coder-agent, a terminal coding agent built on LangGraph, MCP and local RAG, with charts drawn from its real eval results.">
   <!-- The recording's window chrome and player come from the docs site itself, so the hero is
        the same cast the landing page and the README show. -->
+  <!-- The talk's two typefaces, from Google Fonts (free). Manrope for all text, JetBrains Mono for
+       code and the terminal. If they cannot load, talk.css falls back to Segoe UI and Consolas. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Manrope:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="../assets/cast-player.css">
   <link rel="stylesheet" href="talk.css">
 </head>
@@ -22,7 +27,7 @@
   <a href="#start" data-stage="context"><span aria-hidden="true">▸</span> Context</a>
   <a href="#outer-loop" data-stage="plan"><span aria-hidden="true">▸</span> Plan</a>
   <a href="#mcp" data-stage="executing"><span aria-hidden="true">▸</span> Executing</a>
-  <a href="#categories" data-stage="tests"><span aria-hidden="true">▸</span> Tests</a>
+  <a href="#scores" data-stage="tests"><span aria-hidden="true">▸</span> Tests</a>
   <a href="#end" data-stage="passed"><span aria-hidden="true">✓</span> passed</a>
 </nav>
 <nav class="rail" aria-label="Screens"></nav>
@@ -46,38 +51,7 @@
     </div>
   </section>
 
-  <!-- 2 · Scores ---------------------------------------------------------------------------- -->
-  <section class="screen" id="scores" data-stage="context" data-title="What it scored">
-    <div class="slide">
-      <header class="head">
-        <div>
-          <p class="eyebrow">In one breath</p>
-          <h2>What it scored</h2>
-          <p class="lede">Tasks with hidden tests the agent never sees. A pass means those tests went green.</p>
-        </div>
-      </header>
-      <div class="scores">
-        <div class="score">
-          <p class="score-value" data-stat="model0_score">12 / 12</p>
-          <p class="score-label"><span data-stat="model0_name">gpt-oss-120b</span></p>
-          <p class="score-note">in-house tasks</p>
-        </div>
-        <div class="score">
-          <p class="score-value" data-stat="model1_score">11 / 12</p>
-          <p class="score-label"><span data-stat="model1_name">K2-Think-v2</span></p>
-          <p class="score-note">the same twelve tasks</p>
-        </div>
-        <div class="score">
-          <p class="score-value" data-stat="humaneval_score">30 / 30</p>
-          <p class="score-label"><span data-stat="model1_name">K2-Think-v2</span></p>
-          <p class="score-note">a HumanEval slice</p>
-        </div>
-      </div>
-      <p class="aside">Every model call on a free tier, every embedding computed locally.</p>
-    </div>
-  </section>
-
-  <!-- 3 · What I built ---------------------------------------------------------------------- -->
+  <!-- 2 · What I built ---------------------------------------------------------------------- -->
   <section class="screen" id="built" data-stage="context" data-title="What I built">
     <div class="slide">
       <header class="head">
@@ -105,7 +79,7 @@
     </div>
   </section>
 
-  <!-- 4 · Outer loop ------------------------------------------------------------------------ -->
+  <!-- 3 · Outer loop ------------------------------------------------------------------------ -->
   <section class="screen" id="outer-loop" data-stage="plan" data-title="The outer loop">
     <div class="slide">
       <header class="head">
@@ -114,7 +88,6 @@
           <h2>The outer loop</h2>
           <p class="lede">Plan, do the work, run the tests, and retry with what went wrong.</p>
         </div>
-        <aside class="callout"><b>Slow: one lap per try</b>The tests decide when it is done, not the model</aside>
       </header>
       <div class="diagram-row">
         <div class="diagram" data-loop="outer" role="img"
@@ -132,7 +105,7 @@
     </div>
   </section>
 
-  <!-- 5 · Inner loop ------------------------------------------------------------------------ -->
+  <!-- 4 · Inner loop ------------------------------------------------------------------------ -->
   <section class="screen" id="inner-loop" data-stage="plan" data-title="The inner loop">
     <div class="slide">
       <header class="head">
@@ -141,7 +114,6 @@
           <h2>The inner loop</h2>
           <p class="lede">Ask for a tool, run it, look at the result, repeat. This is step 2 of the outer loop.</p>
         </div>
-        <aside class="callout"><b>Fast: many rounds per try</b>One Act step is one model call; the ceiling is 40</aside>
       </header>
       <div class="diagram-row">
         <div class="diagram" data-loop="inner" role="img"
@@ -158,7 +130,7 @@
     </div>
   </section>
 
-  <!-- 6 · Architecture ---------------------------------------------------------------------- -->
+  <!-- 5 · Architecture ---------------------------------------------------------------------- -->
   <section class="screen" id="architecture" data-stage="plan" data-title="System architecture">
     <div class="slide">
       <header class="head">
@@ -167,7 +139,6 @@
           <h2>System architecture</h2>
           <p class="lede">Components, and the boundaries between them.</p>
         </div>
-        <aside class="callout"><b>Orchestration layer</b>LangGraph owns state and routing</aside>
       </header>
       <div class="arch">
         <div class="arch-user">User · CLI</div>
@@ -186,7 +157,7 @@
     </div>
   </section>
 
-  <!-- 7 · MCP ------------------------------------------------------------------------------- -->
+  <!-- 6 · MCP ------------------------------------------------------------------------------- -->
   <section class="screen" id="mcp" data-stage="executing" data-title="MCP: giving the model actions">
     <div class="slide">
       <header class="head">
@@ -195,7 +166,6 @@
           <h2>MCP: giving the model actions</h2>
           <p class="lede">A real Model Context Protocol client and server, talking over stdio.</p>
         </div>
-        <aside class="callout"><b>Runs locally</b>Separate processes on the same machine</aside>
       </header>
       <ol class="pipe">
         <li>the model chooses a tool</li>
@@ -214,7 +184,7 @@
     </div>
   </section>
 
-  <!-- 8 · RAG ------------------------------------------------------------------------------- -->
+  <!-- 7 · RAG ------------------------------------------------------------------------------- -->
   <section class="screen" id="rag" data-stage="executing" data-title="RAG: understanding the repository">
     <div class="slide">
       <header class="head">
@@ -223,7 +193,6 @@
           <h2>RAG: understanding the repository</h2>
           <p class="lede">Index the code once, then retrieve the most relevant chunks for each task.</p>
         </div>
-        <aside class="callout"><b>Hybrid retrieval</b>Keywords and meaning, fused by rank</aside>
       </header>
       <div class="lanes">
         <div class="lane">
@@ -247,7 +216,7 @@
     </div>
   </section>
 
-  <!-- 9 · Context and memory ---------------------------------------------------------------- -->
+  <!-- 8 · Context and memory ---------------------------------------------------------------- -->
   <section class="screen" id="memory" data-stage="executing" data-title="Context and memory">
     <div class="slide">
       <header class="head">
@@ -274,7 +243,7 @@
     </div>
   </section>
 
-  <!-- 10 · Guardrails ----------------------------------------------------------------------- -->
+  <!-- 9 · Guardrails ----------------------------------------------------------------------- -->
   <section class="screen" id="guardrails" data-stage="executing" data-title="Reliability and guardrails">
     <div class="slide">
       <header class="head">
@@ -282,7 +251,6 @@
           <p class="eyebrow">Safety</p>
           <h2>Reliability and guardrails</h2>
         </div>
-        <aside class="callout"><b>Caveat</b>Passing visible tests does not prove correctness</aside>
       </header>
       <div class="quad">
         <article class="card">
@@ -309,7 +277,7 @@
     </div>
   </section>
 
-  <!-- 11 · Observability -------------------------------------------------------------------- -->
+  <!-- 10 · Observability -------------------------------------------------------------------- -->
   <section class="screen" id="observability" data-stage="executing" data-title="Observability">
     <div class="slide">
       <header class="head">
@@ -333,7 +301,37 @@
     </div>
   </section>
 
-  <!-- 13 · Pass rate by category ------------------------------------------------------------ -->
+  <!-- 11 · Scores ---------------------------------------------------------------------------- -->
+  <section class="screen" id="scores" data-stage="tests" data-title="What it scored">
+    <div class="slide">
+      <header class="head">
+        <div>
+          <p class="eyebrow">In one breath</p>
+          <h2>What it scored</h2>
+          <p class="lede">Tasks with hidden tests the agent never sees. A pass means those tests went green.</p>
+        </div>
+      </header>
+      <div class="scores">
+        <div class="score">
+          <p class="score-value" data-stat="model0_score">12 / 12</p>
+          <p class="score-label"><span data-stat="model0_name">gpt-oss-120b</span></p>
+          <p class="score-note">in-house tasks</p>
+        </div>
+        <div class="score">
+          <p class="score-value" data-stat="model1_score">11 / 12</p>
+          <p class="score-label"><span data-stat="model1_name">K2-Think-v2</span></p>
+          <p class="score-note">the same twelve tasks</p>
+        </div>
+        <div class="score">
+          <p class="score-value" data-stat="humaneval_score">30 / 30</p>
+          <p class="score-label"><span data-stat="model1_name">K2-Think-v2</span></p>
+          <p class="score-note">a HumanEval slice</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12 · Pass rate by category ------------------------------------------------------------ -->
   <section class="screen" id="categories" data-stage="tests" data-title="pass@1 by task category">
     <div class="slide">
       <header class="head">
@@ -342,14 +340,13 @@
           <h2>pass@1 by task category</h2>
           <p class="lede">K2 Think missed one multi-file task; everything else passed its hidden tests.</p>
         </div>
-        <aside class="callout"><b>Small sample</b>A working loop, not proof of production reliability</aside>
       </header>
       <div class="chart tall" data-chart="categories"></div>
       <div class="legend" data-legend="categories"></div>
     </div>
   </section>
 
-  <!-- 14 · Retrieval ablation --------------------------------------------------------------- -->
+  <!-- 13 · Retrieval ablation --------------------------------------------------------------- -->
   <section class="screen" id="ablation" data-stage="tests" data-title="RAG ablation">
     <div class="slide">
       <header class="head">
@@ -358,7 +355,6 @@
           <h2>Retrieval made no measurable difference</h2>
           <p class="lede">Twelve tasks per retrieval mode, one model, one afternoon.</p>
         </div>
-        <aside class="callout"><b>One run per arm</b>The gaps sit under the noise floor</aside>
       </header>
       <div class="panels two-plus">
         <figure class="panel"><figcaption><b>pass@1 by retrieval mode</b>hidden-test pass rate</figcaption><div class="chart" data-chart="ablation-pass"></div></figure>
@@ -372,7 +368,7 @@
     </div>
   </section>
 
-  <!-- 16 · Tokens --------------------------------------------------------------------------- -->
+  <!-- 14 · Tokens --------------------------------------------------------------------------- -->
   <section class="screen" id="tokens" data-stage="tests" data-title="Where the tokens go">
     <div class="slide">
       <header class="head">
@@ -381,7 +377,6 @@
           <h2>Where the tokens go</h2>
           <p class="lede" data-caption="nodes">Tokens per run by graph node, averaged over 12 runs of K2-Think-v2.</p>
         </div>
-        <aside class="callout"><b>Lower is better</b>Input + output, every call in the node</aside>
       </header>
       <div class="chart short" data-chart="nodes"></div>
       <div class="legend" data-legend="nodes"></div>
@@ -390,10 +385,11 @@
         <div class="score"><p class="score-value" data-stat="act_calls">15.2</p><p class="score-note">Act calls per run, each resending the context</p></div>
         <div class="score"><p class="score-value" data-stat="plan_tokens">949</p><p class="score-note">tokens for the single Plan call</p></div>
       </div>
+      <p class="aside">Every model call on a free tier, every embedding computed locally.</p>
     </div>
   </section>
 
-  <!-- 12 · Model comparison ----------------------------------------------------------------- -->
+  <!-- 15 · Model comparison ----------------------------------------------------------------- -->
   <section class="screen" id="models" data-stage="tests" data-title="Model comparison">
     <div class="slide">
       <header class="head">
@@ -402,7 +398,6 @@
           <h2>Model comparison</h2>
           <p class="lede">Same suite, graph and retrieval. Only the model changes.</p>
         </div>
-        <aside class="callout"><b>Left: higher is better</b>Middle and right: lower is better</aside>
       </header>
       <div class="panels three">
         <figure class="panel"><figcaption><b>pass@1</b>hidden-test pass rate</figcaption><div class="chart" data-chart="model-pass"></div></figure>
