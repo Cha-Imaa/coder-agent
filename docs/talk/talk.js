@@ -6,9 +6,10 @@
  *
  * Sections:
  *   1. helpers          small SVG and number utilities
- *   2. navigation       dot rail, counter, keyboard, "is-in" reveal
- *   3. loop diagrams    the outer and inner loop, drawn around a ring
- *   4. charts           columns, lines, horizontal stacked bars, and the tooltip
+ *   2. navigation       dot rail, stage line, counter, progress bar, keyboard (F for full
+ *                       screen), "is-in" reveal
+ *   3. loop diagrams    the outer and inner loop, drawn around a ring, walked one stage per key
+ *   4. charts           columns, horizontal stacked bars, and the tooltip
  *   5. data             fetch data.json, fill the quoted numbers, draw every chart
  */
 (function () {
@@ -103,6 +104,8 @@
   var screens = Array.prototype.slice.call(document.querySelectorAll(".screen"));
   var rail = document.querySelector(".rail");
   var counterNow = document.querySelector(".counter-now");
+  var stageLinks = Array.prototype.slice.call(document.querySelectorAll(".stages a"));
+  var progressFill = document.querySelector(".progress span");
   var current = 0;
 
   function pad(n) {
@@ -123,15 +126,36 @@
     });
   }
 
-  /** Mark screen `index` as the current one in the rail, the counter and the address bar. */
+  /**
+   * Mark screen `index` as the current one in the rail, the counter, the progress bar and the
+   * address bar.
+   */
   function setCurrent(index) {
+    // A loop left half-walked would look broken when the reader comes back to it, so the screen
+    // being left shows its whole diagram again.
+    if (index !== current) resetLoop(screens[current]);
     current = index;
     counterNow.textContent = pad(index + 1);
+    progressFill.style.transform = "scaleX(" + (index + 1) / screens.length + ")";
     var links = rail.querySelectorAll("a");
     for (var i = 0; i < links.length; i++) links[i].setAttribute("aria-current", i === index ? "true" : "false");
+    markStage(screens[index].getAttribute("data-stage"));
     // replaceState, not location.hash: a shareable link to this screen without a history entry
     // per scroll, and without the jump that assigning the hash would cause.
     if (window.history && history.replaceState) history.replaceState(null, "", "#" + screens[index].id);
+  }
+
+  /**
+   * Light up the chapter `stage` in the stage line, the way the CLI moves from one stage to the
+   * next: chapters already passed are marked done, the current one is highlighted, and the ones
+   * still ahead stay faint.
+   */
+  function markStage(stage) {
+    var now = stageLinks.map(function (link) { return link.getAttribute("data-stage"); }).indexOf(stage);
+    stageLinks.forEach(function (link, i) {
+      link.setAttribute("aria-current", i === now ? "step" : "false");
+      link.classList.toggle("is-done", i < now);
+    });
   }
 
   function goTo(index) {
@@ -143,22 +167,46 @@
   }
 
   /**
-   * Arrow keys, Page Up/Down, Space and Home/End move one whole screen. Native arrow scrolling
-   * moves forty pixels, which mandatory snapping would just pull back, so these are taken over.
-   * Keys typed into a control (the player's pause button) are left alone.
+   * One step forward (1) or back (-1). On a loop screen the step lights the loop's next stage
+   * first, and only turns the page once the walk is over, so a presenter tells the loop one
+   * stage per key press.
+   */
+  function step(direction) {
+    if (!walkLoop(direction)) goTo(current + direction);
+  }
+
+  /** Enter or leave full screen, the presenter's F key. Esc also leaves, as in any browser. */
+  function toggleFullScreen() {
+    if (!document.fullscreenEnabled) return;
+    // Both return promises that reject when the browser says no (for example when the key press
+    // did not come from a person); there is nothing to do then, so the refusal is swallowed
+    // rather than logged as an uncaught error.
+    var request = document.fullscreenElement
+      ? document.exitFullscreen()
+      : document.documentElement.requestFullscreen();
+    if (request && request.catch) request.catch(function () {});
+  }
+
+  /**
+   * Arrow keys, Page Up/Down, Space and Home/End move one whole screen (or one loop stage).
+   * Native arrow scrolling moves forty pixels, which mandatory snapping would just pull back, so
+   * these are taken over. Page Up/Down matter most: they are what a presentation clicker sends.
+   * Space on a control (the player's pause button) is left to the control.
    */
   function onKey(event) {
     if (event.altKey || event.ctrlKey || event.metaKey) return;
     var inControl = event.target.closest && event.target.closest("button, a, input, textarea, select");
     var next = { ArrowDown: 1, ArrowRight: 1, PageDown: 1, ArrowUp: -1, ArrowLeft: -1, PageUp: -1 };
     if (event.key in next) {
-      goTo(current + next[event.key]);
+      step(next[event.key]);
     } else if (event.key === " " && !inControl) {
-      goTo(current + (event.shiftKey ? -1 : 1));
+      step(event.shiftKey ? -1 : 1);
     } else if (event.key === "Home") {
       goTo(0);
     } else if (event.key === "End") {
       goTo(screens.length - 1);
+    } else if (event.key === "f" || event.key === "F") {
+      toggleFullScreen();
     } else {
       return;
     }
@@ -281,18 +329,35 @@
     text(parent, x, y + 4.5, label, { class: "loop-edge", fill: color, "text-anchor": "middle" });
   }
 
-  /** Draw one loop into `host`: ring, arcs with arrows and labels, nodes, centre text, exit. */
+  /**
+   * A group that lights up during the step-by-step walk. `steps` lists the walk steps it belongs
+   * to: a node is lit at its own step, and the exit's source node again at the exit step.
+   */
+  function stepGroup(parent, steps) {
+    return el("g", { class: "loop-step", "data-steps": steps.join(" ") }, parent);
+  }
+
+  /**
+   * Draw one loop into `host`: ring, arcs with arrows and labels, nodes, centre text, exit.
+   * The walk has one step per node (the node and the arrow leaving it), plus one for the exit
+   * if the loop has one; the step count is kept on the host for `walkLoop`.
+   */
   function drawLoop(host, spec) {
     var svg = el("svg", { "aria-hidden": "true" });
     var count = spec.nodes.length;
     var angles = spec.nodes.map(function (_, i) { return -90 + (360 * i) / count; });
     var centers = angles.map(onRing);
+    var exitStep = spec.exit ? count : -1;
+    host.loopSteps = count + (spec.exit ? 1 : 0);
+    host.walkStep = -1;   // -1: no walk, the whole diagram shows
 
     // The pale track the arrows run along.
     el("circle", { cx: 0, cy: 0, r: RING, fill: "none", stroke: spec.ring, "stroke-width": 30 }, svg);
 
-    // Arcs between consecutive nodes, each starting and ending just clear of the boxes.
+    // Arcs between consecutive nodes, each starting and ending just clear of the boxes. An arc
+    // lights with the node it leaves, so each step says "this happens, then it goes there".
     spec.edges.forEach(function (edge, i) {
+      var group = stepGroup(svg, [i]);
       var next = (i + 1) % count;
       var endAngle = angles[next] + (next === 0 ? 360 : 0);
       var start = leaveBox(angles[i], centers[i], 1, 10);
@@ -304,40 +369,43 @@
           "A" + RING + "," + RING + " 0 0 1 " + b.x.toFixed(1) + "," + b.y.toFixed(1),
         fill: "none", stroke: edge.color, "stroke-width": 2.6, "stroke-linecap": "round",
         pathLength: 1, class: "loop-arc",
-      }, svg);
-      arrowHead(svg, end, edge.color, "loop-head");
+      }, group);
+      arrowHead(group, end, edge.color, "loop-head");
       var mid = onRing((start + end) / 2);
-      pill(svg, mid.x, mid.y, edge.label, edge.color);
+      pill(group, mid.x, mid.y, edge.label, edge.color);
     });
 
     // Nodes: a box, a numbered badge on its corner, a title, a line of description, the node's
     // name in the code.
     spec.nodes.forEach(function (node, i) {
+      var group = stepGroup(svg, spec.exit && spec.exit.from === i ? [i, exitStep] : [i]);
       var c = centers[i];
       var x = c.x - BOX.w / 2;
       var y = c.y - BOX.h / 2;
-      el("rect", { x: x, y: y, width: BOX.w, height: BOX.h, rx: 14, fill: node.fill, stroke: node.color, "stroke-width": 2.2 }, svg);
-      el("circle", { cx: x + 8, cy: y + 4, r: 15, fill: node.color, stroke: COLOR.card, "stroke-width": 3 }, svg);
-      text(svg, x + 8, y + 9, String(i + 1), { class: "loop-badge", "text-anchor": "middle" });
-      text(svg, c.x, c.y - 12, node.title, { class: "loop-title", "text-anchor": "middle" });
-      text(svg, c.x, c.y + 10, node.sub, { class: "loop-sub", "text-anchor": "middle" });
-      text(svg, c.x, c.y + 32, node.code, { class: "loop-code", "text-anchor": "middle" });
+      el("rect", { x: x, y: y, width: BOX.w, height: BOX.h, rx: 14, fill: node.fill, stroke: node.color, "stroke-width": 2.2 }, group);
+      el("circle", { cx: x + 8, cy: y + 4, r: 15, fill: node.color, stroke: COLOR.card, "stroke-width": 3 }, group);
+      text(group, x + 8, y + 9, String(i + 1), { class: "loop-badge", "text-anchor": "middle" });
+      text(group, c.x, c.y - 12, node.title, { class: "loop-title", "text-anchor": "middle" });
+      text(group, c.x, c.y + 10, node.sub, { class: "loop-sub", "text-anchor": "middle" });
+      text(group, c.x, c.y + 32, node.code, { class: "loop-code", "text-anchor": "middle" });
     });
 
     text(svg, 0, 4, spec.center[0], { class: "loop-center", "text-anchor": "middle" });
     text(svg, 0, 32, spec.center[1], { class: "loop-center-sub", "text-anchor": "middle" });
 
-    // The way out of the loop: an arrow from the right side of one node to a "Done" pill.
+    // The way out of the loop: an arrow from the right side of one node to a "Done" pill. It is
+    // the walk's last step, lit together with the node it leaves from.
     var right = RING + BOX.w / 2;
     if (spec.exit) {
+      var exit = stepGroup(svg, [exitStep]);
       var from = centers[spec.exit.from];
       var x0 = from.x + BOX.w / 2 + 8;
       var x1 = x0 + 74;
-      el("path", { d: "M" + x0 + "," + from.y + "H" + (x1 - 12), stroke: COLOR.navy, "stroke-width": 2.6, fill: "none" }, svg);
-      el("polygon", { points: x1 + "," + from.y + " " + (x1 - 13) + "," + (from.y - 7) + " " + (x1 - 13) + "," + (from.y + 7), fill: COLOR.navy }, svg);
-      text(svg, (x0 + x1) / 2, from.y + 26, spec.exit.label, { class: "loop-edge", fill: COLOR.navy, "text-anchor": "middle" });
-      el("rect", { x: x1 + 6, y: from.y - 22, width: 86, height: 44, rx: 22, fill: COLOR.chip, stroke: COLOR.navy, "stroke-width": 2.2 }, svg);
-      text(svg, x1 + 49, from.y + 6, spec.exit.text, { class: "loop-title", "text-anchor": "middle" });
+      el("path", { d: "M" + x0 + "," + from.y + "H" + (x1 - 12), stroke: COLOR.navy, "stroke-width": 2.6, fill: "none" }, exit);
+      el("polygon", { points: x1 + "," + from.y + " " + (x1 - 13) + "," + (from.y - 7) + " " + (x1 - 13) + "," + (from.y + 7), fill: COLOR.navy }, exit);
+      text(exit, (x0 + x1) / 2, from.y + 26, spec.exit.label, { class: "loop-edge", fill: COLOR.navy, "text-anchor": "middle" });
+      el("rect", { x: x1 + 6, y: from.y - 22, width: 86, height: 44, rx: 22, fill: COLOR.chip, stroke: COLOR.navy, "stroke-width": 2.2 }, exit);
+      text(exit, x1 + 49, from.y + 6, spec.exit.text, { class: "loop-title", "text-anchor": "middle" });
       right = Math.max(right, x1 + 96);
     }
 
@@ -352,6 +420,38 @@
     var width = Math.max(right + 12, -left) - left;
     svg.setAttribute("viewBox", [left, top, width, bottom - top].join(" "));
     host.appendChild(svg);
+  }
+
+  /**
+   * Light walk step `stepIndex` of the loop in `host`: its groups at full strength, the rest
+   * dimmed. -1 ends the walk and shows the whole diagram again.
+   */
+  function lightStep(host, stepIndex) {
+    host.walkStep = stepIndex;
+    host.classList.toggle("is-walking", stepIndex >= 0);
+    Array.prototype.forEach.call(host.querySelectorAll(".loop-step"), function (group) {
+      var steps = group.getAttribute("data-steps").split(" ");
+      group.classList.toggle("is-lit", steps.indexOf(String(stepIndex)) >= 0);
+    });
+  }
+
+  /**
+   * Move the current screen's loop walk one step in `direction`. Returns false when there is no
+   * loop on the screen or no step left that way, which tells the caller to turn the page.
+   */
+  function walkLoop(direction) {
+    var host = screens[current].querySelector("[data-loop]");
+    if (!host || host.loopSteps === undefined) return false;
+    var target = host.walkStep + direction;
+    if (target < -1 || target >= host.loopSteps) return false;
+    lightStep(host, target);
+    return true;
+  }
+
+  /** Show the whole diagram again on `screen`, if it has a loop that is mid-walk. */
+  function resetLoop(screen) {
+    var host = screen && screen.querySelector("[data-loop]");
+    if (host && host.walkStep >= 0) lightStep(host, -1);
   }
 
   /* ---------------------------------------------------------------------------------------- */
@@ -443,61 +543,6 @@
         hitArea(c.svg, x - gap / 2, m.top - 20, barW + gap, plotH + 20, bar.tip);
       });
       text(c.svg, center, c.height - 10, group.label, { class: "axis-label", "text-anchor": "middle" });
-    });
-  }
-
-  /**
-   * Lines over a shared x axis of whole steps (iterations 1..k). `series` is a list of
-   * {name, color, values, dashed}; values are shares between 0 and 1. Series that land on the
-   * same final value share one end label, so overlapping lines are not labelled twice.
-   */
-  function drawLines(host, xs, series) {
-    var c = canvas(host);
-    var m = { top: 20, right: 64, bottom: 52, left: 52 };
-    var plotW = c.width - m.left - m.right;
-    var plotH = c.height - m.top - m.bottom;
-    var ticks = [0, 0.2, 0.4, 0.6, 0.8, 1];
-    function scaleX(i) { return m.left + 24 + (i / (xs.length - 1)) * (plotW - 48); }
-    function scaleY(v) { return m.top + plotH - v * plotH; }
-    valueAxis(c.svg, ticks, scaleY, m.left, c.width - m.right, percent);
-    xs.forEach(function (x, i) {
-      text(c.svg, scaleX(i), c.height - 30, String(x), { class: "tick", "text-anchor": "middle" });
-    });
-    text(c.svg, m.left + plotW / 2, c.height - 6, "iterations allowed", { class: "axis-label", "text-anchor": "middle" });
-
-    var labelled = {};
-    series.forEach(function (s, si) {
-      var points = s.values.map(function (v, i) { return scaleX(i).toFixed(1) + "," + scaleY(v).toFixed(1); });
-      var attrs = {
-        points: points.join(" "), fill: "none", stroke: s.color, "stroke-width": 2.5,
-        "stroke-linecap": "round", "stroke-linejoin": "round",
-      };
-      // A dashed line keeps its dashes; a solid one gets the draw-in animation, which works by
-      // animating a single dash the length of the line (hence pathLength 1).
-      if (s.dashed) {
-        attrs["stroke-dasharray"] = "10 8";
-      } else {
-        attrs.pathLength = 1;
-        attrs["class"] = "line";
-      }
-      el("polyline", attrs, c.svg);
-      s.values.forEach(function (v, i) {
-        // The surface ring keeps a dot readable where it sits on another series' line.
-        el("circle", { cx: scaleX(i), cy: scaleY(v), r: 5, fill: s.color, stroke: COLOR.card, "stroke-width": 2, class: "dot" }, c.svg);
-      });
-      var last = s.values[s.values.length - 1];
-      var key = percent(last);
-      if (!labelled[key]) {
-        labelled[key] = true;
-        text(c.svg, scaleX(xs.length - 1) + 14, scaleY(last) + 4, key, { class: "value" });
-      }
-      // One hover band per x step, listing every series at that step.
-      if (si === series.length - 1) {
-        xs.forEach(function (x, i) {
-          var lines = series.map(function (t) { return t.name + ": " + percent(t.values[i]); });
-          hitArea(c.svg, scaleX(i) - 30, m.top, 60, plotH, ["Within " + x + " iteration" + (x > 1 ? "s" : ""), lines.join(" · ")]);
-        });
-      }
     });
   }
 
@@ -620,16 +665,6 @@
         }] };
       }), ticks, kilo);
     },
-    iterations: function (host, data) {
-      var k = data.iterations[0].curve.length;
-      var xs = [];
-      for (var i = 1; i <= k; i++) xs.push(i);
-      // The last series is drawn dashed: in these results it lies exactly on top of the first,
-      // and the dashes let the line underneath show through.
-      drawLines(host, xs, data.iterations.map(function (s, si) {
-        return { name: s.name, color: SERIES[si], values: s.curve, dashed: si > 0 && si === data.iterations.length - 1 };
-      }));
-    },
     nodes: function (host, data) {
       drawStacked(host, data.nodes.nodes.map(function (n) {
         return {
@@ -646,7 +681,6 @@
   function drawLegends(data) {
     var legends = {
       categories: data.categories.series.map(function (s, i) { return { name: s.name, color: SERIES[i] }; }),
-      iterations: data.iterations.map(function (s, i) { return { name: s.name, color: SERIES[i] }; }),
       nodes: [{ name: "input tokens", color: SERIES[0] }, { name: "output tokens", color: SERIES[1] }],
     };
     Object.keys(legends).forEach(function (key) {
@@ -713,10 +747,15 @@
   /* ---------------------------------------------------------------------------------------- */
 
   // A reload would otherwise restore the old pixel offset, which can land between two screens;
-  // instead, open on the screen the address names, or the first one.
+  // instead, open on the screen the address names, or the first one. The jump is "instant":
+  // left to the stylesheet's smooth scrolling, it would glide past the first screens, which
+  // would briefly count as current, so an early key press would start from screen 1.
   if ("scrollRestoration" in history) history.scrollRestoration = "manual";
   var start = document.getElementById(location.hash.slice(1));
-  if (start && start.classList.contains("screen")) start.scrollIntoView();
+  if (start && start.classList.contains("screen")) {
+    current = screens.indexOf(start);
+    start.scrollIntoView({ behavior: "instant" });
+  }
 
   buildRail();
   watchScreens();

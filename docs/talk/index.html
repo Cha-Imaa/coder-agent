@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Coder Agent · the talk</title>
+  <title>Coder Agent</title>
   <meta name="description" content="A walkthrough of coder-agent, a terminal coding agent built on LangGraph, MCP and local RAG, with charts drawn from its real eval results.">
   <!-- The recording's window chrome and player come from the docs site itself, so the hero is
        the same cast the landing page and the README show. -->
@@ -15,13 +15,25 @@
 <!-- Fixed chrome: the way back to the docs site, the screen counter, and the dot rail (built by
      talk.js from the sections below, so adding a screen needs no change here). -->
 <a class="brand" href="../">coder-agent</a>
+<!-- "The Run": the talk's chapters are the stages the CLI prints during a run. Each section names
+     its chapter in `data-stage`; talk.js highlights the one on screen. The marks are hidden from
+     screen readers, which would otherwise read out "black right-pointing triangle". -->
+<nav class="stages" aria-label="Chapters">
+  <a href="#start" data-stage="context"><span aria-hidden="true">▸</span> Context</a>
+  <a href="#outer-loop" data-stage="plan"><span aria-hidden="true">▸</span> Plan</a>
+  <a href="#mcp" data-stage="executing"><span aria-hidden="true">▸</span> Executing</a>
+  <a href="#categories" data-stage="tests"><span aria-hidden="true">▸</span> Tests</a>
+  <a href="#end" data-stage="passed"><span aria-hidden="true">✓</span> passed</a>
+</nav>
 <nav class="rail" aria-label="Screens"></nav>
-<p class="counter" aria-hidden="true"><span class="counter-now">01</span> / <span class="counter-all">18</span></p>
+<!-- How far through the talk we are; talk.js fills it. -->
+<div class="progress" aria-hidden="true"><span></span></div>
+<p class="counter" aria-hidden="true"><span class="counter-now">01</span> / <span class="counter-all">16</span></p>
 
 <main>
 
   <!-- 1 · Hero ------------------------------------------------------------------------------ -->
-  <section class="screen hero" id="start" data-title="Coder Agent">
+  <section class="screen hero" id="start" data-stage="context" data-title="Coder Agent">
     <div class="slide">
       <header class="hero-head">
         <p class="eyebrow">Technical project walkthrough</p>
@@ -30,12 +42,12 @@
           the tests until they pass.</p>
       </header>
       <div class="cast-player" data-src="../figures/demo.frames.json"></div>
-      <p class="hint">A real run, replayed · scroll or press <kbd>↓</kbd></p>
+      <p class="hint">A real run, replayed · scroll or press <kbd>↓</kbd> · <kbd>F</kbd> for full screen</p>
     </div>
   </section>
 
   <!-- 2 · Scores ---------------------------------------------------------------------------- -->
-  <section class="screen" id="scores" data-title="What it scored">
+  <section class="screen" id="scores" data-stage="context" data-title="What it scored">
     <div class="slide">
       <header class="head">
         <div>
@@ -66,7 +78,7 @@
   </section>
 
   <!-- 3 · What I built ---------------------------------------------------------------------- -->
-  <section class="screen" id="built" data-title="What I built">
+  <section class="screen" id="built" data-stage="context" data-title="What I built">
     <div class="slide">
       <header class="head">
         <div>
@@ -94,7 +106,7 @@
   </section>
 
   <!-- 4 · Outer loop ------------------------------------------------------------------------ -->
-  <section class="screen" id="outer-loop" data-title="The outer loop">
+  <section class="screen" id="outer-loop" data-stage="plan" data-title="The outer loop">
     <div class="slide">
       <header class="head">
         <div>
@@ -121,7 +133,7 @@
   </section>
 
   <!-- 5 · Inner loop ------------------------------------------------------------------------ -->
-  <section class="screen" id="inner-loop" data-title="The inner loop">
+  <section class="screen" id="inner-loop" data-stage="plan" data-title="The inner loop">
     <div class="slide">
       <header class="head">
         <div>
@@ -147,7 +159,7 @@
   </section>
 
   <!-- 6 · Architecture ---------------------------------------------------------------------- -->
-  <section class="screen" id="architecture" data-title="System architecture">
+  <section class="screen" id="architecture" data-stage="plan" data-title="System architecture">
     <div class="slide">
       <header class="head">
         <div>
@@ -175,7 +187,7 @@
   </section>
 
   <!-- 7 · MCP ------------------------------------------------------------------------------- -->
-  <section class="screen" id="mcp" data-title="MCP: giving the model actions">
+  <section class="screen" id="mcp" data-stage="executing" data-title="MCP: giving the model actions">
     <div class="slide">
       <header class="head">
         <div>
@@ -203,7 +215,7 @@
   </section>
 
   <!-- 8 · RAG ------------------------------------------------------------------------------- -->
-  <section class="screen" id="rag" data-title="RAG: understanding the repository">
+  <section class="screen" id="rag" data-stage="executing" data-title="RAG: understanding the repository">
     <div class="slide">
       <header class="head">
         <div>
@@ -236,72 +248,69 @@
   </section>
 
   <!-- 9 · Context and memory ---------------------------------------------------------------- -->
-  <section class="screen" id="memory" data-title="Context and memory">
+  <section class="screen" id="memory" data-stage="executing" data-title="Context and memory">
     <div class="slide">
       <header class="head">
         <div>
           <p class="eyebrow">State</p>
-          <h2>Context and persistent memory</h2>
-          <p class="lede">What the model sees on each call, and what a run can resume from.</p>
+          <h2>Context and memory</h2>
+          <p class="lede">What the model sees, and what a run can resume from.</p>
         </div>
-        <aside class="callout"><b>Token budget</b>Summarise once history passes 60k tokens</aside>
       </header>
       <div class="trio">
         <article class="card">
-          <h3>Conversation history</h3>
-          <p>Requests, tool calls and tool results build up in LangGraph state. The Act model sees the managed history on every call.</p>
+          <h3>History</h3>
+          <p>Requests, tool calls and results, kept in graph state.</p>
         </article>
         <article class="card">
-          <h3>Context management</h3>
-          <p>The six most recent tool outputs stay intact; older long ones are trimmed, and past 60k tokens the history is summarised.</p>
+          <h3>Trimming</h3>
+          <p>Recent tool output stays whole; past 60k tokens, the rest is summarised.</p>
         </article>
         <article class="card">
-          <h3>SQLite checkpoints</h3>
-          <p>Graph state is stored by thread, so a run can pause, resume, and span several turns.</p>
+          <h3>Checkpoints</h3>
+          <p>State saved in SQLite, so a run can pause and resume.</p>
         </article>
       </div>
-      <p class="pull">Context management controls what the model sees; checkpoints control what the workflow can resume.</p>
     </div>
   </section>
 
   <!-- 10 · Guardrails ----------------------------------------------------------------------- -->
-  <section class="screen" id="guardrails" data-title="Reliability and guardrails">
+  <section class="screen" id="guardrails" data-stage="executing" data-title="Reliability and guardrails">
     <div class="slide">
       <header class="head">
         <div>
           <p class="eyebrow">Safety</p>
           <h2>Reliability and guardrails</h2>
-          <p class="lede">Safe, bounded execution at every step.</p>
         </div>
         <aside class="callout"><b>Caveat</b>Passing visible tests does not prove correctness</aside>
       </header>
       <div class="quad">
         <article class="card">
           <h3>Verification</h3>
-          <p>A dedicated test stage; failures feed the repair loop.</p>
+          <p>Failing tests feed the repair loop.</p>
           <p class="meta">4 iterations · 40 Act steps</p>
         </article>
         <article class="card">
           <h3>Security</h3>
-          <p>A path jail around the repository, a command policy, and optional Docker.</p>
-          <p class="meta">Docker: 1 GB · 1 CPU · network off</p>
+          <p>Path jail, command policy, optional Docker.</p>
+          <p class="meta">1 GB · 1 CPU · network off</p>
         </article>
         <article class="card">
           <h3>Human control</h3>
-          <p>Approval before <code>edit_file</code>, <code>write_file</code> and <code>run_command</code>.</p>
+          <p>Approval before any file change or command.</p>
           <p class="meta">pause → checkpoint → resume</p>
         </article>
         <article class="card">
           <h3>Model resilience</h3>
-          <p>Provider retries with backoff, and a configured fallback model.</p>
-          <p class="meta">primary: gpt-oss · fallback: Gemini</p>
+          <p>Retries with backoff, then a fallback model.</p>
+          <p class="meta">gpt-oss → Gemini</p>
         </article>
       </div>
     </div>
   </section>
 
   <!-- 11 · Observability -------------------------------------------------------------------- -->
-  <section class="screen" id="observability" data-title="Observability">
+  <section class="screen" id="observability" data-stage="executing" data-title="Observability">
     <div class="slide">
       <header class="head">
         <div>
@@ -309,49 +318,23 @@
           <h2>Observability</h2>
           <p class="lede">What happened in each run, and what it cost.</p>
         </div>
-        <aside class="callout"><b>Two tables</b>runs + node_usage in ledger.sqlite</aside>
       </header>
       <div class="duo">
         <article class="card">
           <h3>LangSmith tracing</h3>
-          <p>Graph and model traces show which nodes and tools ran, in what order, and where a failure happened.</p>
+          <p>Which nodes and tools ran, in what order, and where it failed.</p>
         </article>
         <article class="card">
-          <h3>Local SQLite ledger</h3>
-          <p>Run status, wall time, tokens and calls, totalled per graph node. Free, offline, and queryable.</p>
+          <h3>Local ledger</h3>
+          <p>Status, time, tokens and calls per graph node. Free and offline.</p>
+          <p class="meta">ledger.sqlite · <code>coder stats</code></p>
         </article>
       </div>
-      <ol class="pipe">
-        <li>execution</li>
-        <li>usage collection</li>
-        <li>ledger.sqlite</li>
-        <li><code>coder stats</code> / SQL</li>
-      </ol>
-    </div>
-  </section>
-
-  <!-- 12 · Model comparison ----------------------------------------------------------------- -->
-  <section class="screen" id="models" data-title="Model comparison">
-    <div class="slide">
-      <header class="head">
-        <div>
-          <p class="eyebrow">Results · the same twelve tasks</p>
-          <h2>Model comparison</h2>
-          <p class="lede">Same suite, graph and retrieval. Only the model changes.</p>
-        </div>
-        <aside class="callout"><b>Left: higher is better</b>Middle and right: lower is better</aside>
-      </header>
-      <div class="panels three">
-        <figure class="panel"><figcaption><b>pass@1</b>hidden-test pass rate</figcaption><div class="chart" data-chart="model-pass"></div></figure>
-        <figure class="panel"><figcaption><b>tokens per task</b>mean, all model calls</figcaption><div class="chart" data-chart="model-tokens"></div></figure>
-        <figure class="panel"><figcaption><b>seconds per task</b>mean wall time</figcaption><div class="chart" data-chart="model-seconds"></div></figure>
-      </div>
-      <p class="takeaway">K2 Think is faster per task but spends more than twice the tokens: more tool-calling steps, each one resending the conversation.</p>
     </div>
   </section>
 
   <!-- 13 · Pass rate by category ------------------------------------------------------------ -->
-  <section class="screen" id="categories" data-title="pass@1 by task category">
+  <section class="screen" id="categories" data-stage="tests" data-title="pass@1 by task category">
     <div class="slide">
       <header class="head">
         <div>
@@ -367,7 +350,7 @@
   </section>
 
   <!-- 14 · Retrieval ablation --------------------------------------------------------------- -->
-  <section class="screen" id="ablation" data-title="RAG ablation">
+  <section class="screen" id="ablation" data-stage="tests" data-title="RAG ablation">
     <div class="slide">
       <header class="head">
         <div>
@@ -389,25 +372,8 @@
     </div>
   </section>
 
-  <!-- 15 · Iterations ----------------------------------------------------------------------- -->
-  <section class="screen" id="iterations" data-title="Tasks solved within k iterations">
-    <div class="slide">
-      <header class="head">
-        <div>
-          <p class="eyebrow">Results · the repair loop</p>
-          <h2>One try was enough</h2>
-          <p class="lede">Share of tasks solved within k iterations. Cumulative, so the last point is pass@1.</p>
-        </div>
-        <aside class="callout"><b>Flat means</b>more cycles did not help on these tasks</aside>
-      </header>
-      <div class="chart tall" data-chart="iterations"></div>
-      <div class="legend" data-legend="iterations"></div>
-      <p class="takeaway">Every solved task passed on its first test run. The repair loop was there, with a ceiling of four; these tasks never needed it.</p>
-    </div>
-  </section>
-
   <!-- 16 · Tokens --------------------------------------------------------------------------- -->
-  <section class="screen" id="tokens" data-title="Where the tokens go">
+  <section class="screen" id="tokens" data-stage="tests" data-title="Where the tokens go">
     <div class="slide">
       <header class="head">
         <div>
@@ -427,40 +393,34 @@
     </div>
   </section>
 
-  <!-- 17 · Lessons -------------------------------------------------------------------------- -->
-  <section class="screen" id="lessons" data-title="Lessons and next steps">
+  <!-- 12 · Model comparison ----------------------------------------------------------------- -->
+  <section class="screen" id="models" data-stage="tests" data-title="Model comparison">
     <div class="slide">
       <header class="head">
         <div>
-          <p class="eyebrow">Looking back</p>
-          <h2>Lessons learned, and next steps</h2>
-          <p class="lede">A working, measurable agent loop, and where to take it next.</p>
+          <p class="eyebrow">Results · the same twelve tasks</p>
+          <h2>Model comparison</h2>
+          <p class="lede">Same suite, graph and retrieval. Only the model changes.</p>
         </div>
+        <aside class="callout"><b>Left: higher is better</b>Middle and right: lower is better</aside>
       </header>
-      <ol class="lessons">
-        <li><h3>Retrieval is situational</h3><p>On small repositories, exploring with tools can be enough.</p><p class="next">Adaptive RAG by task and repository size</p></li>
-        <li><h3>Tool loops drive cost</h3><p><span data-stat="act_share">~99%</span> of measured tokens were spent in Act.</p><p class="next">Better context selection, reusable summaries</p></li>
-        <li><h3>Tests are necessary, not sufficient</h3><p>Visible tests can pass while hidden requirements fail.</p><p class="next">Stronger regression tests and verification</p></li>
-        <li><h3>Production needs stronger boundaries</h3><p>Local-first is not multi-tenant infrastructure.</p><p class="next">Isolated workspaces, queues, shared persistence</p></li>
-      </ol>
+      <div class="panels three">
+        <figure class="panel"><figcaption><b>pass@1</b>hidden-test pass rate</figcaption><div class="chart" data-chart="model-pass"></div></figure>
+        <figure class="panel"><figcaption><b>tokens per task</b>mean, all model calls</figcaption><div class="chart" data-chart="model-tokens"></div></figure>
+        <figure class="panel"><figcaption><b>seconds per task</b>mean wall time</figcaption><div class="chart" data-chart="model-seconds"></div></figure>
+      </div>
+      <p class="takeaway">K2 Think is faster per task but spends more than twice the tokens: more tool-calling steps, each one resending the conversation.</p>
     </div>
   </section>
 
-  <!-- 18 · End ------------------------------------------------------------------------------ -->
-  <section class="screen end" id="end" data-title="Try it">
+  <!-- The talk closes like a run of the agent: the final stage line, then the thanks. -->
+  <section class="screen end" id="end" data-stage="passed" data-title="Thank you">
     <div class="slide">
-      <header class="hero-head">
-        <p class="eyebrow">Thank you</p>
-        <h2>Try it on your own repository</h2>
-        <p class="lede">Free tiers and local embeddings only. The commit history is the step-by-step build.</p>
-      </header>
-      <p class="command"><code>uv run coder run path/to/repo "make the failing tests pass"</code></p>
-      <ul class="links">
-        <li><a href="https://github.com/Cha-Imaa/coder-agent">Source on GitHub</a></li>
-        <li><a href="../try-it/">Walkthrough</a></li>
-        <li><a href="../results/">Full results</a></li>
-        <li><a href="../system_design_coding_agent/">System design</a></li>
-      </ul>
+      <div class="finale">
+        <p class="finale-run">✓ passed <span>· run complete</span></p>
+        <h2 class="finale-title">Thank you</h2>
+        <p class="lede">Questions are welcome.</p>
+      </div>
     </div>
   </section>
 
