@@ -98,7 +98,9 @@
     var style = root.getComputedStyle(view.screen);
     var room = view.screen.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
     if (room <= 0) return;
-    var size = Math.min(data.fontSize || 15, Math.max(9, room / data.cols / unit()));
+    // 2% slack: an exact fit is undone by the browser's sub-pixel rounding of each glyph, and
+    // the screen then scrolls sideways by a pixel or three for nothing.
+    var size = Math.min(data.fontSize || 15, Math.max(9, (room * 0.98) / data.cols / unit()));
     view.win.style.setProperty("--cast-font", size.toFixed(2) + "px");
   }
 

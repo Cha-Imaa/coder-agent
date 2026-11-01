@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Coder Agent · the talk</title>
+  <meta name="description" content="A walkthrough of coder-agent, a terminal coding agent built on LangGraph, MCP and local RAG, with charts drawn from its real eval results.">
+  <!-- The recording's window chrome and player come from the docs site itself, so the hero is
+       the same cast the landing page and the README show. -->
+  <link rel="stylesheet" href="../assets/cast-player.css">
+  <link rel="stylesheet" href="talk.css">
+</head>
+<body>
+
+<!-- Fixed chrome: the way back to the docs site, the screen counter, and the dot rail (built by
+     talk.js from the sections below, so adding a screen needs no change here). -->
+<a class="brand" href="../">coder-agent</a>
+<nav class="rail" aria-label="Screens"></nav>
+<p class="counter" aria-hidden="true"><span class="counter-now">01</span> / <span class="counter-all">18</span></p>
+
+<main>
+
+  <!-- 1 · Hero ------------------------------------------------------------------------------ -->
+  <section class="screen hero" id="start" data-title="Coder Agent">
+    <div class="slide">
+      <header class="hero-head">
+        <p class="eyebrow">Technical project walkthrough</p>
+        <h1>Coder Agent</h1>
+        <p class="lede">An autonomous coding assistant: it reads a repository, edits it, and runs
+          the tests until they pass.</p>
+      </header>
+      <div class="cast-player" data-src="../figures/demo.frames.json"></div>
+      <p class="hint">A real run, replayed · scroll or press <kbd>↓</kbd></p>
+    </div>
+  </section>
+
+  <!-- 2 · Scores ---------------------------------------------------------------------------- -->
+  <section class="screen" id="scores" data-title="What it scored">
+    <div class="slide">
+      <header class="head">
+        <div>
+          <p class="eyebrow">In one breath</p>
+          <h2>What it scored</h2>
+          <p class="lede">Tasks with hidden tests the agent never sees. A pass means those tests went green.</p>
+        </div>
+      </header>
+      <div class="scores">
+        <div class="score">
+          <p class="score-value" data-stat="model0_score">12 / 12</p>
+          <p class="score-label"><span data-stat="model0_name">gpt-oss-120b</span></p>
+          <p class="score-note">in-house tasks</p>
+        </div>
+        <div class="score">
+          <p class="score-value" data-stat="model1_score">11 / 12</p>
+          <p class="score-label"><span data-stat="model1_name">K2-Think-v2</span></p>
+          <p class="score-note">the same twelve tasks</p>
+        </div>
+        <div class="score">
+          <p class="score-value" data-stat="humaneval_score">30 / 30</p>
+          <p class="score-label"><span data-stat="model1_name">K2-Think-v2</span></p>
+          <p class="score-note">a HumanEval slice</p>
+        </div>
+      </div>
+      <p class="aside">Every model call on a free tier, every embedding computed locally.</p>
+    </div>
+  </section>
+
+  <!-- 3 · What I built ---------------------------------------------------------------------- -->
+  <section class="screen" id="built" data-title="What I built">
+    <div class="slide">
+      <header class="head">
+        <div>
+          <p class="eyebrow">The agent</p>
+          <h2>What I built</h2>
+          <p class="lede">A command-line agent that takes a repository task, edits files, and verifies the change.</p>
+        </div>
+      </header>
+      <div class="trio">
+        <article class="card">
+          <h3>Capabilities</h3>
+          <p class="flow">search <i>·</i> edit <i>·</i> execute <i>·</i> test</p>
+        </article>
+        <article class="card">
+          <h3>Agent loop</h3>
+          <p class="flow">plan <i>→</i> act <i>→</i> verify <i>→</i> retry</p>
+        </article>
+        <article class="card">
+          <h3>Core stack</h3>
+          <p class="flow">LangGraph <i>·</i> LLMs <i>·</i> MCP <i>·</i> RAG</p>
+        </article>
+      </div>
+      <p class="command"><code>coder run ./repo "make the failing tests pass"</code></p>
+    </div>
+  </section>
+
+  <!-- 4 · Outer loop ------------------------------------------------------------------------ -->
+  <section class="screen" id="outer-loop" data-title="The outer loop">
+    <div class="slide">
+      <header class="head">
+        <div>
+          <p class="eyebrow">Two loops drive the agent · 1 of 2</p>
+          <h2>The outer loop</h2>
+          <p class="lede">Plan, do the work, run the tests, and retry with what went wrong.</p>
+        </div>
+        <aside class="callout"><b>Slow: one lap per try</b>The tests decide when it is done, not the model</aside>
+      </header>
+      <div class="diagram-row">
+        <div class="diagram" data-loop="outer" role="img"
+             aria-label="Outer loop: plan, do the work, run the tests; if they fail, learn from the failing output and plan again, up to four tries; if they pass, done."></div>
+        <div class="stops">
+          <h3>It stops when</h3>
+          <ul>
+            <li>the tests pass <span>→ passed</span></li>
+            <li>all four tries are used <span>→ failed</span></li>
+            <li>the step budget runs out <span>→ gave up</span></li>
+          </ul>
+          <p class="source">graph/build.py · route_after_tests</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 · Inner loop ------------------------------------------------------------------------ -->
+  <section class="screen" id="inner-loop" data-title="The inner loop">
+    <div class="slide">
+      <header class="head">
+        <div>
+          <p class="eyebrow">Two loops drive the agent · 2 of 2</p>
+          <h2>The inner loop</h2>
+          <p class="lede">Ask for a tool, run it, look at the result, repeat. This is step 2 of the outer loop.</p>
+        </div>
+        <aside class="callout"><b>Fast: many rounds per try</b>One Act step is one model call; the ceiling is 40</aside>
+      </header>
+      <div class="diagram-row">
+        <div class="diagram" data-loop="inner" role="img"
+             aria-label="Inner loop: the model asks for a tool, a safety check asks you before risky actions, the tool runs and its result goes back to the model, until the model is done."></div>
+        <div class="stops">
+          <h3>It stops when</h3>
+          <ul>
+            <li>no more tool requests <span>→ the tests run</span></li>
+            <li>40 Act steps are used <span>→ gave up</span></li>
+          </ul>
+          <p class="source">approval can be switched off with --yes</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 · Architecture ---------------------------------------------------------------------- -->
+  <section class="screen" id="architecture" data-title="System architecture">
+    <div class="slide">
+      <header class="head">
+        <div>
+          <p class="eyebrow">How it fits together</p>
+          <h2>System architecture</h2>
+          <p class="lede">Components, and the boundaries between them.</p>
+        </div>
+        <aside class="callout"><b>Orchestration layer</b>LangGraph owns state and routing</aside>
+      </header>
+      <div class="arch">
+        <div class="arch-user">User · CLI</div>
+        <div class="arch-graph"><b>LangGraph</b> orchestration, state, routing</div>
+        <div class="arch-parts">
+          <div class="arch-part"><b>LLM</b><span>plan and act decisions</span></div>
+          <div class="arch-part"><b>RAG</b><span>code retrieval</span></div>
+          <div class="arch-part"><b>MCP</b><span>file and shell tools</span></div>
+          <div class="arch-part"><b>Sandbox</b><span>execution boundary</span></div>
+        </div>
+        <div class="arch-cross">
+          <span class="arch-cross-label">Cross-cutting</span>
+          <span>context management</span><span>SQLite checkpoints</span><span>telemetry + LangSmith</span><span>approval + tests</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 · MCP ------------------------------------------------------------------------------- -->
+  <section class="screen" id="mcp" data-title="MCP: giving the model actions">
+    <div class="slide">
+      <header class="head">
+        <div>
+          <p class="eyebrow">Tools</p>
+          <h2>MCP: giving the model actions</h2>
+          <p class="lede">A real Model Context Protocol client and server, talking over stdio.</p>
+        </div>
+        <aside class="callout"><b>Runs locally</b>Separate processes on the same machine</aside>
+      </header>
+      <ol class="pipe">
+        <li>the model chooses a tool</li>
+        <li>MCP client <small>stdio</small></li>
+        <li>local MCP server</li>
+      </ol>
+      <div class="tools">
+        <div><code>read_file</code><span>read a file's contents</span></div>
+        <div><code>edit_file</code><span>change part of a file</span></div>
+        <div><code>write_file</code><span>create or overwrite a file</span></div>
+        <div><code>list_dir</code><span>list a directory</span></div>
+        <div><code>search_code</code><span>search the repository</span></div>
+        <div><code>run_command</code><span>run a shell command</span></div>
+      </div>
+      <p class="aside">Typical sequence: <code>search_code</code> → <code>read_file</code> → <code>edit_file</code> → <code>run_command</code> → result back to the model</p>
+    </div>
+  </section>
+
+  <!-- 8 · RAG ------------------------------------------------------------------------------- -->
+  <section class="screen" id="rag" data-title="RAG: understanding the repository">
+    <div class="slide">
+      <header class="head">
+        <div>
+          <p class="eyebrow">Retrieval</p>
+          <h2>RAG: understanding the repository</h2>
+          <p class="lede">Index the code once, then retrieve the most relevant chunks for each task.</p>
+        </div>
+        <aside class="callout"><b>Hybrid retrieval</b>Keywords and meaning, fused by rank</aside>
+      </header>
+      <div class="lanes">
+        <div class="lane">
+          <h3>Indexing</h3>
+          <ol class="steps">
+            <li><b>Repo files</b><span>loader + ignore rules</span></li>
+            <li><b>Code chunks</b><span>tree-sitter, line-window fallback</span></li>
+            <li><b>Chroma</b><span>local embeddings + metadata</span></li>
+          </ol>
+        </div>
+        <div class="lane">
+          <h3>Retrieval</h3>
+          <ol class="steps">
+            <li><b>BM25 + dense</b><span>keywords + semantic similarity</span></li>
+            <li><b>Reciprocal rank fusion</b><span>combine the ranked lists</span></li>
+            <li><b>Top 6 chunks</b><span>up to 6,000 characters to plan + act</span></li>
+          </ol>
+        </div>
+      </div>
+      <p class="source">Defaults: ≤ 1,500 characters per chunk · 60-line fallback window · 10-line overlap · 384-D embeddings</p>
+    </div>
+  </section>
+
+  <!-- 9 · Context and memory ---------------------------------------------------------------- -->
+  <section class="screen" id="memory" data-title="Context and memory">
+    <div class="slide">
+      <header class="head">
+        <div>
+          <p class="eyebrow">State</p>
+          <h2>Context and persistent memory</h2>
+          <p class="lede">What the model sees on each call, and what a run can resume from.</p>
+        </div>
+        <aside class="callout"><b>Token budget</b>Summarise once history passes 60k tokens</aside>
+      </header>
+      <div class="trio">
+        <article class="card">
+          <h3>Conversation history</h3>
+          <p>Requests, tool calls and tool results build up in LangGraph state. The Act model sees the managed history on every call.</p>
+        </article>
+        <article class="card">
+          <h3>Context management</h3>
+          <p>The six most recent tool outputs stay intact; older long ones are trimmed, and past 60k tokens the history is summarised.</p>
+        </article>
+        <article class="card">
+          <h3>SQLite checkpoints</h3>
+          <p>Graph state is stored by thread, so a run can pause, resume, and span several turns.</p>
+        </article>
+      </div>
+      <p class="pull">Context management controls what the model sees; checkpoints control what the workflow can resume.</p>
+    </div>
+  </section>
+
+  <!-- 10 · Guardrails ----------------------------------------------------------------------- -->
+  <section class="screen" id="guardrails" data-title="Reliability and guardrails">
+    <div class="slide">
+      <header class="head">
+        <div>
+          <p class="eyebrow">Safety</p>
+          <h2>Reliability and guardrails</h2>
+          <p class="lede">Safe, bounded execution at every step.</p>
+        </div>
+        <aside class="callout"><b>Caveat</b>Passing visible tests does not prove correctness</aside>
+      </header>
+      <div class="quad">
+        <article class="card">
+          <h3>Verification</h3>
+          <p>A dedicated test stage; failures feed the repair loop.</p>
+          <p class="meta">4 iterations · 40 Act steps</p>
+        </article>
+        <article class="card">
+          <h3>Security</h3>
+          <p>A path jail around the repository, a command policy, and optional Docker.</p>
+          <p class="meta">Docker: 1 GB · 1 CPU · network off</p>
+        </article>
+        <article class="card">
+          <h3>Human control</h3>
+          <p>Approval before <code>edit_file</code>, <code>write_file</code> and <code>run_command</code>.</p>
+          <p class="meta">pause → checkpoint → resume</p>
+        </article>
+        <article class="card">
+          <h3>Model resilience</h3>
+          <p>Provider retries with backoff, and a configured fallback model.</p>
+          <p class="meta">primary: gpt-oss · fallback: Gemini</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11 · Observability -------------------------------------------------------------------- -->
+  <section class="screen" id="observability" data-title="Observability">
+    <div class="slide">
+      <header class="head">
+        <div>
+          <p class="eyebrow">Measurement</p>
+          <h2>Observability</h2>
+          <p class="lede">What happened in each run, and what it cost.</p>
+        </div>
+        <aside class="callout"><b>Two tables</b>runs + node_usage in ledger.sqlite</aside>
+      </header>
+      <div class="duo">
+        <article class="card">
+          <h3>LangSmith tracing</h3>
+          <p>Graph and model traces show which nodes and tools ran, in what order, and where a failure happened.</p>
+        </article>
+        <article class="card">
+          <h3>Local SQLite ledger</h3>
+          <p>Run status, wall time, tokens and calls, totalled per graph node. Free, offline, and queryable.</p>
+        </article>
+      </div>
+      <ol class="pipe">
+        <li>execution</li>
+        <li>usage collection</li>
+        <li>ledger.sqlite</li>
+        <li><code>coder stats</code> / SQL</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 12 · Model comparison ----------------------------------------------------------------- -->
+  <section class="screen" id="models" data-title="Model comparison">
+    <div class="slide">
+      <header class="head">
+        <div>
+          <p class="eyebrow">Results · the same twelve tasks</p>
+          <h2>Model comparison</h2>
+          <p class="lede">Same suite, graph and retrieval. Only the model changes.</p>
+        </div>
+        <aside class="callout"><b>Left: higher is better</b>Middle and right: lower is better</aside>
+      </header>
+      <div class="panels three">
+        <figure class="panel"><figcaption><b>pass@1</b>hidden-test pass rate</figcaption><div class="chart" data-chart="model-pass"></div></figure>
+        <figure class="panel"><figcaption><b>tokens per task</b>mean, all model calls</figcaption><div class="chart" data-chart="model-tokens"></div></figure>
+        <figure class="panel"><figcaption><b>seconds per task</b>mean wall time</figcaption><div class="chart" data-chart="model-seconds"></div></figure>
+      </div>
+      <p class="takeaway">K2 Think is faster per task but spends more than twice the tokens: more tool-calling steps, each one resending the conversation.</p>
+    </div>
+  </section>
+
+  <!-- 13 · Pass rate by category ------------------------------------------------------------ -->
+  <section class="screen" id="categories" data-title="pass@1 by task category">
+    <div class="slide">
+      <header class="head">
+        <div>
+          <p class="eyebrow">Results · by category</p>
+          <h2>pass@1 by task category</h2>
+          <p class="lede">K2 Think missed one multi-file task; everything else passed its hidden tests.</p>
+        </div>
+        <aside class="callout"><b>Small sample</b>A working loop, not proof of production reliability</aside>
+      </header>
+      <div class="chart tall" data-chart="categories"></div>
+      <div class="legend" data-legend="categories"></div>
+    </div>
+  </section>
+
+  <!-- 14 · Retrieval ablation --------------------------------------------------------------- -->
+  <section class="screen" id="ablation" data-title="RAG ablation">
+    <div class="slide">
+      <header class="head">
+        <div>
+          <p class="eyebrow">Results · a surprising one</p>
+          <h2>Retrieval made no measurable difference</h2>
+          <p class="lede">Twelve tasks per retrieval mode, one model, one afternoon.</p>
+        </div>
+        <aside class="callout"><b>One run per arm</b>The gaps sit under the noise floor</aside>
+      </header>
+      <div class="panels two-plus">
+        <figure class="panel"><figcaption><b>pass@1 by retrieval mode</b>hidden-test pass rate</figcaption><div class="chart" data-chart="ablation-pass"></div></figure>
+        <figure class="panel"><figcaption><b>tokens per task</b>mean, all model calls</figcaption><div class="chart" data-chart="ablation-tokens"></div></figure>
+        <div class="facts">
+          <p><b data-stat="recall3">0.99</b>recall@3, measured on its own</p>
+          <p><b><span data-stat="mrr">0.56</span> → <span data-stat="mrr_rerank">0.76</span></b>MRR after adding the reranker</p>
+        </div>
+      </div>
+      <p class="takeaway">The benchmark repositories have three to five files: the model finds the right one with a single <code>list_dir</code>, whichever way retrieval ranks it.</p>
+    </div>
+  </section>
+
+  <!-- 15 · Iterations ----------------------------------------------------------------------- -->
+  <section class="screen" id="iterations" data-title="Tasks solved within k iterations">
+    <div class="slide">
+      <header class="head">
+        <div>
+          <p class="eyebrow">Results · the repair loop</p>
+          <h2>One try was enough</h2>
+          <p class="lede">Share of tasks solved within k iterations. Cumulative, so the last point is pass@1.</p>
+        </div>
+        <aside class="callout"><b>Flat means</b>more cycles did not help on these tasks</aside>
+      </header>
+      <div class="chart tall" data-chart="iterations"></div>
+      <div class="legend" data-legend="iterations"></div>
+      <p class="takeaway">Every solved task passed on its first test run. The repair loop was there, with a ceiling of four; these tasks never needed it.</p>
+    </div>
+  </section>
+
+  <!-- 16 · Tokens --------------------------------------------------------------------------- -->
+  <section class="screen" id="tokens" data-title="Where the tokens go">
+    <div class="slide">
+      <header class="head">
+        <div>
+          <p class="eyebrow">Results · cost</p>
+          <h2>Where the tokens go</h2>
+          <p class="lede" data-caption="nodes">Tokens per run by graph node, averaged over 12 runs of K2-Think-v2.</p>
+        </div>
+        <aside class="callout"><b>Lower is better</b>Input + output, every call in the node</aside>
+      </header>
+      <div class="chart short" data-chart="nodes"></div>
+      <div class="legend" data-legend="nodes"></div>
+      <div class="scores small">
+        <div class="score"><p class="score-value" data-stat="act_share">~99%</p><p class="score-note">of tokens are spent in Act</p></div>
+        <div class="score"><p class="score-value" data-stat="act_calls">15.2</p><p class="score-note">Act calls per run, each resending the context</p></div>
+        <div class="score"><p class="score-value" data-stat="plan_tokens">949</p><p class="score-note">tokens for the single Plan call</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 17 · Lessons -------------------------------------------------------------------------- -->
+  <section class="screen" id="lessons" data-title="Lessons and next steps">
+    <div class="slide">
+      <header class="head">
+        <div>
+          <p class="eyebrow">Looking back</p>
+          <h2>Lessons learned, and next steps</h2>
+          <p class="lede">A working, measurable agent loop, and where to take it next.</p>
+        </div>
+      </header>
+      <ol class="lessons">
+        <li><h3>Retrieval is situational</h3><p>On small repositories, exploring with tools can be enough.</p><p class="next">Adaptive RAG by task and repository size</p></li>
+        <li><h3>Tool loops drive cost</h3><p><span data-stat="act_share">~99%</span> of measured tokens were spent in Act.</p><p class="next">Better context selection, reusable summaries</p></li>
+        <li><h3>Tests are necessary, not sufficient</h3><p>Visible tests can pass while hidden requirements fail.</p><p class="next">Stronger regression tests and verification</p></li>
+        <li><h3>Production needs stronger boundaries</h3><p>Local-first is not multi-tenant infrastructure.</p><p class="next">Isolated workspaces, queues, shared persistence</p></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 18 · End ------------------------------------------------------------------------------ -->
+  <section class="screen end" id="end" data-title="Try it">
+    <div class="slide">
+      <header class="hero-head">
+        <p class="eyebrow">Thank you</p>
+        <h2>Try it on your own repository</h2>
+        <p class="lede">Free tiers and local embeddings only. The commit history is the step-by-step build.</p>
+      </header>
+      <p class="command"><code>uv run coder run path/to/repo "make the failing tests pass"</code></p>
+      <ul class="links">
+        <li><a href="https://github.com/Cha-Imaa/coder-agent">Source on GitHub</a></li>
+        <li><a href="../try-it/">Walkthrough</a></li>
+        <li><a href="../results/">Full results</a></li>
+        <li><a href="../system_design_coding_agent/">System design</a></li>
+      </ul>
+    </div>
+  </section>
+
+</main>
+
+<div class="tip" role="status" aria-live="polite" hidden></div>
+
+<script src="../assets/cast-player.js"></script>
+<script src="talk.js"></script>
+</body>
+</html>

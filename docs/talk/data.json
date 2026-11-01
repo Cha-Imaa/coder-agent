@@ -1,0 +1,188 @@
+{
+  "models": [
+    {
+      "name": "gpt-oss-120b",
+      "passed": 12,
+      "tasks": 12,
+      "tokens": 29663,
+      "seconds": 174.3,
+      "steps": 10.8
+    },
+    {
+      "name": "K2-Think-v2",
+      "passed": 11,
+      "tasks": 12,
+      "tokens": 69818,
+      "seconds": 110.6,
+      "steps": 15.2
+    }
+  ],
+  "categories": {
+    "categories": [
+      "fix-bug",
+      "add-feature",
+      "refactor",
+      "add-test",
+      "multi-file",
+      "humaneval"
+    ],
+    "series": [
+      {
+        "name": "gpt-oss-120b",
+        "values": {
+          "fix-bug": [
+            3,
+            3
+          ],
+          "add-feature": [
+            3,
+            3
+          ],
+          "refactor": [
+            2,
+            2
+          ],
+          "add-test": [
+            2,
+            2
+          ],
+          "multi-file": [
+            2,
+            2
+          ]
+        }
+      },
+      {
+        "name": "K2-Think-v2",
+        "values": {
+          "fix-bug": [
+            3,
+            3
+          ],
+          "add-feature": [
+            3,
+            3
+          ],
+          "refactor": [
+            2,
+            2
+          ],
+          "add-test": [
+            2,
+            2
+          ],
+          "multi-file": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "name": "K2-Think-v2 · HumanEval",
+        "values": {
+          "humaneval": [
+            30,
+            30
+          ]
+        }
+      }
+    ]
+  },
+  "iterations": [
+    {
+      "name": "gpt-oss-120b",
+      "curve": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "K2-Think-v2",
+      "curve": [
+        0.9167,
+        0.9167,
+        0.9167,
+        0.9167
+      ]
+    },
+    {
+      "name": "K2-Think-v2 · HumanEval",
+      "curve": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    }
+  ],
+  "ablation": {
+    "model": "K2-Think-v2",
+    "arms": [
+      {
+        "mode": "off",
+        "passed": 12,
+        "tasks": 12,
+        "tokens": 60534
+      },
+      {
+        "mode": "bm25",
+        "passed": 9,
+        "tasks": 12,
+        "tokens": 66654
+      },
+      {
+        "mode": "dense",
+        "passed": 10,
+        "tasks": 12,
+        "tokens": 69958
+      },
+      {
+        "mode": "hybrid",
+        "passed": 11,
+        "tasks": 12,
+        "tokens": 69818
+      }
+    ]
+  },
+  "nodes": {
+    "model": "K2-Think-v2",
+    "runs": 12,
+    "nodes": [
+      {
+        "node": "act",
+        "input": 63346,
+        "output": 5524,
+        "total": 68869,
+        "calls": 15.2
+      },
+      {
+        "node": "plan",
+        "input": 588,
+        "output": 362,
+        "total": 949,
+        "calls": 1.0
+      }
+    ]
+  },
+  "retrieval": {
+    "tasks": 40,
+    "recall3": 0.99,
+    "mrr": 0.56,
+    "mrr_rerank": 0.76
+  },
+  "stats": {
+    "model0_score": "12 / 12",
+    "model0_name": "gpt-oss-120b",
+    "model1_score": "11 / 12",
+    "model1_name": "K2-Think-v2",
+    "humaneval_score": "30 / 30",
+    "act_share": "~99%",
+    "act_calls": "15.2",
+    "plan_tokens": "949",
+    "recall3": "0.99",
+    "mrr": "0.56",
+    "mrr_rerank": "0.76"
+  }
+}

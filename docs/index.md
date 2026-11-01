@@ -28,6 +28,8 @@ this page paints its frames, the same frames the README hero is drawn from.
 
 ## How to read this site
 
+- **[The talk](talk/index.html)** is the project as a presentation: one idea per screen, from the
+  agent's two loops to the eval results, with the charts drawn from the same results files.
 - **[Try it](try-it.md)** is the walkthrough: empty directory to an agent-opened pull request,
   with the quota limits and the platform gotchas called out where you would hit them.
 - **[Results](results.md)** is the numbers page: pass rate on the in-house suite, where the tokens
